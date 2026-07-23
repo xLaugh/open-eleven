@@ -1,0 +1,1762 @@
+/* --- Polices auto-hébergées (Oswald + Poppins, licence SIL OFL) ---
+   Plus aucun appel à fonts.googleapis.com : rendu immédiat (font-display:swap),
+   zéro dépendance externe, fonctionne hors-ligne. Fichiers dans src/fonts/. */
+
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("src/fonts/oswald-500-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("src/fonts/oswald-500-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("src/fonts/oswald-600-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("src/fonts/oswald-600-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("src/fonts/oswald-700-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("src/fonts/oswald-700-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("src/fonts/poppins-400i-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("src/fonts/poppins-400i-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("src/fonts/poppins-400-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("src/fonts/poppins-400-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("src/fonts/poppins-600-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("src/fonts/poppins-600-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("src/fonts/poppins-700-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("src/fonts/poppins-700-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("src/fonts/poppins-800-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url("src/fonts/poppins-800-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ============================================================
+   OPEN ELEVEN — styles v7 (refonte "terrain").
+   Thème unique : fond vert pelouse (#087B4B) à bandes diagonales,
+   cartes blanches à en-têtes colorés, titres Oswald, textes Poppins.
+   Les variables restent le contrat entre composants : les textes
+   posés directement sur le vert utilisent --on-green*, ceux posés
+   sur les cartes blanches utilisent --text-*.
+   ============================================================ */
+:root {
+  --radius: 16px;
+  --font: "Poppins", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: "Oswald", "Arial Narrow", "Segoe UI", sans-serif;
+}
+
+body {
+  /* Marque */
+  --green: #087b4b;
+  --green-deep: #065f3a;
+  --green-ink: #0b3b26;
+  --gold: #c9971c;
+  --gold-bright: #e8c34a;
+  --gold-deep: #9a6a0b;
+  --red: #d6483d;
+  --brown: #4a2d10;
+  --cream: #faecc9;
+  --blue: #2f6fd6;
+  --blue-soft: #245cb8;
+
+  /* Cartes blanches */
+  --card-bg: #ffffff;
+  --card-bg-2: #f4f7f3;
+  --text-0: #1c2a21;
+  --text-1: #46584c;
+  --text-2: #74857a;
+  --accent: #087b4b;
+  --accent-soft: #0a9159;
+  --good: #23875a;
+  --good-text: #23875a;
+  --bad: #c1473b;
+  --bad-text: #c1473b;
+  --money: #96751a;
+  --gold-soft: #a8821c;
+  --panel: rgba(8, 123, 75, 0.06);
+  --panel-2: rgba(8, 123, 75, 0.12);
+  --line: rgba(20, 45, 30, 0.13);
+  --line-strong: rgba(20, 45, 30, 0.24);
+  --shadow: rgba(3, 36, 21, 0.3);
+
+  /* Textes posés directement sur le fond vert */
+  --on-green: #ffffff;
+  --on-green-soft: rgba(255, 255, 255, 0.88);
+  --on-green-faint: rgba(255, 255, 255, 0.62);
+  --on-green-line: rgba(255, 255, 255, 0.32);
+  --on-green-panel: rgba(255, 255, 255, 0.14);
+
+  /* Niveaux de club */
+  --lvl-regional: #7e8b82;
+  --lvl-d2: #3d8a7a;
+  --lvl-d1: #2f6fd6;
+  --lvl-elite: #c9971c;
+
+  background: var(--green);
+}
+
+/* Le fond vit sur une couche FIXE plein écran : bandes diagonales
+   subtiles façon pelouse tondue, aucune cassure au défilement. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.06)),
+    repeating-linear-gradient(
+      115deg,
+      rgba(0, 0, 0, 0.05) 0 150px,
+      rgba(0, 0, 0, 0) 150px 300px,
+      rgba(255, 255, 255, 0.035) 300px 450px,
+      rgba(0, 0, 0, 0) 450px 600px
+    ),
+    var(--green);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: var(--font);
+  -webkit-tap-highlight-color: transparent;
+}
+body { color: var(--text-0); }
+
+#app {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding: 20px 16px 40px;
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  animation: fadeIn 0.4s ease;
+}
+.screen.active { display: flex; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Accueil ---------- */
+.home-wrap {
+  margin: auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+}
+.home-hero {
+  width: min(88%, 350px);
+  height: auto;
+  filter: drop-shadow(0 10px 24px rgba(3, 36, 21, 0.35));
+}
+.title {
+  font-size: clamp(2.3rem, 10vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.08;
+  color: var(--on-green);
+  margin: -6px 0 0;
+}
+/* Le « n » de Destiny devient le vrai « 11 » du logo (image détourée,
+   typographie custom qu'aucune police standard ne reproduit). */
+.wm-11-img {
+  height: 0.6em;
+  width: auto;
+  display: inline-block;
+  vertical-align: 0;
+  margin: 0 1px;
+}
+.tagline {
+  color: var(--on-green);
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.55;
+  max-width: 360px;
+  margin: 0;
+}
+.home-meta { color: var(--on-green-faint); font-size: 0.8rem; margin: 0; }
+
+/* ---------- Cartes de l'accueil (défi / quêtes / duel) ----------
+   Structure commune générée par game.js :
+   .hc-head (bandeau coloré) + .hc-body (contenu + .hc-cta). */
+.daily-panel, .quest-panel, .duel-panel, .story-panel {
+  width: 100%;
+  max-width: 400px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--card-bg);
+  box-shadow: 0 8px 22px var(--shadow);
+  cursor: pointer;
+  text-align: center;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.daily-panel:empty, .quest-panel:empty, .duel-panel:empty, .story-panel:empty { display: none; }
+.daily-panel:hover, .quest-panel:hover, .duel-panel:hover, .story-panel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px var(--shadow);
+}
+.daily-panel:active, .quest-panel:active, .duel-panel:active, .story-panel:active { transform: translateY(0); }
+
+.hc-head {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.035em;
+  color: #fff;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.daily-panel .hc-head { background: var(--red); }
+.quest-panel .hc-head { background: var(--brown); color: var(--cream); }
+.duel-panel .hc-head { background: var(--green-ink); }
+.story-panel .hc-head { background: var(--gold-deep); }
+
+.hc-streak {
+  font-family: var(--font);
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  padding: 2px 9px;
+  border-radius: 999px;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.hc-body {
+  padding: 14px 16px 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.quest-panel .hc-body { background: var(--cream); }
+.duel-panel .hc-body { background: var(--card-bg); }
+
+.hc-cta {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.02rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #fff;
+  padding: 9px 26px;
+  border-radius: 999px;
+  box-shadow: 0 4px 12px var(--shadow);
+  margin-top: 2px;
+}
+.daily-panel .hc-cta { background: var(--red); }
+.quest-panel .hc-cta { background: var(--brown); color: var(--cream); }
+.duel-panel .hc-cta { background: var(--green-ink); }
+.story-panel .hc-cta { background: var(--gold-deep); }
+
+.hc-text { margin: 0; font-size: 0.88rem; font-weight: 700; color: #1c2a21; }
+.story-best { font-size: 0.82rem; font-weight: 700; color: var(--gold-deep); }
+
+/* ---------- Mode Histoire : écran des légendes ---------- */
+.story-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 460px;
+}
+.story-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 22px var(--shadow);
+  padding: 16px 18px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.story-card.locked { opacity: 0.92; }
+.story-head { display: flex; align-items: center; gap: 12px; }
+.story-icon { font-size: 2.1rem; line-height: 1; }
+.story-id { flex: 1; }
+.story-alias {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-0);
+}
+.story-era { margin: 0; font-size: 0.78rem; font-weight: 600; color: var(--text-2); }
+.story-cost, .story-free {
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.story-cost { background: var(--panel-2); color: var(--gold-deep); }
+.story-free { background: rgba(35, 135, 90, 0.14); color: var(--good); }
+.story-teaser { margin: 0; font-size: 0.88rem; color: var(--text-1); font-style: italic; }
+.story-goal { margin: 0; font-size: 0.85rem; color: var(--text-0); }
+.story-record { margin: 0; font-size: 0.85rem; color: var(--gold-deep); font-weight: 700; }
+
+/* Percentile mondial + verdict de légende (fiche finale) */
+.pc-percentile {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--gold-soft);
+}
+.legend-note { color: var(--gold-deep); }
+.legend-reveal {
+  display: block;
+  margin-top: 6px;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--text-1);
+}
+.legend-moments {
+  display: block;
+  margin-top: 6px;
+  font-weight: 700;
+  color: var(--gold-soft);
+}
+
+/* Série de quêtes : cycle de joker + prochain palier */
+.streak-cycle-note {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.streak-next {
+  margin: 2px 0 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--gold-deep);
+}
+
+.hc-lines {
+  list-style: disc;
+  margin: 0 auto;
+  padding-left: 1.2em;
+  text-align: left;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #3a2708;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hc-lines strong { font-weight: 800; }
+
+/* Chips du brief (défi du jour) */
+.daily-brief { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
+.daily-chip {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-0);
+  background: #fff;
+  border: 1.6px solid #2a3b30;
+  padding: 5px 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.daily-best { font-size: 0.75rem; color: var(--text-2); }
+.daily-best.done { color: var(--good-text); font-weight: 700; }
+
+.daily-reminder {
+  max-width: 420px;
+  margin: -2px auto 14px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  color: var(--on-green);
+  background: var(--on-green-panel);
+  border: 1px solid var(--on-green-line);
+  border-radius: 10px;
+  text-align: center;
+}
+.daily-reminder[hidden] { display: none; }
+.daily-note, .jeton-note { color: var(--gold-soft); font-weight: 700; }
+
+/* ---------- Boutique (jetons) ---------- */
+.shop-balance {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--on-green);
+  margin: 4px 0 12px;
+}
+.shop-intro { max-width: 460px; margin-left: auto; margin-right: auto; }
+.shop-intro em { color: var(--gold-bright); font-style: normal; }
+.shop-list { display: flex; flex-direction: column; gap: 10px; max-width: 460px; margin: 14px auto 20px; width: 100%; }
+.perk-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  text-align: left;
+  box-shadow: 0 4px 14px var(--shadow);
+}
+.perk-card.perk-equipped-card {
+  border: 2px solid var(--gold);
+  background: linear-gradient(135deg, rgba(201, 151, 28, 0.1), var(--card-bg));
+}
+.perk-icon { font-size: 1.7rem; flex-shrink: 0; }
+.perk-body { flex: 1; min-width: 0; }
+.perk-name { font-size: 0.92rem; font-weight: 800; color: var(--text-0); margin: 0 0 2px; }
+.perk-desc { font-size: 0.76rem; color: var(--text-1); margin: 0; line-height: 1.4; }
+.perk-side { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.perk-cost { font-size: 0.82rem; font-weight: 800; color: var(--gold-soft); white-space: nowrap; }
+.perk-btn, .perk-equip {
+  font-family: var(--font);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  border: 1px solid var(--line-strong);
+  transition: transform 0.12s ease, filter 0.12s ease, border-color 0.12s ease;
+}
+.perk-btn { background: linear-gradient(180deg, var(--gold-bright), var(--gold)); color: #241a06; border-color: transparent; }
+.perk-btn:active, .perk-equip:active { transform: translateY(1px); }
+.perk-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: var(--panel-2);
+  color: var(--text-2);
+  border-color: var(--line);
+}
+.perk-equip { background: transparent; color: var(--text-1); }
+.perk-equip.on { background: linear-gradient(180deg, var(--gold-bright), var(--gold)); color: #241a06; border-color: transparent; }
+.perk-equip:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ---------- Duel entre amis (écran) ---------- */
+.duel-body { max-width: 460px; margin: 0 auto; width: 100%; }
+.duel-intro-line { font-size: 1.15rem; text-align: center; margin: 6px 0 4px; color: var(--on-green); }
+.duel-intro-line strong { color: var(--gold-bright); }
+.duel-intro-sub {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--on-green);
+  background: var(--on-green-panel);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin: 0 0 14px;
+}
+.duel-intro-hint { text-align: center; font-size: 0.8rem; color: var(--on-green-faint); margin: 12px 0 18px; }
+.duel-result-title {
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gold-bright);
+  margin: 4px 0 14px;
+}
+.duel-body .rival-compare { margin-bottom: 10px; }
+.duel-body .btn { width: 100%; margin-top: 10px; }
+.duel-body .rival-verdict { color: var(--on-green-soft); }
+.duel-note { text-align: center; font-size: 0.8rem; color: #b8e6cd; font-weight: 700; margin: 10px 0 0; min-height: 1em; }
+
+/* ---------- Écran quêtes ---------- */
+.quest-hero {
+  width: 100%;
+  max-width: 460px;
+  margin: 0 auto 6px;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 20px 16px 16px;
+  box-shadow: 0 6px 20px var(--shadow);
+  text-align: center;
+}
+.streak-flame { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.streak-flame .sf-emoji {
+  font-size: 2.5rem;
+  line-height: 1;
+  filter: grayscale(0.7) opacity(0.6);
+}
+.streak-flame.streak-alive .sf-emoji {
+  filter: none;
+  animation: flamePulse 1.6s ease-in-out infinite;
+}
+@keyframes flamePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+.sf-num { font-size: 2.6rem; font-weight: 900; color: var(--gold); line-height: 1; }
+.sf-unit { font-size: 0.76rem; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.06em; }
+.streak-dots { display: flex; justify-content: center; gap: 7px; margin: 12px 0 4px; }
+.streak-dot {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--panel-2);
+  border: 1px solid var(--line-strong);
+  transition: background 0.2s ease;
+}
+.streak-dot.on { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 8px rgba(201, 151, 28, 0.5); }
+.quest-hero-stats {
+  display: flex; justify-content: center; gap: 10px;
+  margin-top: 14px; padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.qh-stat { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.qh-val { font-size: 1.35rem; font-weight: 900; color: var(--text-0); }
+.qh-lbl { font-size: 0.64rem; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; }
+
+.quest-screen-body { width: 100%; max-width: 460px; margin: 0 auto; }
+.quest-section-label {
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--on-green);
+  margin: 20px 0 8px;
+}
+.quest-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card-bg);
+  border: 1px solid transparent;
+  border-radius: 13px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  box-shadow: 0 4px 12px var(--shadow);
+}
+.quest-card-done {
+  border-color: var(--good);
+  background: linear-gradient(90deg, rgba(35, 135, 90, 0.13), var(--card-bg) 60%);
+}
+.qc-icon { font-size: 1.5rem; flex-shrink: 0; width: 28px; text-align: center; }
+.qc-body { flex: 1; min-width: 0; }
+.qc-name {
+  margin: 0 0 2px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-0);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.qc-desc { margin: 0; font-size: 0.76rem; color: var(--text-1); line-height: 1.35; }
+.qc-tier {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+.qc-tier-easy { background: rgba(35, 135, 90, 0.14); color: var(--good-text); }
+.qc-tier-med { background: rgba(47, 111, 214, 0.13); color: var(--blue-soft); }
+.qc-tier-hard { background: rgba(214, 72, 61, 0.13); color: var(--bad-text); }
+.qc-side { display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0; }
+.qc-check { font-size: 1.05rem; color: var(--text-2); }
+.qc-pts { font-size: 0.66rem; font-weight: 800; color: var(--gold-soft); }
+
+/* Défi légendaire : traitement doré premium */
+.legend-wrap .quest-card {
+  border: 1.5px solid var(--gold);
+  background: linear-gradient(135deg, rgba(232, 195, 74, 0.16), var(--card-bg) 65%);
+  box-shadow: 0 4px 16px rgba(60, 45, 5, 0.3);
+}
+.legend-wrap .quest-card.quest-card-done {
+  background: linear-gradient(135deg, rgba(232, 195, 74, 0.3), var(--card-bg) 70%);
+}
+.legend-wrap .qc-pts { color: var(--gold); }
+
+.quest-hint-note {
+  font-size: 0.72rem;
+  color: var(--on-green-faint);
+  line-height: 1.45;
+  margin: 14px 2px 4px;
+  text-align: center;
+}
+
+/* Objectifs de rétention (posés sur le vert) */
+.retention-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 9px;
+  font-size: 0.74rem;
+  color: var(--on-green-soft);
+}
+.retention-label { flex: 0 0 auto; min-width: 128px; }
+.retention-bar {
+  flex: 1;
+  height: 7px;
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.retention-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #fff, var(--gold-bright));
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.retention-val { flex: 0 0 auto; font-weight: 700; color: var(--on-green-faint); min-width: 34px; text-align: right; }
+.retention-done .retention-fill { background: var(--gold-bright); }
+.retention-done .retention-label { color: var(--gold-bright); }
+
+.quest-note { color: var(--accent-soft); }
+.brand-credit {
+  text-align: center;
+  color: var(--on-green-faint);
+  font-size: 0.72rem;
+  margin: 18px 0 0;
+}
+/* Lien vers le dépôt GitHub, discret en pied d'accueil. */
+.github-link {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 6px;
+  margin-top: 14px;
+  color: var(--on-green-faint);
+  font-size: 0.74rem;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.github-link:hover { color: var(--on-green); }
+.github-link svg { display: block; }
+
+/* ---------- Modale de confirmation ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(3, 30, 18, 0.66);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: modalFade 0.2s ease;
+}
+/* display:flex l'emporte sur [hidden] du navigateur : masquer explicitement. */
+.modal-overlay[hidden] { display: none; }
+@keyframes modalFade { from { opacity: 0; } to { opacity: 1; } }
+.modal-box {
+  width: 100%;
+  max-width: 380px;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 26px 24px 22px;
+  box-shadow: 0 20px 50px var(--shadow);
+  text-align: center;
+  animation: modalPop 0.28s cubic-bezier(.3, .9, .3, 1);
+}
+@keyframes modalPop {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.modal-icon { margin: 0 0 10px; font-size: 2rem; line-height: 1; }
+.modal-title {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-0);
+}
+.modal-message { margin: 0 0 20px; font-size: 0.9rem; line-height: 1.55; color: var(--text-1); }
+.modal-actions { display: flex; gap: 10px; justify-content: center; }
+.btn-modal {
+  flex: 1;
+  font-family: var(--font);
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 11px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid var(--line-strong);
+  transition: transform 0.12s ease, filter 0.12s ease, border-color 0.12s ease;
+}
+.btn-modal:active { transform: translateY(1px); }
+.btn-modal-cancel { background: transparent; color: var(--text-1); }
+.btn-modal-cancel:hover { border-color: var(--text-2); }
+.btn-modal-confirm {
+  background: var(--green);
+  color: #fff;
+  border-color: transparent;
+}
+.btn-modal-confirm:hover { filter: brightness(1.08); }
+.btn-modal-confirm.danger { background: var(--bad); color: #fff; }
+
+/* ---------- Boutons ---------- */
+.btn {
+  border: none;
+  border-radius: 13px;
+  padding: 13px 26px;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.btn:active { transform: scale(0.97); }
+/* Bouton principal : contour blanc sur le vert (cf. maquette). */
+.btn-primary {
+  background: rgba(255, 255, 255, 0.04);
+  border: 3px solid #fff;
+  color: #fff;
+  width: 100%;
+  max-width: 400px;
+}
+.btn-primary:hover { background: rgba(255, 255, 255, 0.12); }
+/* Bouton secondaire (Retour…) : pilule blanche, texte vert. */
+.btn-secondary {
+  background: var(--card-bg);
+  color: var(--green-ink);
+  font-size: 1.05rem;
+  width: 100%;
+  margin-top: 18px;
+  box-shadow: 0 6px 18px var(--shadow);
+}
+.btn-secondary:hover { background: #f2f6f1; }
+/* Retour du tunnel de création : compact, en haut à gauche de l'écran.
+   order:-1 le remonte en tête du flex-column sans toucher au HTML. */
+.creation-back {
+  order: -1;
+  align-self: flex-start;
+  width: auto;
+  margin: 0 0 14px;
+  padding: 8px 18px;
+  font-size: 0.9rem;
+}
+
+/* ---------- Titres d'écran + étapes de création ---------- */
+.screen-title {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.035em;
+  color: var(--on-green);
+  margin: 6px 0 2px;
+  text-align: center;
+}
+.screen-sub { color: var(--on-green-soft); font-size: 0.85rem; text-align: center; margin: 0 0 20px; line-height: 1.5; }
+.setup-steps { display: flex; justify-content: center; gap: 8px; margin: 4px 0 8px; }
+.step-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--on-green-line);
+}
+.step-dot.active { background: var(--gold-bright); box-shadow: 0 0 8px rgba(232, 195, 74, 0.8); }
+.step-dot.done { background: #fff; }
+.pot-stars { color: var(--gold); font-weight: 700; letter-spacing: 2px; }
+
+/* ---------- Cartes de choix (création) ---------- */
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.nat-card, .origin-card {
+  background: var(--card-bg);
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  padding: 16px 10px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--text-0);
+  font-family: var(--font);
+  font-size: 1rem;
+  box-shadow: 0 4px 14px var(--shadow);
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.nat-card:active, .origin-card:active { transform: scale(0.97); }
+.nat-card:hover, .origin-card:hover { border-color: var(--gold); }
+.nat-flag { font-size: 2rem; display: block; margin-bottom: 6px; }
+.nat-flag-img {
+  display: block;
+  width: 56px;
+  height: 38px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin: 0 auto 8px;
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 2px 8px rgba(3, 36, 21, 0.18);
+}
+.nat-name { font-weight: 600; font-size: 0.85rem; }
+.nat-count { display: block; margin-top: 4px; font-size: 0.72rem; color: var(--text-2); font-weight: 500; }
+.nat-card-back { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.nat-card-back .nat-flag { color: var(--gold-deep); }
+.nat-card-back .nat-name { color: var(--text-2); }
+
+/* Sous-étape « nom » (dans l'écran nationalité) : occupe toute la largeur de
+   la grille de cartes. Champs blancs sur le fond vert de l'écran de création. */
+.name-form { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 15px; }
+.name-field { display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.name-field > span { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.02em; color: var(--on-green-soft); }
+.name-field input {
+  width: 100%;
+  font-family: var(--font);
+  font-size: 1.1rem;
+  padding: 13px 15px;
+  border-radius: var(--radius);
+  border: 2px solid transparent;
+  background: var(--card-bg);
+  color: var(--text-0);
+  box-shadow: 0 4px 14px var(--shadow);
+}
+.name-field input:focus { outline: none; border-color: var(--gold); }
+.name-form .name-actions { display: flex; gap: 12px; margin-top: 2px; }
+.name-form .name-actions .btn { width: auto; flex: 1; margin: 0; }
+
+.list-cards { display: flex; flex-direction: column; gap: 12px; }
+.origin-card { text-align: left; padding: 16px 16px; }
+.origin-name { font-weight: 700; margin: 0 0 6px; }
+.origin-desc { color: var(--text-1); font-size: 0.85rem; margin: 0; line-height: 1.4; }
+.origin-stats { color: var(--text-2); font-size: 0.75rem; margin: 8px 0 0; letter-spacing: 0.03em; }
+
+/* ---------- Tags de niveau de club ---------- */
+.level-tag {
+  display: inline-block;
+  border-radius: 6px;
+  padding: 1px 7px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 6px;
+  vertical-align: 1px;
+  color: #fff;
+}
+.level-regional { background: var(--lvl-regional); }
+.level-d2 { background: var(--lvl-d2); }
+.level-d1 { background: var(--lvl-d1); }
+.level-elite { background: var(--lvl-elite); box-shadow: 0 0 8px rgba(201, 151, 28, 0.5); }
+.loan-tag {
+  display: inline-block;
+  border: 1px solid var(--blue);
+  color: var(--blue-soft);
+  border-radius: 6px;
+  padding: 0 6px;
+  font-size: 0.64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.club-logo {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  vertical-align: -3px;
+  margin-right: 5px;
+  border-radius: 4px;
+}
+.flag-mini {
+  width: 20px;
+  height: 13px;
+  object-fit: cover;
+  vertical-align: -1px;
+  border-radius: 2px;
+  border: 1px solid var(--line-strong);
+}
+
+/* ---------- En-tête de jeu ---------- */
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  background: var(--card-bg);
+  border-radius: 999px;
+  padding: 10px 16px;
+  margin-bottom: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  box-shadow: 0 4px 14px var(--shadow);
+}
+.hh-item { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hh-player { max-width: 34%; }
+.hh-club { max-width: 44%; text-align: right; }
+
+.game-subheader {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.sub-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: var(--card-bg);
+  border: none;
+  border-radius: 12px;
+  padding: 8px 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-0);
+  font-family: var(--font);
+  box-shadow: 0 3px 10px var(--shadow);
+}
+.ovr-badge {
+  background: linear-gradient(135deg, #fdf4d8, #f6e3a4);
+  color: var(--gold-deep);
+  font-size: 0.95rem;
+}
+.ovr-up { color: var(--good); font-size: 0.7rem; }
+.ovr-down { color: var(--bad); font-size: 0.7rem; }
+.rep-stars { color: var(--gold); letter-spacing: 2px; font-size: 0.75rem; }
+.profile-toggle { flex: 0 0 44px; cursor: pointer; }
+.profile-toggle:hover { box-shadow: 0 3px 10px var(--shadow), 0 0 0 2px var(--gold-bright) inset; }
+
+/* ---------- Jauges forme / moral ---------- */
+.gauges { display: flex; gap: 10px; margin-bottom: 8px; }
+.gauge { flex: 1; display: flex; align-items: center; gap: 8px; }
+.gauge-label { font-size: 0.68rem; color: var(--on-green-soft); text-transform: uppercase; letter-spacing: 0.05em; width: 40px; }
+.gauge-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.gauge-fill { height: 100%; border-radius: 999px; transition: width 0.6s ease; }
+.gauge-form { background: linear-gradient(90deg, #e06a5e, #f2d675 55%, #6fd6a4); }
+.gauge-moral { background: linear-gradient(90deg, #e06a5e, #7fb2ff 60%, #b7d3ff); }
+
+/* ---------- Panneau profil ---------- */
+.profile-panel {
+  display: none;
+  background: var(--card-bg);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 14px var(--shadow);
+  animation: fadeIn 0.25s ease;
+}
+.profile-panel.open { display: block; }
+.pbar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+.pbar-label { width: 96px; font-size: 0.73rem; color: var(--text-1); }
+.pbar { flex: 1; height: 7px; background: var(--panel-2); border-radius: 999px; overflow: hidden; }
+.pbar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green), var(--gold));
+  border-radius: 999px;
+  transition: width 0.5s ease;
+}
+.pbar-val { width: 26px; text-align: right; font-size: 0.75rem; font-weight: 700; }
+.profile-meta { font-size: 0.76rem; color: var(--text-1); margin: 10px 0 0; }
+.profile-traits { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+.trait-chip {
+  background: rgba(201, 151, 28, 0.12);
+  border: 1px solid rgba(201, 151, 28, 0.45);
+  color: var(--gold-soft);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.trait-none { color: var(--text-2); font-size: 0.75rem; font-style: italic; }
+
+.age-progress {
+  height: 5px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 999px;
+  margin: 0 4px 16px;
+  overflow: hidden;
+}
+.age-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #fff, var(--gold-bright));
+  border-radius: 999px;
+  transition: width 0.5s ease;
+}
+
+/* ---------- Carte de jeu ---------- */
+.card-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.game-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  border: 2px solid transparent;
+  padding: 22px 20px;
+  min-height: 340px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 30px var(--shadow);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.game-card.card-in { animation: cardIn 0.45s cubic-bezier(.3,.9,.3,1); }
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.game-card.tone-great {
+  border-color: var(--gold-bright);
+  box-shadow: 0 0 30px rgba(232, 195, 74, 0.45), 0 12px 30px var(--shadow);
+}
+.game-card.tone-good { border-color: rgba(35, 135, 90, 0.6); }
+.game-card.tone-bad { border-color: rgba(214, 72, 61, 0.5); }
+.game-card.tone-moment {
+  border-color: var(--blue);
+  box-shadow: 0 0 30px rgba(47, 111, 214, 0.35), 0 12px 30px var(--shadow);
+}
+.game-card.tone-terrible {
+  border-color: var(--bad);
+  box-shadow: 0 0 26px rgba(214, 72, 61, 0.4), 0 12px 30px var(--shadow);
+  animation: cardIn 0.45s cubic-bezier(.3,.9,.3,1), shake 0.4s ease 0.45s;
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-3px); }
+}
+
+.card-tag {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-2);
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+.card-icon { font-size: 0.95rem; margin-right: 2px; }
+
+.event-text {
+  font-size: 1rem;
+  line-height: 1.55;
+  margin: 4px 0 20px;
+  flex: 1;
+}
+.event-options { display: flex; flex-direction: column; gap: 10px; }
+.opt-btn {
+  background: var(--card-bg-2);
+  border: 1.5px solid var(--line);
+  color: var(--text-0);
+  border-radius: 12px;
+  padding: 13px 15px;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, opacity 0.2s ease;
+}
+.opt-btn:hover { background: #ecf3ec; border-color: var(--green); }
+.opt-btn:active { transform: scale(0.97); }
+.opt-btn.thinking, .opt-btn:disabled { opacity: 0.35; pointer-events: none; }
+.opt-hint {
+  display: inline-block;
+  background: rgba(47, 111, 214, 0.1);
+  border: 1px solid rgba(47, 111, 214, 0.45);
+  color: var(--blue-soft);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-right: 8px;
+  vertical-align: 1px;
+}
+
+.result-text {
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 4px 0 12px;
+  flex: 1;
+}
+
+/* Chips d'effets (deltas de stats, argent, traits…) */
+.fx-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 16px; }
+.fx-chip {
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  opacity: 0;
+  animation: chipIn 0.35s ease forwards;
+}
+@keyframes chipIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.fx-good { background: rgba(35, 135, 90, 0.1); border: 1px solid rgba(35, 135, 90, 0.5); color: var(--good-text); }
+.fx-bad { background: rgba(214, 72, 61, 0.09); border: 1px solid rgba(214, 72, 61, 0.5); color: var(--bad-text); }
+.fx-money { background: rgba(201, 151, 28, 0.11); border: 1px solid rgba(201, 151, 28, 0.5); color: var(--money); }
+.fx-trophy {
+  background: rgba(232, 195, 74, 0.16);
+  border: 1px solid rgba(201, 151, 28, 0.65);
+  color: var(--gold-soft);
+  animation: chipIn 0.35s ease forwards, trophyGlow 1.8s ease-in-out 0.5s infinite;
+}
+.fx-trait { background: rgba(47, 111, 214, 0.09); border: 1px solid rgba(47, 111, 214, 0.5); color: var(--blue-soft); }
+.fx-neutral { background: var(--panel); border: 1px solid var(--line-strong); color: var(--text-1); }
+
+.legend-line {
+  font-size: 0.8rem;
+  color: var(--gold-soft);
+  font-style: italic;
+  margin: 0 0 12px;
+}
+
+/* ---------- Récap de saison ---------- */
+.recap-headline {
+  font-size: 0.88rem;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--text-0);
+  background: var(--panel);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 10px 10px 0;
+  padding: 8px 12px;
+  margin: 0 0 12px;
+}
+.recap-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.recap-cell {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 4px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.recap-num { font-size: 1.15rem; font-weight: 800; color: var(--green); }
+.recap-lbl { font-size: 0.62rem; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.recap-line { font-size: 0.88rem; margin: 0 0 8px; color: var(--text-1); }
+.recap-line strong { color: var(--text-0); }
+.recap-trophies {
+  font-size: 0.85rem;
+  color: var(--gold-soft);
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+.recap-objective { font-size: 0.82rem; color: var(--text-1); margin: 0 0 8px; }
+.recap-bonus { color: var(--money); font-weight: 600; }
+.recap-warn { font-size: 0.8rem; color: var(--bad-text); margin: 0 0 6px; }
+.recap-money { font-size: 0.85rem; color: var(--money); font-weight: 600; margin: 0 0 8px; }
+.recap-micro { font-size: 0.8rem; color: var(--text-1); font-style: italic; margin: 0 0 6px; }
+.recap-news {
+  font-size: 0.78rem;
+  color: var(--text-2);
+  margin: 8px 0 0;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line-strong);
+}
+
+/* ---------- Coupe du Monde ---------- */
+.wc-stage {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-align: center;
+  margin: 10px 0;
+  color: var(--text-0);
+}
+.wc-champion {
+  background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: trophyGlow 1.6s ease-in-out infinite;
+}
+.wc-golden { text-align: center; color: var(--gold-soft); font-weight: 700; font-size: 0.9rem; }
+.wc-stats { text-align: center; color: var(--text-2); font-size: 0.8rem; }
+
+/* ---------- Fiche finale (carte premium par palier) ---------- */
+#screen-final { justify-content: center; }
+.player-card {
+  /* Accents surchargés par palier (tier-bronze → tier-icone) */
+  --card-accent: #d4a72c;
+  --card-soft: #a8821c;
+  position: relative;
+  margin: 0 auto 24px;
+  width: 100%;
+  background:
+    radial-gradient(ellipse at 50% -5%, color-mix(in srgb, var(--card-accent) 14%, transparent), transparent 55%),
+    linear-gradient(160deg, #ffffff, var(--card-bg-2));
+  border: 2px solid color-mix(in srgb, var(--card-accent) 70%, transparent);
+  border-radius: 22px;
+  padding: 26px 22px;
+  box-shadow: 0 0 26px color-mix(in srgb, var(--card-accent) 30%, transparent), 0 16px 40px var(--shadow);
+  text-align: center;
+  overflow: hidden;
+  animation: cardPop 0.5s ease;
+}
+.player-card.tier-bronze { --card-accent: #b5763c; --card-soft: #8f5a28; }
+.player-card.tier-argent { --card-accent: #8ca0b8; --card-soft: #5d708c; }
+.player-card.tier-or { --card-accent: #d4a72c; --card-soft: #a8821c; }
+.player-card.tier-legende { --card-accent: #2e86c1; --card-soft: #1f6a9e; }
+.player-card.tier-icone { --card-accent: #8a5fd0; --card-soft: #6f45b5; }
+.pc-tier {
+  display: inline-block;
+  margin: 2px auto 8px;
+  padding: 3px 14px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--card-accent) 65%, transparent);
+  background: color-mix(in srgb, var(--card-accent) 10%, transparent);
+  color: var(--card-soft);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+@keyframes cardPop {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+.pc-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: var(--text-1);
+  margin-bottom: 10px;
+  gap: 10px;
+}
+/* Tête de carte façon carte premium : gros général + poste + drapeau à
+   gauche, identité à droite */
+.fut-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 6px 0 12px;
+  text-align: left;
+}
+.fut-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 14px;
+  border-right: 2px solid color-mix(in srgb, var(--card-accent) 45%, transparent);
+}
+.fut-pos {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--card-soft);
+}
+.fut-flag {
+  width: 34px;
+  height: 22px;
+  object-fit: cover;
+  border-radius: 3px;
+  border: 1px solid var(--line-strong);
+  margin-top: 4px;
+}
+.fut-right { flex: 1; min-width: 0; }
+.fut-right .pc-name { text-align: left; margin: 0 0 2px; }
+.fut-right .pc-club, .fut-right .pc-trajectory { text-align: left; }
+.pc-nickname {
+  text-align: left;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--card-soft);
+  margin: 0 0 4px;
+}
+.season-up { color: var(--good); font-weight: 800; }
+.season-down { color: var(--bad); font-weight: 800; }
+
+.pc-ovr-wrap { display: flex; flex-direction: column; align-items: center; margin-bottom: 4px; }
+.pc-ovr {
+  font-size: 2.4rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--card-accent), var(--card-soft));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  line-height: 1;
+}
+.pc-ovr-label { font-size: 0.62rem; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.08em; }
+.pc-name {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin: 4px 0;
+  color: var(--text-0);
+}
+.pc-club { color: var(--text-1); font-size: 0.9rem; margin: 0 0 6px; }
+.pc-trajectory {
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--card-soft);
+  margin: 0 0 10px;
+}
+.pc-traits { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 14px; }
+.pc-section-label {
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-1);
+  margin: 0 0 8px;
+  text-align: left;
+}
+.pc-stats, .pc-trophies {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 16px;
+}
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.87rem;
+}
+.stat-label { color: var(--text-1); }
+.stat-value { font-weight: 700; color: var(--text-0); }
+.stat-row.trophy-earned .stat-value {
+  color: var(--gold-soft);
+  animation: trophyGlow 1.8s ease-in-out infinite;
+}
+@keyframes trophyGlow {
+  0%, 100% { text-shadow: none; }
+  50% { text-shadow: 0 0 12px rgba(232, 195, 74, 0.9); }
+}
+.pc-story {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--text-0);
+}
+.confetti-layer { position: absolute; inset: 0; pointer-events: none; }
+.confetti-piece {
+  position: absolute;
+  top: -10px;
+  width: 7px;
+  height: 12px;
+  opacity: 0.9;
+  animation: confettiFall 2s ease-in forwards;
+}
+@keyframes confettiFall {
+  to { transform: translateY(420px) rotate(280deg); opacity: 0; }
+}
+
+#btn-replay { align-self: center; }
+#btn-download { align-self: center; width: auto; margin: 0 0 12px; }
+
+/* ---------- Liens accueil (pilules blanches) ---------- */
+.btn-link {
+  background: var(--card-bg);
+  border: 2px solid transparent;
+  color: var(--green-ink);
+  font-size: 0.92rem;
+  font-weight: 800;
+  font-family: var(--font);
+  border-radius: 999px;
+  padding: 10px 18px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px var(--shadow);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+.btn-link:hover { transform: translateY(-1px); box-shadow: 0 6px 16px var(--shadow); border-color: var(--green); }
+.btn-link:active { transform: translateY(0); }
+/* Les 3 liens (Boutique / Badges / Panthéon) sur UNE seule ligne, même sur
+   mobile : largeurs égales, pas de retour à la ligne, libellés compactés. */
+.home-links {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+  justify-content: center;
+  width: 100%;
+  max-width: 400px;
+}
+.home-links .btn-link {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 10px 6px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 360px) {
+  .home-links .btn-link { font-size: 0.76rem; padding: 10px 4px; }
+}
+
+/* ---------- Parcours ---------- */
+.pc-path {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+  text-align: left;
+}
+.path-step {
+  position: relative;
+  padding-left: 18px;
+  border-left: 2px solid rgba(201, 151, 28, 0.4);
+  font-size: 0.85rem;
+}
+.path-step::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+.path-age { color: var(--gold-soft); font-weight: 700; margin-right: 8px; }
+.path-club { color: var(--text-0); }
+.path-country { color: var(--text-1); font-size: 0.8rem; }
+
+/* ---------- Saison par saison (repliable) ---------- */
+.seasons-toggle {
+  align-self: center;
+  margin: -6px 0 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--text-1);
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 6px 14px;
+  box-shadow: none;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.seasons-toggle:hover { border-color: var(--gold); color: var(--gold-soft); transform: none; box-shadow: none; }
+.pc-seasons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 12px;
+  text-align: left;
+}
+.season-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.74rem;
+  padding: 2px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.season-row:last-child { border-bottom: none; }
+.season-age { width: 22px; font-weight: 700; color: var(--gold-soft); }
+.season-club { flex: 1; color: var(--text-0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.season-stats { color: var(--text-1); white-space: nowrap; }
+.season-icons { min-width: 20px; text-align: right; }
+
+.final-actions { display: flex; gap: 10px; justify-content: center; }
+.final-actions .btn { width: auto; margin: 0 0 12px; }
+
+/* ---------- Face à face ---------- */
+.rival-compare { display: flex; gap: 10px; margin-bottom: 12px; }
+.rival-col {
+  flex: 1;
+  min-width: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 10px;
+  text-align: left;
+  box-shadow: 0 4px 12px rgba(3, 36, 21, 0.12);
+}
+.rival-col-name {
+  font-weight: 700;
+  font-size: 0.82rem;
+  margin: 0 0 2px;
+  color: var(--text-0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rival-col-tier { font-size: 0.72rem; color: var(--gold-soft); margin: 0 0 10px; }
+.rival-col-stats .stat-row { font-size: 0.76rem; }
+.rival-verdict {
+  font-style: italic;
+  font-size: 0.85rem;
+  text-align: center;
+  color: var(--text-0);
+  margin-bottom: 18px;
+}
+
+/* ---------- Chemin non emprunté ---------- */
+.pc-untaken {
+  font-size: 0.82rem;
+  font-style: italic;
+  color: var(--text-1);
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line-strong);
+}
+
+/* ---------- Note de badge ---------- */
+.badge-unlock-note {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--gold-soft);
+  text-align: center;
+  margin-top: 10px;
+}
+
+/* ---------- Écran badges (groupés par catégorie) ---------- */
+.badge-grid { margin-bottom: 20px; }
+.badge-progress {
+  position: relative;
+  height: 22px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.badge-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #fff, var(--gold-bright));
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+.badge-progress-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+.badge-cat-header {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--on-green);
+  margin: 16px 0 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.badge-cat-count { font-size: 0.7rem; color: var(--gold-bright); font-weight: 700; font-family: var(--font); }
+.badge-cat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.badge-item {
+  background: var(--card-bg);
+  border: 2px solid transparent;
+  border-radius: 14px;
+  padding: 14px 8px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  box-shadow: 0 4px 12px var(--shadow);
+}
+.badge-item.unlocked { border-color: rgba(201, 151, 28, 0.65); }
+.badge-item.badge-platine.unlocked {
+  border-color: rgba(138, 95, 208, 0.75);
+  box-shadow: 0 0 18px rgba(138, 95, 208, 0.4);
+}
+.badge-item.locked { background: rgba(255, 255, 255, 0.82); }
+.badge-icon { font-size: 1.7rem; }
+.badge-item.locked .badge-icon { filter: grayscale(1) brightness(0.75); opacity: 0.5; }
+.badge-name { font-size: 0.63rem; font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; color: var(--text-0); }
+@media (max-width: 360px) { .badge-name { font-size: 0.58rem; } }
+.badge-item.locked .badge-name { color: var(--text-1); opacity: 0.7; }
+.badge-hint { font-size: 0.62rem; color: var(--text-2); font-style: italic; line-height: 1.3; }
+.badge-context {
+  font-size: 0.58rem;
+  color: var(--gold-soft);
+  line-height: 1.3;
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--line);
+}
+#btn-badges-back { align-self: center; }
+
+/* ---------- Écran Panthéon ---------- */
+.pantheon-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+.pantheon-card {
+  background: var(--card-bg);
+  border-left: 4px solid var(--gold);
+  border-radius: 14px;
+  padding: 14px 16px;
+  text-align: left;
+  box-shadow: 0 4px 14px var(--shadow);
+}
+.pantheon-name { font-weight: 700; font-size: 0.95rem; margin: 0 0 2px; color: var(--text-0); }
+.pantheon-title { font-size: 0.8rem; color: var(--gold-soft); margin: 0 0 8px; }
+.pantheon-trophies { font-size: 0.82rem; color: var(--text-1); margin: 0; }
+/* Carte cliquable : rouvre la fiche finale complète de la légende. */
+.pantheon-clickable { cursor: pointer; transition: transform 0.12s ease, box-shadow 0.12s ease; }
+.pantheon-clickable:hover { transform: translateY(-2px); box-shadow: 0 8px 22px var(--shadow); }
+.pantheon-clickable:active { transform: scale(0.99); }
+.pantheon-see { margin: 8px 0 0; font-size: 0.74rem; font-weight: 600; color: var(--green-ink); opacity: 0.75; }
+.pantheon-empty { text-align: center; color: var(--on-green-soft); font-style: italic; margin-top: 40px; }
+#btn-pantheon-back { align-self: center; }

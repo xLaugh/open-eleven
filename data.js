@@ -1,0 +1,4630 @@
+/* ============================================================
+   DONNÉES DU JEU v2 — aucune logique ici, uniquement du contenu.
+   Toute la mécanique vit dans engine.js, l'UI dans game.js.
+
+   Format des effets ("fx") d'une issue d'événement :
+     t / p / m / c : deltas Technique / Physique / Mental / Charisme
+     rep           : delta Réputation (0-100, amplifié par la visibilité
+                     médiatique du club pour les gains)
+     form / mor    : deltas Forme / Moral (jauges 0-100)
+     dis           : delta Discipline (hygiène de vie, 0-100)
+     coach / team  : deltas Relation coach / Relation vestiaire (0-100)
+     money         : delta fortune en M€ (peut être négatif)
+     inj           : semaines d'indisponibilité cette saison
+     pot           : delta sur le potentiel caché (rare)
+     trait         : id d'un trait débloqué (cf. TRAITS)
+     flag          : pose un drapeau d'histoire (storylines)
+     clearFlag     : retire un drapeau
+     transfer      : { d: -2..2 (delta de niveau), cross: bool,
+                       exotic: bool } → génère des offres concrètes
+     loan          : true → propose un prêt d'une saison (niveau inférieur)
+     sched         : { id, inYears } → programme un événement futur
+                     (conséquence à retardement, cf. scheduledOnly)
+     trophy        : "league" | "cup" | "continental" (gagné cette saison)
+     natCall       : true → première convocation en sélection
+     natRetire     : true → retraite internationale
+     retire        : true → raccroche à la fin de la saison
+     end           : "injury" | "medical" → carrière stoppée net
+
+   Conditions ("cond") d'un événement :
+     aMin/aMax, levels:["elite"], pos:["att"], origin:"quartier",
+     lifestyle:"pro", entourage:"crew", minDis/maxDis, minCoach/maxCoach,
+     minTeam/maxTeam, loan:true|false (en prêt ou non),
+     minRep/maxRep, minOvr/maxOvr, minMoney, minForm/maxForm,
+     minMor/maxMor, flag, notFlag, trait, notTrait,
+     nat:true|false (en sélection ou non), wc:true (année de CDM),
+     chance: 0-1 (disponibilité aléatoire cette saison-là)
+   ============================================================ */
+
+// --- Marque / crédit (personnalisez librement) ------------------------
+// Le nom du jeu est injecté partout depuis ici : une seule ligne à
+// changer pour rebaptiser le jeu (titre, accueil, fiche partageable).
+const BRAND = {
+  game: "OPEN ELEVEN",
+  author: "", // crédit masqué
+  designer: "", // crédit masqué
+  tagline: "Écrivez votre légende du football",
+  url: "https://openeleven.laugh.yt", // ← domaine d'hébergement RÉEL (ne pas changer sans migrer le site + les images de partage)
+  hashtag: "#OpenEleven",
+};
+
+// --- Nationalités jouables ----------------------------------------------
+// weight : multiplicateur de chances en sélection (CDM, Ballon d'Or).
+// img : drapeau officiel (src/img/flag). L'emoji reste utilisé dans les
+// textes inline (header, récits). Pour ajouter un pays : une entrée ici,
+// ses clubs dans CLUBS, son pool de noms dans NAME_POOLS, et c'est tout.
+const NATIONALITIES = [
+  { id: "fr", name: "France", flag: "🇫🇷", img: "src/img/flag/Flag_of_France.png", weight: 1, wcWeight: 1, homeCountryId: "fr" },
+  { id: "de", name: "Allemagne", flag: "🇩🇪", img: "src/img/flag/Drapeau-Allemagne.png", weight: 0.95, wcWeight: 0.95, homeCountryId: "de" },
+  { id: "es", name: "Espagne", flag: "🇪🇸", img: "src/img/flag/Spain_flag_300.png", weight: 0.95, wcWeight: 0.9, homeCountryId: "es" },
+  { id: "it", name: "Italie", flag: "🇮🇹", img: "src/img/flag/Flag_of_Italy_(1946–2003).png", weight: 0.9, wcWeight: 0.9, homeCountryId: "it" },
+  { id: "en", name: "Angleterre", flag: "🇬🇧", img: "src/img/flag/Drapeau-Angleterre.png", weight: 0.95, wcWeight: 0.88, homeCountryId: "en" },
+  { id: "br", name: "Brésil", flag: "🇧🇷", img: "src/img/flag/Brazil_flag_300.png", weight: 1, wcWeight: 1, homeCountryId: "br" },
+  { id: "ar", name: "Argentine", flag: "🇦🇷", img: "src/img/flag/Flag_of_Argentina.png", weight: 1, wcWeight: 1, homeCountryId: "ar" },
+  { id: "nl", name: "Pays-Bas", flag: "🇳🇱", img: "src/img/flag/Flag_of_Netherlands.png", weight: 0.7, wcWeight: 0.45, homeCountryId: "nl" },
+  { id: "pt", name: "Portugal", flag: "🇵🇹", img: "src/img/flag/Flag_of_Portugal.png", weight: 0.6, wcWeight: 0.42, homeCountryId: "pt" },
+  { id: "be", name: "Belgique", flag: "🇧🇪", img: "src/img/flag/Flag_of_Belgium.png", weight: 0.6, wcWeight: 0.38, homeCountryId: "be" },
+  { id: "hr", name: "Croatie", flag: "🇭🇷", img: "src/img/flag/Flag_of_Croatia.png", weight: 0.55, wcWeight: 0.34, homeCountryId: "hr" },
+  { id: "uy", name: "Uruguay", flag: "🇺🇾", img: "src/img/flag/Flag_of_Uruguay.png", weight: 0.55, wcWeight: 0.5, homeCountryId: "uy" },
+  { id: "ma", name: "Maroc", flag: "🇲🇦", img: "src/img/flag/Flag_of_Morocco.png", weight: 0.45, wcWeight: 0.22, homeCountryId: "ma" },
+  { id: "mx", name: "Mexique", flag: "🇲🇽", img: "src/img/flag/Flag_of_Mexico.png", weight: 0.42, wcWeight: 0.18, homeCountryId: "mx" },
+  { id: "co", name: "Colombie", flag: "🇨🇴", img: "src/img/flag/Flag_of_Colombia.png", weight: 0.42, wcWeight: 0.18, homeCountryId: "co" },
+  { id: "ch", name: "Suisse", flag: "🇨🇭", img: "src/img/flag/Flag_of_Switzerland.png", weight: 0.4, wcWeight: 0.16, homeCountryId: "ch" },
+  { id: "sn", name: "Sénégal", flag: "🇸🇳", img: "src/img/flag/Flag_of_Senegal.png", weight: 0.4, wcWeight: 0.16, homeCountryId: "sn" },
+  { id: "tr", name: "Turquie", flag: "🇹🇷", img: "src/img/flag/Flag_of_Turkey.png", weight: 0.4, wcWeight: 0.15, homeCountryId: "tr" },
+  { id: "cm", name: "Cameroun", flag: "🇨🇲", img: "src/img/flag/Flag_of_Cameroon.png", weight: 0.38, wcWeight: 0.12, homeCountryId: "cm" },
+  { id: "ci", name: "Côte d'Ivoire", flag: "🇨🇮", img: "src/img/flag/Drapeau-CIV.png", weight: 0.36, wcWeight: 0.12, homeCountryId: "ci" },
+  { id: "dz", name: "Algérie", flag: "🇩🇿", img: "src/img/flag/Flag_of_Algeria.png", weight: 0.34, wcWeight: 0.12, homeCountryId: "dz" },
+  { id: "tn", name: "Tunisie", flag: "🇹🇳", img: "src/img/flag/Flag_of_Tunisia.png", weight: 0.32, wcWeight: 0.1, homeCountryId: "tn" },
+  { id: "no", name: "Norvège", flag: "🇳🇴", img: "src/img/flag/Flag_of_Norway.png", weight: 0.3, wcWeight: 0.1, homeCountryId: "no" },
+  { id: "fi", name: "Finlande", flag: "🇫🇮", img: "src/img/flag/Flag_of_Finland.png", weight: 0.25, wcWeight: 0.05, homeCountryId: "fi" },
+  { id: "se", name: "Suède", flag: "🇸🇪", img: "src/img/flag/Flag_of_Sweden.png", weight: 0.45, wcWeight: 0.15, homeCountryId: "se" },
+  { id: "pl", name: "Pologne", flag: "🇵🇱", img: "src/img/flag/Flag_of_Poland.png", weight: 0.5, wcWeight: 0.18, homeCountryId: "pl" },
+  { id: "bg", name: "Bulgarie", flag: "🇧🇬", img: "src/img/flag/Flag_of_Bulgaria.png", weight: 0.3, wcWeight: 0.1, homeCountryId: "bg" },
+  { id: "jp", name: "Japon", flag: "🇯🇵", img: "src/img/flag/Flag_of_Japan.png", weight: 0.42, wcWeight: 0.13, homeCountryId: "jp" },
+  { id: "kr", name: "Corée du Sud", flag: "🇰🇷", img: "src/img/flag/Flag_of_South_Korea.png", weight: 0.4, wcWeight: 0.12, homeCountryId: "kr" },
+  { id: "cn", name: "Chine", flag: "🇨🇳", img: "src/img/flag/Flag_of_China.png", weight: 0.2, wcWeight: 0.05, homeCountryId: "cn" },
+  { id: "au", name: "Australie", flag: "🇦🇺", img: "src/img/flag/Flag_of_Australia.png", weight: 0.4, wcWeight: 0.12, homeCountryId: "au" },
+  { id: "nz", name: "Nouvelle-Zélande", flag: "🇳🇿", img: "src/img/flag/Flag_of_New_Zealand.png", weight: 0.22, wcWeight: 0.05, homeCountryId: "nz" },
+  { id: "pg", name: "Papouasie-Nouvelle-Guinée", flag: "🇵🇬", img: "src/img/flag/Flag_of_Papua_New_Guinea.png", weight: 0.12, wcWeight: 0.02, homeCountryId: "pg" },
+  { id: "cd", name: "RDC", flag: "🇨🇩", img: "src/img/flag/Flag_of_RDC.png", weight: 0.28, wcWeight: 0.08, homeCountryId: "cd" },
+  { id: "gn", name: "Guinée", flag: "🇬🇳", img: "src/img/flag/Flag_of_Guinea.png", weight: 0.25, wcWeight: 0.07, homeCountryId: "gn" },
+  { id: "bj", name: "Bénin", flag: "🇧🇯", img: "src/img/flag/Flag_of_Benin.png", weight: 0.2, wcWeight: 0.05, homeCountryId: "bj" },
+];
+
+// Prénoms/noms par nationalité (génération du joueur et du rival).
+const NAME_POOLS = {
+  fr: { first: ["Théo", "Enzo", "Kylian", "Maël", "Rayan", "Antoine", "Jules", "Sofiane"], last: ["Moreau", "Dubois", "Diallo", "Lefèvre", "Marchand", "Girard", "Benali", "Roche"] },
+  br: { first: ["Thiago", "Gabriel", "Vinícius", "João", "Caio", "Rafael", "Matheus", "Luan"], last: ["Silva", "Santos", "Oliveira", "Costa", "Ferreira", "Rocha", "Almeida", "Moraes"] },
+  en: { first: ["Harry", "Jude", "Ollie", "Marcus", "Callum", "Reece", "Jack", "Theo"], last: ["Walker", "Bennett", "Shaw", "Hughes", "Palmer", "Barnes", "Ward", "Foster"] },
+  es: { first: ["Pablo", "Álvaro", "Iker", "Dani", "Sergio", "Marcos", "Adrián", "Unai"], last: ["García", "Navarro", "Torres", "Vidal", "Serrano", "Iglesias", "Romero", "Alonso"] },
+  it: { first: ["Matteo", "Lorenzo", "Federico", "Sandro", "Nicolò", "Davide", "Marco", "Gianluca"], last: ["Bianchi", "Ricci", "Conti", "Greco", "Marino", "Ferrara", "Gallo", "Rizzo"] },
+  de: { first: ["Leon", "Jamal", "Florian", "Niklas", "Jonas", "Kai", "Timo", "Maximilian"], last: ["Müller", "Wagner", "Fischer", "Becker", "Hoffmann", "Schulz", "Krüger", "Brandt"] },
+  pt: { first: ["Miguel", "André", "Pedro", "Ricardo", "Tiago", "Hugo", "Bruno", "Filipe"], last: ["Costa", "Pereira", "Oliveira", "Sousa", "Rodrigues", "Martins", "Gomes", "Lopes"] },
+  tr: { first: ["Mehmet", "Mustafa", "Ahmet", "Ali", "Emre", "Burak", "Murat", "Serkan"], last: ["Yılmaz", "Kaya", "Demir", "Şahin", "Çelik", "Yıldız", "Aydın", "Öztürk"] },
+  ma: { first: ["Mohamed", "Youssef", "Karim", "Omar", "Hamza", "Anas", "Reda", "Mehdi"], last: ["Alaoui", "Bennani", "Idrissi", "El Amrani", "Bouchta", "Sqalli", "Berrada", "Lahlou"] },
+  sn: { first: ["Moussa", "Abdou", "Ousmane", "Modou", "Cheikh", "Alioune", "Mamadou", "Babacar"], last: ["Diop", "Ndiaye", "Fall", "Sow", "Ba", "Sy", "Diouf", "Sène"] },
+  ci: { first: ["Koffi", "Yao", "Konan", "Aboubacar", "Ismaël", "Sékou", "Adama", "Brou"], last: ["Koné", "Kouassi", "Kouadio", "Aka", "Bamba", "Diaby", "Konaté", "N'Guessan"] },
+  dz: { first: ["Mohamed", "Amine", "Yacine", "Karim", "Sofiane", "Bilal", "Rachid", "Farid"], last: ["Benali", "Belkacem", "Haddad", "Meziane", "Mansouri", "Cherif", "Bouazza", "Saadi"] },
+  nl: { first: ["Bram", "Sem", "Lars", "Thijs", "Tim", "Jesse", "Stijn", "Bas"], last: ["Jansen", "van den Berg", "Bakker", "Smit", "Mulder", "de Boer", "Willems", "Vos"] },
+  ar: { first: ["Santiago", "Mateo", "Bautista", "Benjamín", "Tomás", "Joaquín", "Lucas", "Facundo"], last: ["González", "Rodríguez", "Fernández", "López", "García", "Pérez", "Gómez", "Díaz"] },
+  tn: { first: ["Mohamed", "Amine", "Wassim", "Bilel", "Nizar", "Oussama", "Hedi", "Skander"], last: ["Ben Ali", "Trabelsi", "Gharbi", "Chaabane", "Nasri", "Bouazizi", "Mejri", "Hamdi"] },
+  gn: { first: ["Mamadou", "Ibrahima", "Alpha", "Ousmane", "Sékou", "Aboubacar", "Mohamed", "Thierno"], last: ["Diallo", "Barry", "Bah", "Camara", "Sylla", "Condé", "Touré", "Sow"] },
+  cm: { first: ["Jean", "Paul", "Éric", "Serge", "Landry", "Bertrand", "Aurélien", "Hervé"], last: ["Ndongo", "Mbarga", "Fotso", "Ateba", "Etoundi", "Manga", "Owona", "Essomba"] },
+  be: { first: ["Thomas", "Louis", "Lucas", "Nathan", "Maxime", "Simon", "Victor", "Arthur"], last: ["Peeters", "Janssens", "Maes", "Wouters", "Claes", "Willems", "Goossens", "De Smet"] },
+  ch: { first: ["Luca", "Noah", "Leon", "Elias", "Nico", "Julian", "Fabio", "Samuel"], last: ["Müller", "Meier", "Schmid", "Keller", "Weber", "Huber", "Steiner", "Brunner"] },
+  no: { first: ["Håkon", "Magnus", "Emil", "Oskar", "Henrik", "Even", "Sindre", "Jonas"], last: ["Hansen", "Johansen", "Olsen", "Larsen", "Andersen", "Pedersen", "Nilsen", "Kristiansen"] },
+  fi: { first: ["Teemu", "Joel", "Onni", "Eetu", "Niko", "Leo", "Aleksi", "Miro"], last: ["Virtanen", "Korhonen", "Nieminen", "Mäkelä", "Hämäläinen", "Laine", "Koskinen", "Heikkinen"] },
+  se: { first: ["Erik", "Gustav", "Lars", "Anders", "Johan", "Nils", "Oskar", "Emil"], last: ["Andersson", "Johansson", "Karlsson", "Nilsson", "Eriksson", "Olsson", "Persson", "Svensson"] },
+  pl: { first: ["Jakub", "Piotr", "Michał", "Tomasz", "Marcin", "Paweł", "Krzysztof", "Mateusz"], last: ["Nowak", "Kowalski", "Wiśniewski", "Wójcik", "Kowalczyk", "Kamiński", "Kaczmarek", "Mazur"] },
+  bg: { first: ["Georgi", "Ivan", "Dimitar", "Nikolay", "Stefan", "Petar", "Aleksandar", "Martin"], last: ["Ivanov", "Georgiev", "Dimitrov", "Petrov", "Kolev", "Stoyanov", "Todorov", "Angelov"] },
+  jp: { first: ["Haruto", "Sota", "Yuto", "Ren", "Riku", "Kaito", "Sora", "Hinata"], last: ["Sato", "Suzuki", "Takahashi", "Tanaka", "Watanabe", "Ito", "Yamamoto", "Nakamura"] },
+  kr: { first: ["Min-jun", "Seo-jun", "Do-yun", "Ji-ho", "Ha-jun", "Eun-woo", "Si-woo", "Ju-won"], last: ["Kim", "Lee", "Park", "Choi", "Jung", "Kang", "Cho", "Yoon"] },
+  cn: { first: ["Wei", "Hao", "Jun", "Lei", "Ming", "Peng", "Tao", "Bo"], last: ["Wang", "Li", "Zhang", "Liu", "Chen", "Yang", "Zhao", "Huang"] },
+  au: { first: ["Jack", "Liam", "Noah", "Oliver", "William", "Cooper", "Lachlan", "Ethan"], last: ["Smith", "Jones", "Williams", "Brown", "Wilson", "Taylor", "White", "Ryan"] },
+  nz: { first: ["James", "Ben", "Riley", "Cody", "Kane", "Tama", "Nikau", "Ari"], last: ["Walker", "Thompson", "Baker", "Ngata", "Wright", "Reid", "Harris", "Rewiti"] },
+  pg: { first: ["David", "John", "Peter", "Samuel", "Raymond", "Nigel", "Tau", "Kolu"], last: ["Kila", "Wai", "Aria", "Bai", "Gau", "Namu", "Lohia", "Vada"] },
+  mx: { first: ["José", "Juan", "Luis", "Carlos", "Miguel", "Diego", "Fernando", "Ángel"], last: ["Hernández", "García", "Martínez", "López", "González", "Pérez", "Sánchez", "Ramírez"] },
+  co: { first: ["Andrés", "Camilo", "Julián", "Santiago", "Sebastián", "Mateo", "Felipe", "Juan"], last: ["Rodríguez", "Gómez", "González", "Martínez", "García", "López", "Ramírez", "Muñoz"] },
+  bj: { first: ["Kévin", "Rodrigue", "Cédric", "Marcel", "David", "Sylvain", "Roland", "Gaël"], last: ["Hounkpatin", "Dossou", "Gbaguidi", "Tossou", "Agbessi", "Aholou", "Houngbédji", "Adjovi"] },
+  hr: { first: ["Ivan", "Marko", "Ante", "Tomislav", "Petar", "Filip", "Domagoj", "Karlo"], last: ["Horvat", "Kovačević", "Babić", "Marić", "Jurić", "Novak", "Knežević", "Petrović"] },
+  uy: { first: ["Santiago", "Mateo", "Bruno", "Joaquín", "Emiliano", "Gonzalo", "Martín", "Nicolás"], last: ["Rodríguez", "Fernández", "González", "Pérez", "García", "Martínez", "López", "Silva"] },
+  cd: { first: ["Jean", "Christian", "Yannick", "Glody", "Trésor", "Gédéon", "Fiston", "Divin"], last: ["Kabongo", "Mukendi", "Ilunga", "Tshimanga", "Kalala", "Kasongo", "Mwamba", "Ngoy"] },
+};
+
+// --- Hygiène de vie (choisie à la création) ---------------------------------
+// fx appliqués au départ + potBonus sur le potentiel caché.
+const LIFESTYLES = [
+  { id: "pro", name: "Hygiène de pro", icon: "🥗", desc: "Couché à 22h, diète stricte, zéro écart. Les coéquipiers se moquent, les recruteurs adorent.", fx: { dis: 18, form: 6, c: -4 }, potBonus: 2 },
+  { id: "balance", name: "Équilibré", icon: "⚖️", desc: "Sérieux à l'entraînement, détendu en dehors. Ni moine, ni fêtard.", fx: { dis: 6, mor: 4 }, potBonus: 0 },
+  { id: "street", name: "La belle vie", icon: "🎉", desc: "Les sorties, les potes, les réseaux. Le talent fera le reste… non ?", fx: { dis: -12, c: 8, mor: 6, form: -4 }, potBonus: -1 },
+];
+
+// --- Entourage (choisi à la création) ----------------------------------------
+// academy : modificateurs de poids sur le niveau du centre de formation
+// qui vous repère. flag : drapeau d'histoire posé dès le départ.
+const ENTOURAGES = [
+  { id: "family", name: "Famille encadrante", icon: "👨‍👩‍👦", desc: "Des parents présents qui gèrent tout : contrats, école, équilibre.", fx: { dis: 8, m: 4 }, academy: { d1: 6, elite: 2 } },
+  { id: "shark", name: "Agent ambitieux", icon: "🦈", desc: "Un jeune agent aux dents longues vous a repéré. Il promet les sommets — et prend sa part.", fx: { rep: 6, dis: -4 }, academy: { elite: 10, d1: 2 }, flag: "shark_agent" },
+  { id: "crew", name: "La bande du quartier", icon: "🤙", desc: "Vos amis d'enfance vous suivent partout. Fidèles, bruyants, incontrôlables.", fx: { c: 6, mor: 8, dis: -8 }, academy: { regional: 8, elite: -6 }, flag: "crew_entourage" },
+];
+
+// --- Trajectoires de carrière -------------------------------------------
+// Tirée en secret à la création (biais selon l'origine), révélée sur la
+// fiche finale. Module la vitesse de progression selon l'âge — c'est elle
+// qui permet les phénomènes à 85 d'OVR à 20 ans comme les carrières en
+// dents de scie. w = poids de tirage.
+const TRAJECTORIES = [
+  { id: "normal", w: 26, label: "Progression classique", desc: "Une montée en puissance régulière." },
+  { id: "steady", w: 13, label: "Lente mais sûre", desc: "Moins de fulgurances, plus de longévité." },
+  { id: "early", w: 11, label: "Explosion précoce", desc: "Un talent qui brûle les étapes dès l'adolescence." },
+  { id: "late", w: 12, label: "Révélation tardive", desc: "Le déclic arrive quand on ne l'attendait plus." },
+  { id: "chaotic", w: 12, label: "Montagnes russes", desc: "Des saisons stratosphériques, d'autres à oublier." },
+  { id: "unstable", w: 9, label: "Diamant instable", desc: "Un potentiel immense, un équilibre fragile." },
+  { id: "flash", w: 8, label: "Météore", desc: "Phénoménal à 18 ans… puis le plafond arrive vite." },
+  { id: "surge", w: 9, label: "Déclic fulgurant", desc: "Banal des années, puis une explosion soudaine." },
+];
+
+// --- Postes -------------------------------------------------------------
+// goalRate/assistRate : rendement offensif de base par match (modulé
+// par la technique et la forme dans engine.js).
+const POSITIONS = [
+  { id: "att", name: "Attaquant", icon: "⚡", goalRate: 0.6, assistRate: 0.18, desc: "Vivre et mourir pour le but. Les statistiques qui font les légendes… et les critiques quand elles se tarissent." },
+  { id: "mil", name: "Milieu", icon: "🎩", goalRate: 0.24, assistRate: 0.4, desc: "Le chef d'orchestre. Moins de buts, plus de contrôle : c'est vous qui donnez le tempo du jeu." },
+  { id: "def", name: "Défenseur", icon: "🛡️", goalRate: 0.08, assistRate: 0.09, desc: "L'art de l'ombre. Peu de gloire statistique, mais les grandes équipes se construisent derrière." },
+  { id: "gk", name: "Gardien", icon: "🧤", goalRate: 0.004, assistRate: 0.01, desc: "Seul face à tous. Un poste ingrat où une carrière se joue sur des réflexes et des nerfs d'acier." },
+];
+
+// --- Archétypes de jeu (spécialisation choisie entre 18 et 21 ans) ----------
+// mods : multiplicateurs appliqués chaque saison — goals/assists/cs
+// (clean sheets), rating (delta sur la note), mGrowth (mental annuel bonus).
+// Un archétype rend les statistiques crédibles : un renard des surfaces
+// marque plus mais crée moins, un maestro distribue mais défend peu.
+const ARCHETYPES = [
+  // Attaquants
+  { id: "fox", pos: "att", name: "Renard des surfaces", icon: "🦊", desc: "Toujours au bon endroit. Le but avant tout, le reste ensuite.", effect: "+30% buts · −35% passes décisives", mods: { goals: 1.3, assists: 0.65 } },
+  { id: "complete", pos: "att", name: "Attaquant complet", icon: "🎯", desc: "Marquer, faire marquer, peser sur chaque défense.", effect: "+8% buts · +15% passes · note +0,05", mods: { goals: 1.08, assists: 1.15, rating: 0.05 } },
+  { id: "winger", pos: "att", name: "Ailier dribbleur", icon: "🌀", desc: "Le déséquilibre permanent : un contre un, encore et encore.", effect: "+40% passes décisives · −15% buts", mods: { goals: 0.85, assists: 1.4 } },
+  { id: "false9", pos: "att", name: "Faux neuf", icon: "🎭", desc: "Décrocher, aimanter, libérer les autres : l'attaquant chef d'orchestre.", effect: "+55% passes · −25% buts · note +0,05", mods: { goals: 0.75, assists: 1.55, rating: 0.05 } },
+  // Milieux
+  { id: "anchor", pos: "mil", name: "Sentinelle", icon: "⚓", desc: "L'équilibre de toute l'équipe repose sur vos épaules.", effect: "note +0,15 · peu de stats offensives", mods: { goals: 0.5, assists: 0.75, rating: 0.15 } },
+  { id: "b2b", pos: "mil", name: "Box-to-box", icon: "🚂", desc: "Douze kilomètres par match, présent dans les deux surfaces.", effect: "+25% buts · +5% passes", mods: { goals: 1.25, assists: 1.05 } },
+  { id: "maestro", pos: "mil", name: "Maestro", icon: "🎼", desc: "Le tempo, les angles, la dernière passe : tout passe par vous.", effect: "+50% passes décisives · −20% buts", mods: { goals: 0.8, assists: 1.5 } },
+  { id: "cam", pos: "mil", name: "Meneur offensif", icon: "✨", desc: "Entre les lignes, là où se décident les matchs.", effect: "+35% buts · +25% passes · note −0,05", mods: { goals: 1.35, assists: 1.25, rating: -0.05 } },
+  // Défenseurs
+  { id: "stopper", pos: "def", name: "Stoppeur", icon: "🧱", desc: "Le duel, l'impact, le kilomètre zéro de la défense.", effect: "note +0,10 · duels gagnés", mods: { goals: 0.9, assists: 0.7, rating: 0.1 } },
+  { id: "libero", pos: "def", name: "Défenseur relanceur", icon: "🧭", desc: "La première passe qui casse les lignes part de vos pieds.", effect: "+50% passes décisives · note +0,05", mods: { assists: 1.5, rating: 0.05 } },
+  { id: "wingback", pos: "def", name: "Latéral offensif", icon: "🛩️", desc: "Un couloir entier pour vous, de votre surface à la leur.", effect: "+90% passes · +30% buts · note −0,05", mods: { goals: 1.3, assists: 1.9, rating: -0.05 } },
+  { id: "boss", pos: "def", name: "Patron de la défense", icon: "🛡️", desc: "La voix qui organise, replace et rassure toute une équipe.", effect: "note +0,15 · mental +1 par saison", mods: { rating: 0.15, mGrowth: 1 } },
+  // Gardiens
+  { id: "line", pos: "gk", name: "Gardien de ligne", icon: "🥅", desc: "Sur sa ligne, tout simplement infranchissable.", effect: "+15% clean sheets", mods: { cs: 1.15 } },
+  { id: "sweeper", pos: "gk", name: "Gardien moderne", icon: "🧹", desc: "Onzième joueur de champ, première relance de l'équipe.", effect: "+5% clean sheets · relances décisives · note +0,05", mods: { cs: 1.05, assists: 2, rating: 0.05 } },
+  { id: "aerial", pos: "gk", name: "Maître des airs", icon: "🪂", desc: "Chaque centre est une prise, chaque corner un soulagement.", effect: "+10% clean sheets · note +0,05", mods: { cs: 1.1, rating: 0.05 } },
+  { id: "reflex", pos: "gk", name: "Gardien réflexes", icon: "⚡", desc: "L'arrêt impossible, votre spécialité.", effect: "+20% clean sheets", mods: { cs: 1.2 } },
+];
+
+// --- Origines sociales ----------------------------------------------------
+// startStats : { t, p, m, c, rep } — visibles par le joueur cette fois.
+const ORIGINS = [
+  { id: "formation", name: "Centre de formation classique", desc: "Un parcours académique, encadré et rigoureux depuis le plus jeune âge.", startStats: { t: 56, p: 54, m: 50, c: 42, rep: 18 } },
+  { id: "sportif", name: "Fils de sportif pro", desc: "Un nom qui ouvre des portes, et une pression qui ne vous quitte jamais.", startStats: { t: 52, p: 55, m: 44, c: 55, rep: 32 } },
+  { id: "quartier", name: "Quartier populaire", desc: "Tout appris dans la rue et sur des terrains vagues, à la dure.", startStats: { t: 60, p: 52, m: 58, c: 45, rep: 10 } },
+  { id: "futsal", name: "Prodige du futsal", desc: "Des pieds en or forgés en salle. Le grand terrain reste à apprivoiser.", startStats: { t: 64, p: 42, m: 48, c: 46, rep: 14 } },
+  { id: "tardif", name: "Révélé sur le tard", desc: "Personne ne croyait en vous. Le physique et la rage comme seuls bagages.", startStats: { t: 47, p: 60, m: 62, c: 38, rep: 5 } },
+];
+
+// --- Pays de club ---------------------------------------------------------
+// exotic : destination "fin de carrière dorée" (salaires gonflés, jamais
+// un pays de départ). salaryMult : multiplicateur de salaire local.
+const COUNTRIES = [
+  { id: "fr", name: "France", flag: "🇫🇷", img: "src/img/flag/Flag_of_France.png", of: "de France", salaryMult: 1, growthMult: 1, mediaMult: 1, continent: "eu" },
+  { id: "de", name: "Allemagne", flag: "🇩🇪", img: "src/img/flag/Drapeau-Allemagne.png", of: "d'Allemagne", salaryMult: 1.05, growthMult: 1, mediaMult: 1, continent: "eu" },
+  { id: "es", name: "Espagne", flag: "🇪🇸", img: "src/img/flag/Spain_flag_300.png", of: "d'Espagne", salaryMult: 1.1, growthMult: 1, mediaMult: 1, continent: "eu" },
+  { id: "it", name: "Italie", flag: "🇮🇹", img: "src/img/flag/Flag_of_Italy_(1946–2003).png", of: "d'Italie", salaryMult: 1, growthMult: 1, mediaMult: 1, continent: "eu" },
+  { id: "en", name: "Angleterre", flag: "🇬🇧", img: "src/img/flag/Drapeau-Angleterre.png", of: "d'Angleterre", salaryMult: 1.4, growthMult: 1, mediaMult: 1, continent: "eu" },
+  { id: "br", name: "Brésil", flag: "🇧🇷", img: "src/img/flag/Brazil_flag_300.png", of: "du Brésil", salaryMult: 0.6, growthMult: 0.95, mediaMult: 0.9, continent: "am" },
+  { id: "ar", name: "Argentine", flag: "🇦🇷", img: "src/img/flag/Flag_of_Argentina.png", of: "d'Argentine", salaryMult: 0.6, growthMult: 0.95, mediaMult: 0.9, continent: "am" },
+  { id: "nl", name: "Pays-Bas", flag: "🇳🇱", img: "src/img/flag/Flag_of_Netherlands.png", of: "des Pays-Bas", salaryMult: 0.72, growthMult: 0.92, mediaMult: 0.82, contMult: 0.35, continent: "eu" },
+  { id: "pt", name: "Portugal", flag: "🇵🇹", img: "src/img/flag/Flag_of_Portugal.png", of: "du Portugal", salaryMult: 0.7, growthMult: 0.9, mediaMult: 0.8, contMult: 0.3, continent: "eu" },
+  { id: "be", name: "Belgique", flag: "🇧🇪", img: "src/img/flag/Flag_of_Belgium.png", of: "de Belgique", salaryMult: 0.75, growthMult: 0.92, mediaMult: 0.8, continent: "eu" },
+  { id: "hr", name: "Croatie", flag: "🇭🇷", img: "src/img/flag/Flag_of_Croatia.png", of: "de Croatie", salaryMult: 0.55, growthMult: 0.85, mediaMult: 0.7, continent: "eu" },
+  { id: "uy", name: "Uruguay", flag: "🇺🇾", img: "src/img/flag/Flag_of_Uruguay.png", of: "d'Uruguay", salaryMult: 0.45, growthMult: 0.83, mediaMult: 0.68, continent: "am" },
+  { id: "ma", name: "Maroc", flag: "🇲🇦", img: "src/img/flag/Flag_of_Morocco.png", of: "du Maroc", salaryMult: 0.42, growthMult: 0.78, mediaMult: 0.62, continent: "af" },
+  { id: "mx", name: "Mexique", flag: "🇲🇽", img: "src/img/flag/Flag_of_Mexico.png", of: "du Mexique", salaryMult: 0.6, growthMult: 0.85, mediaMult: 0.72, continent: "am" },
+  { id: "co", name: "Colombie", flag: "🇨🇴", img: "src/img/flag/Flag_of_Colombia.png", of: "de Colombie", salaryMult: 0.45, growthMult: 0.82, mediaMult: 0.68, continent: "am" },
+  { id: "ch", name: "Suisse", flag: "🇨🇭", img: "src/img/flag/Flag_of_Switzerland.png", of: "de Suisse", salaryMult: 0.72, growthMult: 0.9, mediaMult: 0.75, continent: "eu" },
+  { id: "sn", name: "Sénégal", flag: "🇸🇳", img: "src/img/flag/Flag_of_Senegal.png", of: "du Sénégal", salaryMult: 0.4, growthMult: 0.77, mediaMult: 0.6, continent: "af" },
+  { id: "tr", name: "Turquie", flag: "🇹🇷", img: "src/img/flag/Flag_of_Turkey.png", of: "de Turquie", salaryMult: 0.75, growthMult: 0.85, mediaMult: 0.78, continent: "eu" },
+  { id: "cm", name: "Cameroun", flag: "🇨🇲", img: "src/img/flag/Flag_of_Cameroon.png", of: "du Cameroun", salaryMult: 0.4, growthMult: 0.76, mediaMult: 0.6, continent: "af" },
+  { id: "ci", name: "Côte d'Ivoire", flag: "🇨🇮", img: "src/img/flag/Drapeau-CIV.png", of: "de Côte d'Ivoire", salaryMult: 0.4, growthMult: 0.77, mediaMult: 0.6, continent: "af" },
+  { id: "dz", name: "Algérie", flag: "🇩🇿", img: "src/img/flag/Flag_of_Algeria.png", of: "d'Algérie", salaryMult: 0.4, growthMult: 0.77, mediaMult: 0.6, continent: "af" },
+  { id: "tn", name: "Tunisie", flag: "🇹🇳", img: "src/img/flag/Flag_of_Tunisia.png", of: "de Tunisie", salaryMult: 0.4, growthMult: 0.76, mediaMult: 0.6, continent: "af" },
+  { id: "no", name: "Norvège", flag: "🇳🇴", img: "src/img/flag/Flag_of_Norway.png", of: "de Norvège", salaryMult: 0.6, growthMult: 0.85, mediaMult: 0.7, continent: "eu" },
+  { id: "fi", name: "Finlande", flag: "🇫🇮", img: "src/img/flag/Flag_of_Finland.png", of: "de Finlande", salaryMult: 0.5, growthMult: 0.82, mediaMult: 0.6, continent: "eu" },
+  { id: "se", name: "Suède", flag: "🇸🇪", img: "src/img/flag/Flag_of_Sweden.png", of: "de Suède", salaryMult: 0.6, growthMult: 0.9, mediaMult: 0.7, continent: "eu" },
+  { id: "pl", name: "Pologne", flag: "🇵🇱", img: "src/img/flag/Flag_of_Poland.png", of: "de Pologne", salaryMult: 0.55, growthMult: 0.9, mediaMult: 0.7, continent: "eu" },
+  { id: "bg", name: "Bulgarie", flag: "🇧🇬", img: "src/img/flag/Flag_of_Bulgaria.png", of: "de Bulgarie", salaryMult: 0.45, growthMult: 0.82, mediaMult: 0.6, continent: "eu" },
+  { id: "kr", name: "Corée du Sud", flag: "🇰🇷", img: "src/img/flag/Flag_of_South_Korea.png", of: "de Corée du Sud", salaryMult: 0.55, growthMult: 0.88, mediaMult: 0.65, continent: "as" },
+  { id: "cn", name: "Chine", flag: "🇨🇳", img: "src/img/flag/Flag_of_China.png", of: "de Chine", salaryMult: 0.6, growthMult: 0.85, mediaMult: 0.6, continent: "as" },
+  { id: "au", name: "Australie", flag: "🇦🇺", img: "src/img/flag/Flag_of_Australia.png", of: "d'Australie", salaryMult: 0.6, growthMult: 0.85, mediaMult: 0.6, continent: "oc" },
+  { id: "nz", name: "Nouvelle-Zélande", flag: "🇳🇿", img: "src/img/flag/Flag_of_New_Zealand.png", of: "de Nouvelle-Zélande", salaryMult: 0.42, growthMult: 0.8, mediaMult: 0.5, continent: "oc" },
+  { id: "pg", name: "Papouasie-Nouvelle-Guinée", flag: "🇵🇬", img: "src/img/flag/Flag_of_Papua_New_Guinea.png", of: "de Papouasie-Nouvelle-Guinée", salaryMult: 0.3, growthMult: 0.72, mediaMult: 0.4, continent: "oc" },
+  { id: "cd", name: "RDC", flag: "🇨🇩", img: "src/img/flag/Flag_of_RDC.png", of: "de RDC", salaryMult: 0.35, growthMult: 0.74, mediaMult: 0.55, continent: "af" },
+  { id: "gn", name: "Guinée", flag: "🇬🇳", img: "src/img/flag/Flag_of_Guinea.png", of: "de Guinée", salaryMult: 0.35, growthMult: 0.74, mediaMult: 0.55, continent: "af" },
+  { id: "bj", name: "Bénin", flag: "🇧🇯", img: "src/img/flag/Flag_of_Benin.png", of: "du Bénin", salaryMult: 0.33, growthMult: 0.73, mediaMult: 0.53, continent: "af" },
+  { id: "sa", name: "Golfe", flag: "🏜️", img: "src/img/flag/Flag_of_Golfe.png", of: "du Golfe", salaryMult: 5, exotic: true, continent: "as" },
+  { id: "us", name: "Amérique", flag: "🗽", img: "src/img/flag/Flag_of_Amerique.png", of: "d'Amérique", salaryMult: 1.6, exotic: true, continent: "am" },
+  { id: "jp", name: "Japon", flag: "🇯🇵", img: "src/img/flag/Flag_of_Japan.png", of: "du Japon", salaryMult: 0.7, growthMult: 0.9, mediaMult: 0.7, continent: "as" },
+];
+
+// --- Coupes continentales de CLUBS (une par continent, jamais confondues) -----
+// Une "Coupe des Champions" par continent, toutes jouables : la gagner se joue
+// en finale interactive (moment "continental_final"). Amérique et Afrique
+// contestent la leur comme l'Europe (cf. BALANCE.continentalReach).
+const CONTINENTAL_CUPS = {
+  eu: { name: "Coupe des Champions d'Europe", short: "Europe", icon: "🥇" },
+  am: { name: "Coupe des Champions d'Amérique", short: "Amérique", icon: "🏆" },
+  as: { name: "Coupe des Champions d'Asie", short: "Asie", icon: "🎌" },
+  af: { name: "Coupe des Champions d'Afrique", short: "Afrique", icon: "🌍" },
+  oc: { name: "Coupe des Champions d'Océanie", short: "Océanie", icon: "🌊" },
+};
+
+// --- Championnats continentaux de SÉLECTION (l'Euro, la Copa, la CAN) ---------
+// Pendant continental de la Coupe du Monde : une compétition par continent de
+// nationalité (eu/am/af), disputée les années paires hors Mondial (cf.
+// engine.isContinentalYear). À NE PAS confondre avec CONTINENTAL_CUPS (clubs).
+const NATIONAL_CUPS = {
+  eu: { name: "Championnat d'Europe des Nations", short: "Euro", of: "d'Europe", icon: "🇪🇺",
+        championText: "L'Europe entière est à vos pieds : votre nation soulève le trophée continental !" },
+  am: { name: "Coupe d'Amérique", short: "Copa América", of: "d'Amérique", icon: "🌎",
+        championText: "Tout un continent s'embrase : la Copa América vous appartient !" },
+  af: { name: "Coupe d'Afrique des Nations", short: "CAN", of: "d'Afrique", icon: "🌍",
+        championText: "L'Afrique vibre d'un seul cœur : Champions d'Afrique, enfin !" },
+  as: { name: "Coupe d'Asie des Nations", short: "Coupe d'Asie", of: "d'Asie", icon: "🌏",
+        championText: "Le plus grand continent s'incline : votre nation règne sur l'Asie !" },
+  oc: { name: "Coupe d'Océanie des Nations", short: "Coupe d'Océanie", of: "d'Océanie", icon: "🏝️",
+        championText: "Tout le Pacifique vous acclame : votre nation domine l'Océanie !" },
+};
+
+// --- Niveaux de clubs ----------------------------------------------------------
+// 4 échelons, du sommet européen au football régional. Chaque niveau a un
+// impact réel (cf. BALANCE) : budget, infrastructures, visibilité médiatique,
+// concurrence au poste, accès à la sélection, temps de jeu.
+const LEVELS = {
+  elite: { name: "D1 · Élite", short: "Élite", rank: 3 },
+  d1: { name: "Première division", short: "D1", rank: 2 },
+  d2: { name: "Deuxième division", short: "D2", rank: 1 },
+  regional: { name: "Football régional", short: "Rég.", rank: 0 },
+};
+const LEVEL_ORDER = ["regional", "d2", "d1", "elite"];
+
+// --- Clubs ----------------------------------------------------------
+// Noms inspirés de vrais clubs/villes, par pays jouable + destinations
+// exotiques. colors (optionnel) : couleurs du maillot en emoji.
+// img (optionnel) : logo du club dans src/img/club (fallback automatique).
+const CLUBS = [
+  { id: "fr_paris", name: "Paris", level: "elite", countryId: "fr", colors: "🔴🔵" },
+  { id: "fr_marseille", name: "Marseille", level: "elite", countryId: "fr", colors: "🔵⚪" },
+  { id: "fr_lyon", name: "Lyon", level: "elite", countryId: "fr", colors: "🔴🔵" },
+  { id: "fr_monaco", name: "Monaco", level: "elite", countryId: "fr", colors: "🔴⚪" },
+  { id: "fr_lille", name: "Lille", level: "d1", countryId: "fr", colors: "🔴⚪" },
+  { id: "fr_brest", name: "Brest", level: "d1", countryId: "fr", colors: "🔴⚪" },
+  { id: "fr_rennes", name: "Rennes", level: "d1", countryId: "fr", colors: "🔴⚫" },
+  { id: "fr_nice", name: "Nice", level: "d1", countryId: "fr", colors: "🔴⚫" },
+  { id: "fr_lens", name: "Lens", level: "d1", countryId: "fr", colors: "🔴🟡" },
+  { id: "fr_strasbourg", name: "Strasbourg", level: "d1", countryId: "fr", colors: "🔵" },
+  { id: "fr_toulouse", name: "Toulouse", level: "d1", countryId: "fr", colors: "🟣⚪" },
+  { id: "fr_clermont", name: "Clermont", level: "d1", countryId: "fr", colors: "🔴🔵" },
+  { id: "fr_lemans", name: "Le Mans", level: "d1", countryId: "fr", colors: "🔴🟡" },
+  { id: "fr_troyes", name: "Troyes", level: "d1", countryId: "fr", colors: "🔵⚪" },
+  { id: "fr_auxerre", name: "Auxerre", level: "d1", countryId: "fr", colors: "🔵⚪" },
+  { id: "fr_angers", name: "Angers", level: "d1", countryId: "fr", colors: "⚫⚪" },
+  { id: "fr_bordeaux", name: "Bordeaux", level: "d2", countryId: "fr", colors: "🔵⚪" },
+  { id: "fr_grenoble", name: "Grenoble", level: "d2", countryId: "fr", colors: "🔵⚪" },
+  { id: "fr_metz", name: "Metz", level: "d2", countryId: "fr", colors: "🔴⚪" },
+  { id: "fr_lehavre", name: "Le Havre", level: "d2", countryId: "fr", colors: "🔵⚪" },
+  { id: "fr_saintetienne", name: "Saint-Étienne", level: "d2", countryId: "fr", colors: "🟢⚪" },
+  { id: "fr_montpellier", name: "Montpellier", level: "d2", countryId: "fr", colors: "🔵🟠" },
+  { id: "fr_nantes", name: "Nantes", level: "d2", countryId: "fr", colors: "🟡🟢" },
+  { id: "fr_annecy", name: "Annecy", level: "d2", countryId: "fr", colors: "🔴⚪" },
+  { id: "fr_nancy", name: "Nancy", level: "d2", countryId: "fr", colors: "🔴⚪" },
+  { id: "fr_sochaux", name: "Sochaux", level: "d2", countryId: "fr", colors: "🟡🔵" },
+  { id: "fr_pau", name: "Pau", level: "d2", countryId: "fr", colors: "⚫⚪" },
+  { id: "fr_laval", name: "Laval", level: "d2", countryId: "fr", colors: "⚫🟠" },
+  { id: "fr_dijon", name: "Dijon", level: "d2", countryId: "fr", colors: "🔴⚪" },
+  { id: "fr_guingamp", name: "Guingamp", level: "d2", countryId: "fr", colors: "🔴⚫" },
+  { id: "fr_amiens", name: "Amiens", level: "d2", countryId: "fr", colors: "⚫⚪" },
+  { id: "fr_rodez", name: "Rodez", level: "d2", countryId: "fr", colors: "🟡🔴" },
+  { id: "fr_cannes", name: "Cannes", level: "regional", countryId: "fr", colors: "🔴⚪" },
+  { id: "fr_aubervilliers", name: "Aubervilliers", level: "regional", countryId: "fr", colors: "🔵⚪" },
+  { id: "fr_quimper", name: "Quimper", level: "regional", countryId: "fr", colors: "⚫⚪" },
+  { id: "fr_rouen", name: "Rouen", level: "regional", countryId: "fr", colors: "🔴⚪" },
+  { id: "fr_fleury", name: "Fleury", level: "regional", countryId: "fr", colors: "🔴⚫" },
+  { id: "fr_orleans", name: "Orleans", level: "regional", countryId: "fr", colors: "🔴🟡" },
+  { id: "fr_thionville", name: "Thionville", level: "regional", countryId: "fr", colors: "⚪" },
+  { id: "fr_bastia", name: "Bastia", level: "regional", countryId: "fr", colors: "🔵⚪" },
+  { id: "fr_versailles", name: "Versailles", level: "regional", countryId: "fr", colors: "🔵⚪" },
+  { id: "fr_lesherbiers", name: "Les Herbiers", level: "regional", countryId: "fr", colors: "🔴⚫" },
+  { id: "fr_villefranche", name: "Villefranche", level: "regional", countryId: "fr", colors: "🔵⚪" },
+  { id: "fr_laroche", name: "La Roche", level: "regional", countryId: "fr", colors: "🔴⚪" },
+  { id: "fr_bourgenbresse", name: "Bourg-en-Bresse", level: "regional", countryId: "fr", colors: "🔵⚪" },
+  { id: "de_munich", name: "Munich", level: "elite", countryId: "de", colors: "🔴⚪" },
+  { id: "de_dortmund", name: "Dortmund", level: "elite", countryId: "de", colors: "🟡⚫" },
+  { id: "de_leipzig", name: "Leipzig", level: "elite", countryId: "de", colors: "⚪🔴" },
+  { id: "de_leverkusen", name: "Leverkusen", level: "d1", countryId: "de", colors: "⚫🔴" },
+  { id: "de_schalke", name: "Schalke", level: "d1", countryId: "de", colors: "🔵⚪" },
+  { id: "de_frankfurt", name: "Frankfurt", level: "d1", countryId: "de", colors: "⚫🔴" },
+  { id: "de_stuttgart", name: "Stuttgart", level: "d1", countryId: "de", colors: "🔴⚪" },
+  { id: "de_monchengladbar", name: "Monchengladbar", level: "d1", countryId: "de", colors: "⚫⚪" },
+  { id: "de_freibourg", name: "Freibourg", level: "d1", countryId: "de", colors: "🔴⚫" },
+  { id: "de_hoffenheim", name: "Hoffenheim", level: "d1", countryId: "de", colors: "🔵⚪" },
+  { id: "de_wolfsburg", name: "Wolfsburg", level: "d1", countryId: "de", colors: "🟢⚪" },
+  { id: "de_hambourg", name: "Hambourg", level: "d2", countryId: "de", colors: "🔵⚪" },
+  { id: "de_cologne", name: "Cologne", level: "d2", countryId: "de", colors: "🔴⚪" },
+  { id: "de_hanovre", name: "Hanovre", level: "d2", countryId: "de", colors: "🔴⚫" },
+  { id: "de_nurnberg", name: "Nurnberg", level: "d2", countryId: "de", colors: "🔴⚪" },
+  { id: "de_stpaul", name: "St Paul", level: "d2", countryId: "de", colors: "🟤⚪" },
+  { id: "de_heidenheim", name: "Heidenheim", level: "d2", countryId: "de", colors: "🔴🔵" },
+  { id: "de_nienborg", name: "Nienborg", level: "regional", countryId: "de", colors: "🔴⚪" },
+  { id: "de_wulfrath", name: "Wülfrath", level: "regional", countryId: "de" },
+  { id: "de_manfort", name: "Manfort", level: "regional", countryId: "de" },
+  { id: "es_madrid", name: "Madrid", level: "elite", countryId: "es", colors: "⚪" },
+  { id: "es_barcelona", name: "Barcelona", level: "elite", countryId: "es", colors: "🔵🔴" },
+  { id: "es_atleticas", name: "Atleticas", level: "elite", countryId: "es", colors: "🔴⚪" },
+  { id: "es_sevilla", name: "Sevilla", level: "d1", countryId: "es", colors: "⚪🔴" },
+  { id: "es_bilbao", name: "Bilbao", level: "d1", countryId: "es", colors: "🔴⚪" },
+  { id: "es_valencia", name: "Valencia", level: "d1", countryId: "es", colors: "⚪🟠" },
+  { id: "es_villarreal", name: "Villarreal", level: "d1", countryId: "es", colors: "🟡🔵" },
+  { id: "es_societad", name: "Societad", level: "d1", countryId: "es", colors: "🔵⚪" },
+  { id: "es_malaga", name: "Malaga", level: "d1", countryId: "es", colors: "🔵⚪" },
+  { id: "es_vigo", name: "Vigo", level: "d1", countryId: "es", colors: "🔵⚪" },
+  { id: "es_laspalmas", name: "Las Palmas", level: "d2", countryId: "es", colors: "🟡🔵" },
+  { id: "es_saragosse", name: "Saragosse", level: "d2", countryId: "es", colors: "⚪🔵" },
+  { id: "es_eibar", name: "Eibar", level: "d2", countryId: "es", colors: "🔵🔴" },
+  { id: "es_mallorque", name: "Mallorque", level: "d2", countryId: "es", colors: "🔴⚫" },
+  { id: "es_andorre", name: "Andorre", level: "d2", countryId: "es", colors: "🔵🟡" },
+  { id: "es_grenade", name: "Grenade", level: "d2", countryId: "es", colors: "🔴⚪" },
+  { id: "es_alcorcon", name: "Alcorcón", level: "regional", countryId: "es", colors: "🟡🔵" },
+  { id: "es_albacete", name: "Albacete", level: "regional", countryId: "es", colors: "⚪⚫" },
+  { id: "es_toledo", name: "Toledo", level: "regional", countryId: "es", colors: "🟢⚪" },
+  { id: "it_milan", name: "Milan", level: "elite", countryId: "it", colors: "🔴⚫" },
+  { id: "it_international", name: "International", level: "elite", countryId: "it", colors: "🔵⚫" },
+  { id: "it_naples", name: "Naples", level: "elite", countryId: "it", colors: "🔵⚪" },
+  { id: "it_juventurin", name: "Juventurin", level: "elite", countryId: "it", colors: "⚫⚪" },
+  { id: "it_rome", name: "Rome", level: "elite", countryId: "it", colors: "🔴🟡" },
+  { id: "it_lazioregione", name: "Lazio Regione", level: "d1", countryId: "it", colors: "🔵⚪" },
+  { id: "it_florence", name: "Florence", level: "d1", countryId: "it", colors: "🟣⚪" },
+  { id: "it_bologne", name: "Bologne", level: "d1", countryId: "it", colors: "🔴🔵" },
+  { id: "it_bergame", name: "Bergame", level: "d1", countryId: "it", colors: "⚫🔵" },
+  { id: "it_come", name: "Come", level: "d1", countryId: "it", colors: "🔵⚪" },
+  { id: "it_parme", name: "Parme", level: "d1", countryId: "it", colors: "🟡🔵" },
+  { id: "it_udine", name: "Udine", level: "d1", countryId: "it", colors: "⚫⚪" },
+  { id: "it_modene", name: "Modene", level: "d2", countryId: "it", colors: "🟡🔵" },
+  { id: "it_palerme", name: "Palerme", level: "d2", countryId: "it", colors: "🩷⚫" },
+  { id: "it_bari", name: "Bari", level: "d2", countryId: "it", colors: "🔴⚪" },
+  { id: "it_spezia", name: "Spezia", level: "d2", countryId: "it", colors: "⚪⚫" },
+  { id: "it_padoue", name: "Padoue", level: "d2", countryId: "it", colors: "⚪🔴" },
+  { id: "it_cesena", name: "Cesena", level: "d2", countryId: "it", colors: "⚪⚫" },
+  { id: "it_piacenza", name: "Piacenza", level: "d2", countryId: "it", colors: "🔴⚫" },
+  { id: "it_vigolzone", name: "Vigolzone", level: "regional", countryId: "it", colors: "⚪🔴" },
+  { id: "it_sicilia", name: "Sicilia", level: "regional", countryId: "it" },
+  { id: "it_foggia", name: "Foggia", level: "regional", countryId: "it", colors: "🔴⚪" },
+  { id: "en_united", name: "United", level: "elite", countryId: "en", colors: "🔴⚪" },
+  { id: "en_liverpool", name: "Liverpool", level: "elite", countryId: "en", colors: "🔴⚪" },
+  { id: "en_city", name: "City", level: "elite", countryId: "en", colors: "🔵⚪" },
+  { id: "en_londonblue", name: "London Blue", level: "elite", countryId: "en", colors: "🔵⚪" },
+  { id: "en_gunners", name: "Gunners", level: "elite", countryId: "en", colors: "🔴⚪" },
+  { id: "en_brighton", name: "Brighton", level: "d1", countryId: "en", colors: "🔵⚪" },
+  { id: "en_newcastle", name: "Newcastle", level: "d1", countryId: "en", colors: "⚫⚪" },
+  { id: "en_everton", name: "Everton", level: "d1", countryId: "en", colors: "🔵⚪" },
+  { id: "en_forest", name: "Forest", level: "d1", countryId: "en", colors: "🔴⚪" },
+  { id: "en_brentford", name: "Brentford", level: "d1", countryId: "en", colors: "🔴⚪" },
+  { id: "en_southampton", name: "Southampton", level: "d1", countryId: "en", colors: "🔴⚪" },
+  { id: "en_leeds", name: "Leeds", level: "d1", countryId: "en", colors: "⚪🟡" },
+  { id: "en_crystal", name: "Crystal", level: "d1", countryId: "en", colors: "🔴🔵" },
+  { id: "en_westlondon", name: "West London", level: "d2", countryId: "en", colors: "⚪⚫" },
+  { id: "en_sheffield", name: "Sheffield", level: "d2", countryId: "en", colors: "🔴⚫" },
+  { id: "en_portsmouth", name: "Portsmouth", level: "d2", countryId: "en", colors: "🔵⚪" },
+  { id: "en_wolf", name: "Wolf", level: "d2", countryId: "en", colors: "🟡⚫" },
+  { id: "en_middlesbrough", name: "Middlesbrough", level: "d2", countryId: "en", colors: "🔴⚪" },
+  { id: "en_wrexham", name: "Wrexham", level: "regional", countryId: "en", colors: "🔴⚪" },
+  { id: "en_lutin", name: "Lutin", level: "regional", countryId: "en", colors: "🟠🔵" },
+  { id: "en_grimsby", name: "Grimsby", level: "regional", countryId: "en", colors: "⚫⚪" },
+  { id: "en_dover", name: "Dover", level: "regional", countryId: "en", colors: "⚪⚫" },
+  { id: "en_canterbury", name: "Canterbury", level: "regional", countryId: "en", colors: "🟢⚪" },
+  { id: "pt_lisbonne", name: "Lisbonne", level: "elite", countryId: "pt", colors: "🔴⚪" },
+  { id: "pt_porto", name: "Porto", level: "elite", countryId: "pt", colors: "🔵⚪" },
+  { id: "pt_sporting", name: "Sporting", level: "elite", countryId: "pt", colors: "🟢⚪" },
+  { id: "pt_braga", name: "Braga", level: "d1", countryId: "pt", colors: "🔴⚪" },
+  { id: "pt_guimaraes", name: "Guimarães", level: "d1", countryId: "pt", colors: "⚪⚫" },
+  { id: "pt_rioave", name: "Rio Ave", level: "d1", countryId: "pt", colors: "🟢⚪" },
+  { id: "pt_santaclara", name: "Santa Clara", level: "d1", countryId: "pt", colors: "🔴⚪" },
+  { id: "pt_famalicao", name: "Famalicão", level: "d1", countryId: "pt", colors: "🔵⚪" },
+  { id: "pt_arouca", name: "Arouca", level: "d1", countryId: "pt", colors: "🔵⚪" },
+  { id: "pt_gilvicente", name: "Gil Vicente", level: "d1", countryId: "pt", colors: "🔴⚪" },
+  { id: "pt_moreirense", name: "Moreirense", level: "d1", countryId: "pt", colors: "🟢⚪" },
+  { id: "pt_estoril", name: "Estoril", level: "d1", countryId: "pt", colors: "🔵🟡" },
+  { id: "pt_tondela", name: "Tondela", level: "d2", countryId: "pt", colors: "🟡🟢" },
+  { id: "pt_penafiel", name: "Penafiel", level: "d2", countryId: "pt", colors: "🔴⚪" },
+  { id: "pt_vizela", name: "Vizela", level: "d2", countryId: "pt", colors: "🔵⚪" },
+  { id: "pt_feirense", name: "Feirense", level: "d2", countryId: "pt", colors: "🔵⚪" },
+  { id: "pt_leiria", name: "Leiria", level: "d2", countryId: "pt", colors: "🔴⚪" },
+  { id: "pt_torreense", name: "Torreense", level: "d2", countryId: "pt", colors: "🔴⚪" },
+  { id: "pt_belenenses", name: "Belenenses", level: "regional", countryId: "pt", colors: "🔵⚪" },
+  { id: "pt_setubal", name: "Setúbal", level: "regional", countryId: "pt", colors: "🔴⚪" },
+  { id: "pt_boavista", name: "Boavista", level: "regional", countryId: "pt", colors: "⚫⚪" },
+  { id: "nl_amsterdam", name: "Amsterdam", level: "elite", countryId: "nl", colors: "🔴⚪" },
+  { id: "nl_utrecht", name: "Utrecht", level: "d1", countryId: "nl", colors: "🔴⚪" },
+  { id: "nl_groningue", name: "Groningue", level: "d1", countryId: "nl", colors: "🟢⚪" },
+  { id: "nl_twente", name: "Twente", level: "d1", countryId: "nl", colors: "🔴⚪" },
+  { id: "nl_nimegue", name: "Nimègue", level: "d1", countryId: "nl", colors: "🔴⚫" },
+  { id: "nl_heerenveen", name: "Heerenveen", level: "d1", countryId: "nl", colors: "🔵⚪" },
+  { id: "nl_zwolle", name: "Zwolle", level: "d1", countryId: "nl", colors: "🔵⚪" },
+  { id: "nl_sittard", name: "Sittard", level: "d1", countryId: "nl", colors: "🟡🟢" },
+  { id: "nl_rotterdam", name: "Rotterdam", level: "d1", countryId: "nl", colors: "🔴⚪" },
+  { id: "nl_eindhoven", name: "Eindhoven", level: "d1", countryId: "nl", colors: "🔴⚪" },
+  { id: "nl_alkmaar", name: "Alkmaar", level: "d1", countryId: "nl", colors: "🔴⚪" },
+  { id: "nl_vitesse", name: "Vitesse", level: "d2", countryId: "nl", colors: "🟡⚫" },
+  { id: "nl_waalwijk", name: "Waalwijk", level: "d2", countryId: "nl", colors: "🟡🔵" },
+  { id: "nl_maastricht", name: "Maastricht", level: "d2", countryId: "nl", colors: "🔴⚪" },
+  { id: "nl_volendam", name: "Volendam", level: "d2", countryId: "nl", colors: "🟠⚪" },
+  { id: "nl_almere", name: "Almere", level: "d2", countryId: "nl", colors: "🔴⚪" },
+  { id: "nl_enschede", name: "Enschede", level: "regional", countryId: "nl", colors: "🔴⚪" },
+  { id: "nl_almelo", name: "Almelo", level: "regional", countryId: "nl", colors: "🔴⚪" },
+  { id: "br_rio", name: "Rio", level: "d1", countryId: "br", colors: "🔴⚫" },
+  { id: "br_saopaulo", name: "São Paulo", level: "d1", countryId: "br", colors: "⚪🔴" },
+  { id: "br_palmeira", name: "Palmeira", level: "d1", countryId: "br", colors: "🟢⚪" },
+  { id: "br_santo", name: "Santo", level: "d1", countryId: "br", colors: "⚪⚫" },
+  { id: "br_brasillia", name: "Brasillia", level: "d1", countryId: "br" },
+  { id: "br_portoallegre", name: "Porto Allegre", level: "d1", countryId: "br", colors: "🔵⚫" },
+  { id: "br_bragantino", name: "Bragantino", level: "d1", countryId: "br", colors: "🔴⚪" },
+  { id: "br_chapeco", name: "Chapeco", level: "d1", countryId: "br", colors: "🟢⚪" },
+  { id: "br_vitoria", name: "Vitoria", level: "d2", countryId: "br", colors: "🔴⚫" },
+  { id: "br_recife", name: "Recife", level: "d2", countryId: "br", colors: "🔴⚫" },
+  { id: "br_curitiba", name: "Curitiba", level: "d2", countryId: "br", colors: "🔴⚫" },
+  { id: "br_varzea", name: "Várzea", level: "regional", countryId: "br" },
+  { id: "br_goias", name: "Goiás", level: "regional", countryId: "br", colors: "🟢⚪" },
+  { id: "br_salvador", name: "Salvador", level: "regional", countryId: "br", colors: "🔵🔴" },
+  { id: "ar_boca", name: "Boca", level: "d1", countryId: "ar", colors: "🔵🟡" },
+  { id: "ar_river", name: "River", level: "d1", countryId: "ar", colors: "🔴⚪" },
+  { id: "ar_racing", name: "Racing", level: "d1", countryId: "ar", colors: "🔵⚪" },
+  { id: "ar_independiente", name: "Independiente", level: "d1", countryId: "ar", colors: "🔴⚪" },
+  { id: "ar_sanlorenzo", name: "San Lorenzo", level: "d1", countryId: "ar", colors: "🔵🔴" },
+  { id: "ar_tigre", name: "Tigre", level: "d1", countryId: "ar", colors: "🔵🔴" },
+  { id: "ar_estudiantes", name: "Estudiantes", level: "d1", countryId: "ar", colors: "🔴⚪" },
+  { id: "ar_rosario", name: "Rosario", level: "d1", countryId: "ar", colors: "🔵🟡" },
+  { id: "ar_lanus", name: "Lanús", level: "d1", countryId: "ar", colors: "🟤⚪" },
+  { id: "ma_berkane", name: "Berkane", level: "d1", countryId: "ma", colors: "🟠⚫" },
+  { id: "ma_raja", name: "Raja", level: "d1", countryId: "ma", colors: "🟢⚪" },
+  { id: "ma_rabat", name: "Rabat", level: "d1", countryId: "ma", colors: "🔴🟢" },
+  { id: "ma_wydad", name: "Wydad", level: "d1", countryId: "ma", colors: "🔴⚪" },
+  { id: "ma_agadir", name: "Agadir", level: "d1", countryId: "ma", colors: "🔴⚪" },
+  { id: "ma_tanger", name: "Tanger", level: "d1", countryId: "ma", colors: "⚪🔵" },
+  { id: "ma_fes", name: "Fès", level: "d2", countryId: "ma", colors: "🔵⚪" },
+  { id: "ma_oujda", name: "Oujda", level: "d2", countryId: "ma", colors: "⚫⚪" },
+  { id: "ma_khenifra", name: "Khénifra", level: "d2", countryId: "ma", colors: "🔴⚪" },
+  { id: "ma_soualem", name: "Soualem", level: "d2", countryId: "ma", colors: "🔵⚪" },
+  { id: "dz_setif", name: "Setif", level: "d1", countryId: "dz", colors: "⚫⚪" },
+  { id: "dz_chlef", name: "Chlef", level: "d1", countryId: "dz", colors: "🔴⚪" },
+  { id: "dz_oran", name: "Oran", level: "d1", countryId: "dz", colors: "🔴⚪" },
+  { id: "dz_alger", name: "Alger", level: "d1", countryId: "dz", colors: "🟢🔴" },
+  { id: "dz_bechar", name: "Bechar", level: "d1", countryId: "dz", colors: "🟡🔵" },
+  { id: "dz_bejaia", name: "Bejaia", level: "d1", countryId: "dz", colors: "🔵⚪" },
+  { id: "dz_constantine", name: "Constantine", level: "d1", countryId: "dz", colors: "⚫🟢" },
+  { id: "dz_jskabylie", name: "JS Kabylie", level: "d1", countryId: "dz", colors: "🟡🟢" },
+  { id: "dz_algiers", name: "Algiers", level: "d1", countryId: "dz", colors: "🔴⚫" },
+  { id: "sn_dakar", name: "Dakar", level: "d1", countryId: "sn", colors: "🟡🔵" },
+  { id: "sn_rufisque", name: "Rufisque", level: "d1", countryId: "sn", colors: "🔴⚪" },
+  { id: "sn_sacrecur", name: "Sacré-Cœur", level: "d1", countryId: "sn", colors: "🔴⚫" },
+  { id: "sn_jaraaf", name: "Jaraaf", level: "d1", countryId: "sn", colors: "🟢⚪" },
+  { id: "sn_ziguinchor", name: "Ziguinchor", level: "d1", countryId: "sn", colors: "🟢⚪" },
+  { id: "sn_gf", name: "GF", level: "d1", countryId: "sn", colors: "🔴⚪" },
+  { id: "sn_teungueth", name: "Teungueth", level: "d1", countryId: "sn", colors: "🔵⚪" },
+  { id: "sn_goree", name: "Gorée", level: "d1", countryId: "sn", colors: "🔴⚪" },
+  { id: "ci_bouake", name: "Bouaké", level: "d1", countryId: "ci", colors: "🔵⚪" },
+  { id: "ci_mimosa", name: "Mimosa", level: "d1", countryId: "ci", colors: "🟡⚫" },
+  { id: "ci_plateau", name: "Plateau", level: "d1", countryId: "ci", colors: "🔵⚪" },
+  { id: "ci_sanpedro", name: "San Pedro", level: "d1", countryId: "ci", colors: "🔴⚪" },
+  { id: "ci_tchologo", name: "Tchologo", level: "d1", countryId: "ci", colors: "🟡🔵" },
+  { id: "ci_stadeabidjan", name: "Stade Abidjan", level: "d1", countryId: "ci", colors: "🔵⚪" },
+  { id: "ci_yamoussoukro", name: "Yamoussoukro", level: "d2", countryId: "ci", colors: "🔵⚪" },
+  { id: "ci_sassandra", name: "Sassandra", level: "d2", countryId: "ci", colors: "🔵⚪" },
+  { id: "tn_esperance", name: "Espérance", level: "d1", countryId: "tn", colors: "🟡🔴" },
+  { id: "tn_africaintunis", name: "Africain Tunis", level: "d1", countryId: "tn", colors: "⚪🔴" },
+  { id: "tn_sfax", name: "Sfax", level: "d1", countryId: "tn", colors: "⚪⚫" },
+  { id: "tn_etoilesousse", name: "Étoile Sousse", level: "d1", countryId: "tn", colors: "⚪🔴" },
+  { id: "tn_monastir", name: "Monastir", level: "d1", countryId: "tn", colors: "⚪🔵" },
+  { id: "tn_stadetunis", name: "Stade Tunis", level: "d1", countryId: "tn", colors: "🔴🟢" },
+  { id: "gn_renaissance", name: "Renaissance", level: "d1", countryId: "gn", colors: "🔴⚪" },
+  { id: "gn_horoya", name: "Horoya", level: "d1", countryId: "gn", colors: "🔴⚪" },
+  { id: "gn_hafia", name: "Hafia", level: "d1", countryId: "gn", colors: "🟢⚪" },
+  { id: "gn_kamsar", name: "Kamsar", level: "d1", countryId: "gn", colors: "🟡🔴" },
+  { id: "gn_kaloum", name: "Kaloum", level: "d1", countryId: "gn", colors: "🟡🟢" },
+  { id: "gn_sangaredi", name: "Sangaredi", level: "d1", countryId: "gn", colors: "🔵⚪" },
+  { id: "cm_dynamo", name: "Dynamo", level: "d1", countryId: "cm", colors: "🟡⚫" },
+  { id: "cm_colombes", name: "Colombes", level: "d1", countryId: "cm", colors: "🔴⚪" },
+  { id: "cm_bafang", name: "Bafang", level: "d1", countryId: "cm", colors: "🟡🔴" },
+  { id: "cm_coton", name: "Coton", level: "d1", countryId: "cm", colors: "🟢🟡" },
+  { id: "cm_canon", name: "Canon", level: "d1", countryId: "cm", colors: "🟢🔴" },
+  { id: "cm_panthere", name: "Panthère", level: "d1", countryId: "cm", colors: "🟢🟡" },
+  { id: "be_anderlecht", name: "Anderlecht", level: "d1", countryId: "be", colors: "🟣⚪" },
+  { id: "be_bruges", name: "Bruges", level: "d1", countryId: "be", colors: "🔵⚫" },
+  { id: "be_liege", name: "Liège", level: "d1", countryId: "be", colors: "🔴⚪" },
+  { id: "be_cercle", name: "Cercle", level: "d1", countryId: "be", colors: "🟢⚪" },
+  { id: "be_anvers", name: "Anvers", level: "d1", countryId: "be", colors: "🔴⚪" },
+  { id: "be_genk", name: "Genk", level: "d1", countryId: "be", colors: "🔵⚪" },
+  { id: "ch_bale", name: "Bâle", level: "d1", countryId: "ch", colors: "🔴🔵" },
+  { id: "ch_berne", name: "Berne", level: "d1", countryId: "ch", colors: "🟡⚫" },
+  { id: "ch_zurich", name: "Zürich", level: "d1", countryId: "ch", colors: "🔵⚪" },
+  { id: "ch_geneve", name: "Genève", level: "d1", countryId: "ch", colors: "🔴⚪" },
+  { id: "ch_sion", name: "Sion", level: "d1", countryId: "ch", colors: "🔴⚪" },
+  { id: "ch_lugano", name: "Lugano", level: "d1", countryId: "ch", colors: "⚫⚪" },
+  { id: "no_rosenborg", name: "Rosenborg", level: "d1", countryId: "no", colors: "⚫⚪" },
+  { id: "no_tromso", name: "Tromso", level: "d1", countryId: "no", colors: "🔴⚪" },
+  { id: "no_viking", name: "Viking", level: "d1", countryId: "no", colors: "🔴⚪" },
+  { id: "no_molde", name: "Molde", level: "d1", countryId: "no", colors: "🔵⚪" },
+  { id: "no_bod", name: "Bodø", level: "d1", countryId: "no", colors: "🟡⚫" },
+  { id: "fi_hjk", name: "HJK Helsinki", level: "d1", countryId: "fi", colors: "🔵⚪" },
+  { id: "fi_kups", name: "KuPS", level: "d1", countryId: "fi", colors: "🟡⚫" },
+  { id: "fi_inter", name: "Inter Turku", level: "d1", countryId: "fi", colors: "🔵⚫" },
+  { id: "fi_sjk", name: "SJK", level: "d1", countryId: "fi", colors: "⚫⚪" },
+  { id: "fi_ilves", name: "Ilves", level: "d1", countryId: "fi", colors: "🟢🔵" },
+  { id: "se_malmo", name: "Malmö FF", level: "d1", countryId: "se", colors: "🔵⚪" },
+  { id: "se_aik", name: "AIK Stockholm", level: "d1", countryId: "se", colors: "⚫🟡" },
+  { id: "se_goteborg", name: "IFK Göteborg", level: "d1", countryId: "se", colors: "🔵⚪" },
+  { id: "se_hammarby", name: "Hammarby", level: "d1", countryId: "se", colors: "🟢⚪" },
+  { id: "se_djurgarden", name: "Djurgården", level: "d1", countryId: "se", colors: "🔵🔴" },
+  { id: "pl_legia", name: "Legia Varsovie", level: "d1", countryId: "pl", colors: "🟢⚪" },
+  { id: "pl_lech", name: "Lech Poznań", level: "d1", countryId: "pl", colors: "🔵⚪" },
+  { id: "pl_rakow", name: "Raków", level: "d1", countryId: "pl", colors: "🔴🔵" },
+  { id: "pl_wisla", name: "Wisła Cracovie", level: "d1", countryId: "pl", colors: "🔴⚪" },
+  { id: "pl_gornik", name: "Górnik Zabrze", level: "d1", countryId: "pl", colors: "🔵⚪" },
+  { id: "bg_ludogorets", name: "Ludogorets", level: "d1", countryId: "bg", colors: "🟢⚪" },
+  { id: "bg_cska", name: "CSKA Sofia", level: "d1", countryId: "bg", colors: "🔴⚪" },
+  { id: "bg_levski", name: "Levski Sofia", level: "d1", countryId: "bg", colors: "🔵⚪" },
+  { id: "bg_lokomotiv", name: "Lokomotiv Plovdiv", level: "d1", countryId: "bg", colors: "🔴⚫" },
+  { id: "bg_botev", name: "Botev Plovdiv", level: "d1", countryId: "bg", colors: "🟡⚫" },
+  { id: "kr_jeonbuk", name: "Jeonbuk Hyundai", level: "d1", countryId: "kr", colors: "🟢⚪" },
+  { id: "kr_ulsan", name: "Ulsan HD", level: "d1", countryId: "kr", colors: "🔵⚪" },
+  { id: "kr_seoul", name: "FC Seoul", level: "d1", countryId: "kr", colors: "🔴⚫" },
+  { id: "kr_pohang", name: "Pohang Steelers", level: "d1", countryId: "kr", colors: "🔴⚫" },
+  { id: "kr_suwon", name: "Suwon Bluewings", level: "d1", countryId: "kr", colors: "🔵⚪" },
+  { id: "cn_shanghai", name: "Shanghai Port", level: "d1", countryId: "cn", colors: "🔴⚫" },
+  { id: "cn_shenhua", name: "Shanghai Shenhua", level: "d1", countryId: "cn", colors: "🔵⚪" },
+  { id: "cn_beijing", name: "Beijing Guoan", level: "d1", countryId: "cn", colors: "🟢⚪" },
+  { id: "cn_shandong", name: "Shandong Taishan", level: "d1", countryId: "cn", colors: "🟠⚫" },
+  { id: "cn_chengdu", name: "Chengdu Rongcheng", level: "d1", countryId: "cn", colors: "🔴🟡" },
+  { id: "au_melbcity", name: "Melbourne City", level: "d1", countryId: "au", colors: "🔵⚪" },
+  { id: "au_sydney", name: "Sydney FC", level: "d1", countryId: "au", colors: "🔵⚪" },
+  { id: "au_victory", name: "Melbourne Victory", level: "d1", countryId: "au", colors: "🔵⚪" },
+  { id: "au_wsw", name: "Western Sydney", level: "d1", countryId: "au", colors: "🔴⚫" },
+  { id: "au_adelaide", name: "Adelaide United", level: "d1", countryId: "au", colors: "🔴⚪" },
+  { id: "nz_aucklandfc", name: "Auckland FC", level: "d1", countryId: "nz", colors: "🔵⚪" },
+  { id: "nz_phoenix", name: "Wellington Phoenix", level: "d1", countryId: "nz", colors: "🟡⚫" },
+  { id: "nz_aucklandcity", name: "Auckland City", level: "d1", countryId: "nz", colors: "🔵⚪" },
+  { id: "nz_waitakere", name: "Waitakere United", level: "d1", countryId: "nz", colors: "🔵🟡" },
+  { id: "nz_canterbury", name: "Canterbury United", level: "d1", countryId: "nz", colors: "🔴⚫" },
+  { id: "pg_hekari", name: "Hekari United", level: "d1", countryId: "pg", colors: "🔴🟡" },
+  { id: "pg_laecity", name: "Lae City", level: "d1", countryId: "pg", colors: "🟢⚪" },
+  { id: "pg_toti", name: "Toti City", level: "d1", countryId: "pg", colors: "🔵⚪" },
+  { id: "pg_besta", name: "Besta United", level: "d1", countryId: "pg", colors: "🟠⚫" },
+  { id: "pg_morobe", name: "Morobe Wawens", level: "d1", countryId: "pg", colors: "🔴⚪" },
+  { id: "mx_puebla", name: "Puebla", level: "d1", countryId: "mx", colors: "🔴⚪" },
+  { id: "mx_monterrey", name: "Monterrey", level: "d1", countryId: "mx", colors: "🔵⚪" },
+  { id: "mx_tijuana", name: "Tijuana", level: "d1", countryId: "mx", colors: "🔴⚪" },
+  { id: "mx_america", name: "America", level: "d1", countryId: "mx", colors: "🟡🔵" },
+  { id: "mx_tigre", name: "Tigre", level: "d1", countryId: "mx", colors: "🟡🔵" },
+  { id: "mx_pachuca", name: "Pachuca", level: "d1", countryId: "mx", colors: "🔵⚪" },
+  { id: "mx_puma", name: "Puma", level: "d1", countryId: "mx", colors: "🔵🟡" },
+  { id: "co_pasto", name: "Pasto", level: "d1", countryId: "co", colors: "🔴⚪" },
+  { id: "co_millionaros", name: "Millionaros", level: "d1", countryId: "co", colors: "🔵⚪" },
+  { id: "co_medellin", name: "Medellín", level: "d1", countryId: "co", colors: "🟢⚪" },
+  { id: "co_barranquilla", name: "Barranquilla", level: "d1", countryId: "co", colors: "🔵🔴" },
+  { id: "co_manizales", name: "Manizales", level: "d1", countryId: "co", colors: "🔵⚫" },
+  { id: "bj_cotonou", name: "Cotonou", level: "d1", countryId: "bj", colors: "🟡⚫" },
+  { id: "bj_toffo", name: "Toffo", level: "d1", countryId: "bj", colors: "🔵⚪" },
+  { id: "bj_ouidah", name: "Ouidah", level: "d1", countryId: "bj", colors: "🔵⚪" },
+  { id: "bj_daagbe", name: "Daagbé", level: "d1", countryId: "bj", colors: "🟢⚪" },
+  { id: "bj_grandpopo", name: "Grand Popo", level: "d1", countryId: "bj", colors: "🟢⚪" },
+  { id: "bj_abomey", name: "Abomey", level: "d1", countryId: "bj", colors: "🔴🟢" },
+  { id: "hr_zagreb", name: "Zagreb", level: "d1", countryId: "hr", colors: "🔵🔴" },
+  { id: "hr_split", name: "Split", level: "d1", countryId: "hr", colors: "🔴⚪" },
+  { id: "hr_rijeka", name: "Rijeka", level: "d1", countryId: "hr", colors: "⚪🔵" },
+  { id: "hr_osijek", name: "Osijek", level: "d1", countryId: "hr", colors: "⚪🔵" },
+  { id: "hr_varazdin", name: "Varaždin", level: "d1", countryId: "hr", colors: "🔵⚪" },
+  { id: "uy_montevideo", name: "Montevideo", level: "d1", countryId: "uy", colors: "🟢⚪" },
+  { id: "uy_penarol", name: "Peñarol", level: "d1", countryId: "uy", colors: "🟡⚫" },
+  { id: "uy_nacional", name: "Nacional", level: "d1", countryId: "uy", colors: "⚪🔵" },
+  { id: "uy_maldonado", name: "Maldonado", level: "d1", countryId: "uy", colors: "🔴🟢" },
+  { id: "cd_toutpuissant", name: "Tout Puissant", level: "d1", countryId: "cd", colors: "⚫⚪" },
+  { id: "cd_aigles", name: "Aigles", level: "d1", countryId: "cd", colors: "⚪🔵" },
+  { id: "cd_sainteloi", name: "Saint-Éloi", level: "d1", countryId: "cd", colors: "🔵⚪" },
+  { id: "cd_kindu", name: "Kindu", level: "d1", countryId: "cd", colors: "🟡⚫" },
+  { id: "cd_angeskinshasa", name: "Anges Kinshasa", level: "d1", countryId: "cd", colors: "🟢⚪" },
+  { id: "cd_simba", name: "Simba", level: "d1", countryId: "cd", colors: "⚪🔴" },
+  { id: "cd_dauphin", name: "Dauphin", level: "d1", countryId: "cd", colors: "🔵⚫" },
+  { id: "tr_galata", name: "Galata", level: "d1", countryId: "tr", colors: "🔴🟡" },
+  { id: "tr_fener", name: "Fener", level: "d1", countryId: "tr", colors: "🟡🔵" },
+  { id: "tr_besiktas", name: "Beşiktaş", level: "d1", countryId: "tr", colors: "⚫⚪" },
+  { id: "tr_trabzon", name: "Trabzon", level: "d1", countryId: "tr", colors: "🔵🔴" },
+  { id: "tr_basaksehir", name: "Başakşehir", level: "d2", countryId: "tr", colors: "🔵🟠" },
+  { id: "tr_konya", name: "Konya", level: "d2", countryId: "tr", colors: "🟢⚪" },
+  { id: "tr_sivas", name: "Sivas", level: "d2", countryId: "tr", colors: "🔴⚪" },
+  { id: "tr_antalya", name: "Antalya", level: "d2", countryId: "tr", colors: "🔴⚪" },
+  { id: "tr_kayseri", name: "Kayseri", level: "regional", countryId: "tr", colors: "🔴🟡" },
+  { id: "tr_gaziantep", name: "Gaziantep", level: "regional", countryId: "tr", colors: "🔴⚫" },
+  { id: "tr_rizespor", name: "Rizespor", level: "regional", countryId: "tr", colors: "🟢🔵" },
+  { id: "sa_riyad", name: "Riyad", level: "d1", countryId: "sa", colors: "🔵" },
+  { id: "sa_doha", name: "Doha", level: "d1", countryId: "sa", colors: "⚫⚪" },
+  { id: "sa_dubai", name: "Dubai", level: "d1", countryId: "sa", colors: "🔴" },
+  { id: "sa_jeddah", name: "Jeddah", level: "d2", countryId: "sa", colors: "⚫🟡" },
+  { id: "sa_aboudabi", name: "Abou Dabi", level: "d2", countryId: "sa" },
+  { id: "us_miami", name: "Miami", level: "d1", countryId: "us", colors: "🩷⚫" },
+  { id: "us_newyork", name: "New York", level: "d1", countryId: "us", colors: "🔵🟠" },
+  { id: "us_seattle", name: "Seattle", level: "d1", countryId: "us", colors: "🔵🟢" },
+  { id: "us_losangeles", name: "Los Angeles", level: "d1", countryId: "us", colors: "🔵🟡" },
+  { id: "jp_tokyo", name: "Tokyo", level: "d1", countryId: "jp", colors: "🔵" },
+  { id: "jp_fukushima", name: "Fukushima", level: "d1", countryId: "jp" },
+  { id: "jp_sendai", name: "Sendai", level: "d1", countryId: "jp", colors: "🟡🔵" },
+  { id: "jp_kyoto", name: "Kyoto", level: "d1", countryId: "jp", colors: "🟣" },
+  { id: "jp_osaka", name: "Osaka", level: "d2", countryId: "jp" },
+];
+
+const CLUBS_BY_LEVEL = {
+  regional: CLUBS.filter((c) => c.level === "regional"),
+  d2: CLUBS.filter((c) => c.level === "d2"),
+  d1: CLUBS.filter((c) => c.level === "d1"),
+  elite: CLUBS.filter((c) => c.level === "elite"),
+};
+
+// --- Compétitions fictives ---------------------------------------------------
+const COMPETITIONS = {
+  league: { name: "Championnat National", icon: "🎖️" },
+  cup: { name: "Coupe Nationale", icon: "🏵️" },
+  continental: { name: "Coupe des Champions", icon: "🥇" },
+  worldCup: { name: "Coupe du Monde", icon: "🏆" },
+  ballon: { name: "Ballon d'Or", icon: "⭐" },
+  goldenBoot: { name: "Soulier d'Or européen", icon: "👟" },
+};
+
+// --- Récompenses individuelles de saison --------------------------------------
+// Attribuées par engine.rollSeasonAwards selon la saison réalisée. Chaque
+// distinction applique ses fx, nourrit le score Ballon d'Or (ballonPts)
+// et s'accumule dans le palmarès individuel de fin de carrière.
+const AWARDS = {
+  league_mvp: { name: "Joueur de la saison", icon: "🏅", fx: { rep: 6, mor: 4, money: 0.4 }, ballonPts: 1.6 },
+  young_star: { name: "Espoir de l'année", icon: "🌟", fx: { rep: 5, mor: 4 }, ballonPts: 0.6 },
+  top_assist: { name: "Meilleur passeur", icon: "🎯", fx: { rep: 3, mor: 2 }, ballonPts: 0.5 },
+  team_of_season: { name: "Équipe type de la saison", icon: "📋", fx: { rep: 3 }, ballonPts: 0.6 },
+  cl_mvp: { name: "MVP de la Coupe des Champions", icon: "🥇", fx: { rep: 8, mor: 4, money: 0.6 }, ballonPts: 1.8 },
+  wc_golden_ball: { name: "Ballon d'Or du Mondial", icon: "🌍", fx: { rep: 9, mor: 5, money: 0.8 }, ballonPts: 2.5 },
+  wc_top_scorer: { name: "Meilleur buteur du Mondial", icon: "⚽", fx: { rep: 6, mor: 4 }, ballonPts: 1.2 },
+  top_scorer: { name: "Meilleur buteur du championnat", icon: "⚽", fx: { rep: 4, mor: 3, money: 0.3 }, ballonPts: 0.7 },
+  golden_glove: { name: "Gant d'Or", icon: "🧤", fx: { rep: 5, mor: 3 }, ballonPts: 1.0 },
+  revelation: { name: "Révélation de la saison", icon: "💫", fx: { rep: 6, mor: 5 }, ballonPts: 0.8 },
+  club_legend: { name: "Légende du club", icon: "🏛️", fx: { rep: 6, mor: 8 }, ballonPts: 0.3 },
+};
+
+/* ============================================================
+   MOMENTS DÉCISIFS — séquences interactives des très grands
+   matchs. Variante "field" (joueur de champ, tireur) et "gk"
+   (gardien, séance de tirs au but). base = proba de réussite,
+   modulée par technique/mental/sang froid dans engine.js.
+   repWin/repFail : réputation en jeu au-delà du résultat.
+   ============================================================ */
+const KEY_MOMENTS = {
+  wc_final: {
+    field: [{
+      title: "FINALE DE LA COUPE DU MONDE",
+      text: "120e minute, 3-3 au terme d'une finale irrespirable. Penalty décisif pour {nat}. Un milliard et demi de téléspectateurs. Le ballon est posé — c'est vous qui le tirez.",
+      options: [
+        { id: "placed", label: "Tir placé, assurer l'essentiel", hint: "Sûr", base: 0.74 },
+        { id: "power", label: "Frappe de mule sous la barre", hint: "Puissant", base: 0.62, repWin: 3 },
+        { id: "corner", label: "Croisé pied ouvert, petit filet", base: 0.66, repWin: 2 },
+        { id: "panenka", label: "Panenka", hint: "Légendaire", base: 0.44, repWin: 10, repFail: -8, traitWin: "showman" },
+      ],
+      winText: "AU FOND !!! Le stade explose, votre nation est CHAMPIONNE DU MONDE — et c'est vous qui l'avez envoyée au paradis !",
+      failText: "Arrêté… Le gardien adverse s'envole vers la gloire, et votre nation s'incline au bout de la nuit. Cette image vous hantera.",
+    }, {
+      title: "FINALE DE LA COUPE DU MONDE",
+      text: "118e minute, 2-2. Vous récupérez le ballon à quarante mètres du but adverse, trois défenseurs en face, le monde entier debout.",
+      options: [
+        { id: "solo", label: "Partir en solo, dribbler le monde", hint: "Légendaire", base: 0.4, repWin: 10, repFail: -5 },
+        { id: "longshot", label: "Armer la frappe de quarante mètres", hint: "Folie", base: 0.34, repWin: 12, repFail: -6, traitWin: "showman" },
+        { id: "combo", label: "Jouer le une-deux et surgir dans la surface", base: 0.58, repWin: 4 },
+        { id: "draw", label: "Provoquer la faute aux abords de la surface", hint: "Malin", base: 0.52, repWin: 3 },
+      ],
+      winText: "L'ACTION D'UNE VIE !!! Le but qui offre la Coupe du Monde à votre nation — les images repasseront pendant un siècle !",
+      failText: "L'action s'éteint dans la défense adverse… puis le contre fatal tombe côté opposé. Champions du monde : les autres.",
+    }],
+    mil: {
+      title: "FINALE DE LA COUPE DU MONDE",
+      text: "116e minute, 2-2. La dernière vraie possession du match arrive dans vos pieds, au milieu du terrain. Tout le monde est cuit — sauf vous, peut-être.",
+      options: [
+        { id: "vertical", label: "Tenter la passe verticale qui tue", hint: "Risqué", base: 0.48, repWin: 6, repFail: -3 },
+        { id: "longshot", label: "Frapper de trente-cinq mètres", hint: "Folie", base: 0.35, repWin: 11, repFail: -5, traitWin: "showman" },
+        { id: "control", label: "Contrôler le tempo et viser les tirs au but", hint: "Froid", base: 0.6, repWin: 2 },
+        { id: "overlap", label: "Lancer le surnombre côté faible", base: 0.55, repWin: 4 },
+      ],
+      winText: "VOTRE geste décide de la finale ! Champion du monde en dictant le tempo jusqu'à la dernière seconde !",
+      failText: "La perte de balle de trop… le contre adverse est fatal. Le milieu de terrain porte la défaite sur ses épaules.",
+    },
+    def: {
+      title: "FINALE DE LA COUPE DU MONDE",
+      text: "119e minute, 2-2. Leur attaquant star part seul au but — vous êtes le dernier rempart de toute une nation.",
+      options: [
+        { id: "tackle", label: "Le tacle parfait, à pleine vitesse", hint: "Quitte ou double", base: 0.46, repWin: 8, repFail: -5 },
+        { id: "delay", label: "Temporiser et l'emmener loin du but", hint: "Malin", base: 0.58, repWin: 3 },
+        { id: "foul", label: "La faute tactique — rouge assumé", hint: "Sacrifice", base: 0.64, repWin: 2, repFail: -4 },
+        { id: "trust", label: "Faire confiance à votre gardien", base: 0.42, repWin: 5 },
+      ],
+      winText: "L'INTERVENTION D'UNE VIE ! Vous sauvez la nation, puis le titre arrive aux tirs au but : CHAMPIONS DU MONDE !",
+      failText: "Battu sur l'action décisive… Le but tombe, et la finale s'écroule dans votre dos. Cruel, injuste, inoubliable.",
+    },
+    gk: {
+      title: "FINALE DE LA COUPE DU MONDE",
+      text: "Séance de tirs au but de la finale. 4-4 : le dernier tireur adverse s'avance. S'il rate, vous êtes champions du monde. Tout repose sur vos gants.",
+      options: [
+        { id: "read", label: "Lire ses appuis jusqu'au bout", hint: "Patient", base: 0.5 },
+        { id: "early", label: "Partir tôt sur son côté fort", base: 0.44, repWin: 2 },
+        { id: "center", label: "Rester planté au centre", hint: "Culotté", base: 0.4, repWin: 6, repFail: -4 },
+        { id: "mind", label: "Le déstabiliser : retarder, fixer, sourire", hint: "Guerre des nerfs", base: 0.46, repWin: 4, traitWin: "clutch" },
+      ],
+      winText: "QUEL ARRÊT !!! Vous détournez le tir et disparaissez sous une marée de coéquipiers : CHAMPIONS DU MONDE grâce à VOUS !",
+      failText: "Le ballon file à l'opposé de votre plongeon. La plus cruelle des loteries vient de choisir son camp.",
+    },
+  },
+  cup_final: {
+    field: [{
+      title: "FINALE DE LA COUPE NATIONALE",
+      text: "90e minute de la finale, 1-1. Penalty pour {club} — le trophée au bout du pied, un stade entier qui n'ose plus respirer.",
+      options: [
+        { id: "placed", label: "Tir placé, assurer l'essentiel", hint: "Sûr", base: 0.72 },
+        { id: "power", label: "Frappe sous la barre", hint: "Puissant", base: 0.6, repWin: 2 },
+        { id: "corner", label: "Croisé pied ouvert", base: 0.65, repWin: 2 },
+        { id: "panenka", label: "Panenka", hint: "Légendaire", base: 0.42, repWin: 8, repFail: -6, traitWin: "showman" },
+      ],
+      winText: "AU FOND ! La coupe est à vous, et cette image de vous ballon posé, seul face au destin, fera les couvertures !",
+      failText: "Le gardien s'envole et détourne… La coupe s'échappe dans les dernières secondes, et le silence est assourdissant.",
+    }, {
+      title: "FINALE DE LA COUPE NATIONALE",
+      text: "Contre à deux contre un à la 88e de la finale, 1-1. Vous portez le ballon, un coéquipier hurle à votre gauche, le défenseur recule.",
+      options: [
+        { id: "selfish", label: "Y aller seul et frapper", hint: "Ego", base: 0.5, repWin: 5, repFail: -4 },
+        { id: "give", label: "Servir le coéquipier au bon moment", hint: "Collectif", base: 0.68, repWin: 2 },
+        { id: "feint", label: "Feinter la passe et repiquer", base: 0.52, repWin: 4, repFail: -2 },
+        { id: "wait", label: "Casser le rythme et attendre le surnombre", base: 0.6, repWin: 1 },
+      ],
+      winText: "Le contre parfait ! La coupe se soulève ce soir, et la dernière action porte votre signature !",
+      failText: "Le contre se meurt, la finale glisse aux tirs au but… perdus. Les détails, toujours les détails.",
+    }],
+    mil: [{
+      title: "FINALE DE LA COUPE NATIONALE",
+      text: "88e minute de la finale, 1-1. Le jeu passe par vous : accélérer et prendre le risque, ou verrouiller et attendre ?",
+      options: [
+        { id: "killer", label: "La passe entre les lignes qui tue", hint: "Risqué", base: 0.5, repWin: 5, repFail: -2 },
+        { id: "longshot", label: "Frapper de loin, au culot", base: 0.42, repWin: 6, repFail: -3 },
+        { id: "tempo", label: "Geler le jeu et viser la prolongation", hint: "Froid", base: 0.62, repWin: 1 },
+        { id: "corner_run", label: "Provoquer et obtenir le coup de pied arrêté", base: 0.56, repWin: 3 },
+      ],
+      winText: "Votre lecture du money-time offre la coupe à {club} ! Le chef d'orchestre a joué sa plus belle partition.",
+      failText: "Le choix ne paie pas… et la coupe s'échappe dans les dernières minutes. Les regrets dureront tout l'été.",
+    }, {
+      title: "FINALE DE LA COUPE NATIONALE",
+      text: "Finale, 1-0 pour {club}, dix dernières minutes interminables. Le coach vous hurle de tuer le match — à vous d'inventer comment.",
+      options: [
+        { id: "corner_poteau", label: "Emmener le ballon mourir au poteau de corner", hint: "Vicieux", base: 0.64, repWin: 2 },
+        { id: "keepball", label: "Confisquer le ballon, passe après passe", hint: "Toro", base: 0.56, repWin: 3 },
+        { id: "kill", label: "Chercher le 2-0 pour plier l'affaire", base: 0.46, repWin: 5, repFail: -3 },
+        { id: "foul_smart", label: "Hacher le rythme par des fautes malignes", base: 0.6, repWin: 1, repFail: -2 },
+      ],
+      winText: "Le match meurt exactement là où vous l'avez décidé : LA COUPE ! Le sale boulot aussi fait les légendes.",
+      failText: "Le ballon vous échappe une fois de trop… égalisation, prolongation, effondrement. La coupe s'envole.",
+    }],
+    def: [{
+      title: "FINALE DE LA COUPE NATIONALE",
+      text: "90e+3 de la finale, {club} mène d'un but. Dernier corner adverse, leur gardien monte, la surface est une jungle.",
+      options: [
+        { id: "mark", label: "Prendre leur meilleure tête au marquage", base: 0.58, repWin: 3 },
+        { id: "clear", label: "Attaquer le ballon au premier poteau", hint: "Tranchant", base: 0.5, repWin: 5, repFail: -3 },
+        { id: "zone", label: "Organiser la zone et hurler les consignes", base: 0.62, repWin: 2, traitWin: "leader" },
+        { id: "counter", label: "Rester haut pour jouer le contre", hint: "Joueur", base: 0.44, repWin: 6, repFail: -3 },
+      ],
+      winText: "Le ballon est dégagé, l'arbitre siffle : LA COUPE ! Une victoire défendue jusqu'au dernier centimètre.",
+      failText: "L'égalisation tombe sur ce dernier corner… puis tout s'écroule. La coupe s'envole au pire moment.",
+    }, {
+      title: "FINALE DE LA COUPE NATIONALE",
+      text: "Toute la finale se résume à un duel : leur attaquant vedette contre vous. Chaque ballon dans votre zone est une finale dans la finale.",
+      options: [
+        { id: "stick", label: "Le marquer à la culotte, 90 minutes durant", hint: "Duel d'hommes", base: 0.55, repWin: 5, repFail: -3 },
+        { id: "intimidate", label: "L'intimider dès le premier contact", hint: "Rugueux", base: 0.48, repWin: 4, repFail: -4 },
+        { id: "anticipate", label: "Jouer l'anticipation et couper les passes", hint: "Cérébral", base: 0.58, repWin: 4 },
+        { id: "team", label: "Organiser un double rideau avec le milieu", hint: "Collectif", base: 0.62, repWin: 2 },
+      ],
+      winText: "Leur star n'a pas existé : la coupe est à vous, et votre masterclass défensive fait le tour des analyses vidéo !",
+      failText: "Un éclair de génie adverse suffit… La star a gagné le duel, et la coupe est partie avec elle.",
+    }],
+    gk: [{
+      title: "FINALE DE LA COUPE NATIONALE",
+      text: "Séance de tirs au but de la finale. Un arrêt et {club} soulève la coupe. Le tireur s'élance…",
+      options: [
+        { id: "read", label: "Lire ses appuis jusqu'au bout", hint: "Patient", base: 0.5 },
+        { id: "early", label: "Partir tôt sur son côté fort", base: 0.44 },
+        { id: "center", label: "Rester au centre", hint: "Culotté", base: 0.4, repWin: 5, repFail: -3 },
+        { id: "mind", label: "Gagner la guerre des nerfs", base: 0.46, repWin: 3, traitWin: "clutch" },
+      ],
+      winText: "L'ARRÊT ! Vous repoussez le tir et la coupe est à vous — les photographes n'ont d'yeux que pour vos gants !",
+      failText: "Pris à contre-pied. La coupe file dans d'autres mains, à un gant près.",
+    }, {
+      title: "FINALE DE LA COUPE NATIONALE",
+      text: "90e minute de la finale, 1-0 pour {club}… et leur attaquant surgit seul face à vous. Un arrêt, et la coupe est dans vos gants.",
+      options: [
+        { id: "rush", label: "Sortir vite et étouffer l'angle", base: 0.52, repWin: 4, repFail: -2 },
+        { id: "stand", label: "Rester grand le plus longtemps possible", hint: "Patient", base: 0.56, repWin: 3 },
+        { id: "feint", label: "Feinter la sortie pour forcer sa décision", hint: "Joueur d'échecs", base: 0.46, repWin: 6, repFail: -3 },
+        { id: "close", label: "Fermer le petit filet et parier sur le croisé", base: 0.5, repWin: 4 },
+      ],
+      winText: "FACE-À-FACE GAGNÉ ! Le dernier rempart offre la coupe à {club} — les gants en or de la soirée !",
+      failText: "L'attaquant ne tremble pas… Égalisation, puis naufrage. Si près des gants, si loin de la coupe.",
+    }],
+  },
+  derby: {
+    att: [{
+      title: "LE DERBY",
+      text: "90e minute du derby, égalité. Vous voilà seul face au gardien, tout un virage en apnée derrière le but.",
+      options: [
+        { id: "shoot", label: "Fusiller le gardien", base: 0.55, repWin: 4, repFail: -3 },
+        { id: "lob", label: "Tenter le lob", hint: "Panache", base: 0.4, repWin: 7, repFail: -4, traitWin: "showman" },
+        { id: "round", label: "Dribbler le gardien", base: 0.46, repWin: 5, repFail: -3 },
+        { id: "pass", label: "Servir un coéquipier démarqué", hint: "Collectif", base: 0.66, repWin: 2 },
+      ],
+      winText: "LE BUT DU DERBY ! La moitié de la ville chantera votre nom toute la semaine.",
+      failText: "L'occasion du derby s'envole… et le match avec. L'autre moitié de la ville ne vous laissera pas l'oublier.",
+    }, {
+      title: "LE DERBY",
+      text: "Penalty pour vous à la 88e du derby, 1-1. Le tireur attitré s'avance déjà… mais c'est VOTRE derby, et le virage scande votre nom.",
+      options: [
+        { id: "take", label: "Prendre le ballon : ce penalty est à vous", hint: "Autorité", base: 0.55, repWin: 5, repFail: -4 },
+        { id: "leave", label: "Laisser le tireur attitré", hint: "Collectif", base: 0.7, repWin: 1 },
+        { id: "panenka", label: "Le prendre… et tenter la panenka", hint: "Légendaire", base: 0.4, repWin: 8, repFail: -6, traitWin: "showman" },
+        { id: "power", label: "Le prendre et frapper en force", base: 0.5, repWin: 4, repFail: -3 },
+      ],
+      winText: "Le penalty du derby est au fond ! La ville entière connaît le nom du patron.",
+      failText: "Raté… Le derby s'échappe, et votre prise de pouvoir se transforme en procès public.",
+    }],
+    mil: [{
+      title: "LE DERBY",
+      text: "Dernière minute du derby, le ballon vous arrive à trente mètres. Le bloc adverse est massif, le stade hurle : il faut décider, maintenant.",
+      options: [
+        { id: "longshot", label: "Tenter la frappe de trente mètres", hint: "Panache", base: 0.42, repWin: 7, repFail: -3 },
+        { id: "killer", label: "Chercher la passe qui tue entre les lignes", base: 0.52, repWin: 4, repFail: -2 },
+        { id: "tempo", label: "Garder le ballon et faire monter le bloc", hint: "Maîtrise", base: 0.64, repWin: 2 },
+        { id: "voice", label: "Haranguer le public et l'équipe", base: 0.55, repWin: 2, traitWin: "leader" },
+      ],
+      winText: "Votre geste décide du derby dans les dernières secondes ! Toute la ville en parlera pendant des mois.",
+      failText: "Le choix ne paie pas, le derby file. Les réseaux sociaux, eux, n'oublient jamais.",
+    }, {
+      title: "LE DERBY",
+      text: "Récupération très haute à la 90e du derby : contre à trois contre deux, et c'est vous qui portez le ballon.",
+      options: [
+        { id: "through", label: "Lancer l'ailier dans la profondeur", base: 0.6, repWin: 3 },
+        { id: "carry", label: "Porter jusqu'à la surface et décider au dernier moment", base: 0.5, repWin: 5, repFail: -2 },
+        { id: "shoot", label: "Frapper dès l'entrée de surface", base: 0.46, repWin: 5, repFail: -3 },
+        { id: "slow", label: "Casser le contre et sécuriser le nul", hint: "Froid", base: 0.66, repWin: 1 },
+      ],
+      winText: "Le contre parfait, mené de bout en bout : le derby bascule sur VOTRE inspiration !",
+      failText: "Le contre avorte… et sur l'action suivante, le derby vous poignarde. Impardonnable, disent les ultras.",
+    }],
+    def: [{
+      title: "LE DERBY",
+      text: "Contre éclair adverse à la 89e du derby : leur star file seule vers votre but, vous êtes le dernier rempart.",
+      options: [
+        { id: "tackle", label: "Tacler à pleine vitesse", hint: "Quitte ou double", base: 0.48, repWin: 5, repFail: -4 },
+        { id: "delay", label: "Temporiser et l'emmener vers l'angle", hint: "Malin", base: 0.62, repWin: 2 },
+        { id: "tactical", label: "Prendre le carton tactique", hint: "Cynique", base: 0.7, repWin: 1, repFail: -2 },
+        { id: "duel", label: "Provoquer le duel physique", base: 0.5, repWin: 4, repFail: -3 },
+      ],
+      winText: "Votre intervention sauve le derby ! Un tacle qui entre directement dans la légende du club.",
+      failText: "Battu sur l'action décisive… Le derby se perd dans votre dos, et la ville a tout vu.",
+    }, {
+      title: "LE DERBY",
+      text: "93e minute : votre gardien est battu, le ballon file doucement vers la ligne… et vous arrivez lancé de nulle part.",
+      options: [
+        { id: "bicycle", label: "Le retourné acrobatique sur la ligne", hint: "Spectaculaire", base: 0.45, repWin: 7, repFail: -3 },
+        { id: "slide", label: "Le tacle glissé désespéré", base: 0.58, repWin: 4, repFail: -2 },
+        { id: "clear", label: "Dégager n'importe où, pourvu que ça sorte", hint: "Sûr", base: 0.66, repWin: 2 },
+        { id: "hand", label: "La main volontaire — rouge et penalty", hint: "Cynique", base: 0.5, repWin: 1, repFail: -4 },
+      ],
+      winText: "SAUVETAGE SUR LA LIGNE ! La photo fera la une : le derby est sauvé par votre instinct.",
+      failText: "Trop tard d'un souffle… Le ballon franchit la ligne et le derby s'écroule.",
+    }],
+    gk: [{
+      title: "LE DERBY",
+      text: "Corner adverse à la 93e du derby, tout le monde monte, le ballon flotte vers votre surface saturée.",
+      options: [
+        { id: "punch", label: "Sortir au poing dans la mêlée", base: 0.55, repWin: 3, repFail: -3 },
+        { id: "catch", label: "Capter le ballon au-dessus de tous", hint: "Autorité", base: 0.44, repWin: 6, repFail: -4 },
+        { id: "line", label: "Rester sur votre ligne", hint: "Prudent", base: 0.6, repWin: 1 },
+        { id: "counter", label: "Capter et relancer le contre éclair", base: 0.48, repWin: 5, repFail: -2 },
+      ],
+      winText: "Votre sortie assomme le derby ! Les gants les plus sûrs de la ville, c'est désormais officiel.",
+      failText: "Le ballon vous échappe dans la mêlée… et finit au fond. Le pire scénario, dans le pire match.",
+    }, {
+      title: "LE DERBY",
+      text: "Penalty adverse à la 89e du derby, 1-1. Leur tireur ne vous a jamais raté… jusqu'à ce soir, peut-être.",
+      options: [
+        { id: "read", label: "Lire ses appuis jusqu'au bout", hint: "Patient", base: 0.5, repWin: 4 },
+        { id: "early", label: "Plonger tôt sur son côté préféré", base: 0.46, repWin: 4, repFail: -2 },
+        { id: "center", label: "Rester au centre", hint: "Culotté", base: 0.4, repWin: 6, repFail: -3 },
+        { id: "mind", label: "Le fixer, sourire, gagner les nerfs", hint: "Guerre psychologique", base: 0.48, repWin: 5, traitWin: "clutch" },
+      ],
+      winText: "PENALTY ARRÊTÉ ! Le virage porte déjà votre nom en banderole : le derby est à vous.",
+      failText: "Il ne vous a pas raté, encore. Le derby glisse entre vos gants, et la semaine sera longue.",
+    }],
+  },
+  old_club: {
+    any: {
+      title: "RETROUVAILLES",
+      text: "Premier match contre votre ancien club depuis votre départ. Tribunes partagées entre applaudissements et sifflets — chaque ballon que vous touchez fait monter le volume.",
+      options: [
+        { id: "big", label: "Jouer le match de votre vie", hint: "Revanche", base: 0.5, repWin: 4 },
+        { id: "sober", label: "Rester sobre et appliqué", hint: "Classe", base: 0.68, repWin: 1 },
+        { id: "celebrate", label: "Marquer ET célébrer face au virage", hint: "Provocateur", base: 0.42, repWin: 6, repFail: -6 },
+      ],
+      winText: "Match plein face à votre passé : même vos anciens supporters finissent par applaudir. Le plus beau des points finaux.",
+      failText: "Trop d'émotion, pas assez de jeu : votre ancien public savoure, le nouveau s'interroge.",
+    },
+    gk: {
+      title: "RETROUVAILLES",
+      text: "Premier match contre votre ancien club depuis votre départ. Les attaquants d'en face connaissent chacune de vos habitudes — et l'ancien public guette la moindre erreur de gant.",
+      options: [
+        { id: "big", label: "Sortir le match de votre vie", hint: "Revanche", base: 0.5, repWin: 4 },
+        { id: "sober", label: "Rester sobre et appliqué", hint: "Classe", base: 0.68, repWin: 1 },
+        { id: "celebrate", label: "Verrouiller la cage ET chambrer le virage", hint: "Provocateur", base: 0.42, repWin: 6, repFail: -6 },
+      ],
+      winText: "Cage inviolée face à votre passé : même vos anciens supporters finissent par applaudir. Le plus beau des points finaux.",
+      failText: "Trop d'émotion, pas assez de gants : votre ancien public savoure, le nouveau s'interroge.",
+    },
+  },
+  continental_final: {
+    field: [{
+      title: "FINALE CONTINENTALE",
+      text: "Finale continentale, 1-1 à la 89e devant tout un continent. Coup franc idéal pour {club}, à l'entrée de la surface. Le sacre au bout du pied.",
+      options: [
+        { id: "curl", label: "Enrouler dans la lucarne", hint: "Signature", base: 0.55, repWin: 5, repFail: -2 },
+        { id: "power", label: "Frappe pure sous la barre", hint: "Puissant", base: 0.5, repWin: 4 },
+        { id: "pass", label: "Jouer la combinaison travaillée", hint: "Collectif", base: 0.66, repWin: 2 },
+        { id: "panenka", label: "Le geste fou pour l'histoire", hint: "Légendaire", base: 0.4, repWin: 9, repFail: -6, traitWin: "showman" },
+      ],
+      winText: "LUCARNE ! Le trophée continental est à {club}, et tout un continent scande votre nom jusqu'au bout de la nuit !",
+      failText: "Le mur dévie d'un souffle… Le sacre continental s'envole dans les dernières secondes. Le vide, immense.",
+    }, {
+      title: "FINALE CONTINENTALE",
+      text: "Prolongation de la finale continentale, 2-2. Une dernière contre-attaque se dessine, vous êtes lancé plein axe, le gardien sort à votre rencontre.",
+      options: [
+        { id: "dribble", label: "Éliminer le gardien au culot", hint: "Ego", base: 0.48, repWin: 6, repFail: -4 },
+        { id: "chip", label: "Le piquer au-dessus du gardien", base: 0.52, repWin: 5, repFail: -2 },
+        { id: "square", label: "Décaler le coéquipier sur la cage vide", hint: "Lucide", base: 0.7, repWin: 2 },
+        { id: "cool", label: "Temporiser et fixer avant de conclure", base: 0.6, repWin: 1 },
+      ],
+      winText: "Le geste parfait au bout de la nuit : le trophée continental se soulève, et la dernière image porte votre signature !",
+      failText: "Le dernier geste se dérobe, et la séance de tirs au but tourne au cauchemar. Si près du toit du continent.",
+    }],
+    gk: [{
+      title: "FINALE CONTINENTALE",
+      text: "Tirs au but en finale continentale. 4-4. Le tireur adverse s'avance, un continent retient son souffle : c'est vous, le dernier rempart.",
+      options: [
+        { id: "read", label: "Lire l'appui et plonger tôt", hint: "Anticipation", base: 0.5, repWin: 5 },
+        { id: "wait", label: "Attendre le dernier instant", hint: "Sang-froid", base: 0.58, repWin: 3 },
+        { id: "mind", label: "Jouer avec ses nerfs sur la ligne", hint: "Provoc", base: 0.46, repWin: 7, repFail: -3 },
+      ],
+      winText: "REPOUSSÉ ! Vous offrez le sacre continental à {club} d'une claire-voie légendaire : le héros du continent, c'est vous !",
+      failText: "Le ballon file au ras du poteau… Le trophée échappe à {club} d'un souffle. La nuit sera longue.",
+    }],
+  },
+  promo_playoff: {
+    field: [{
+      title: "BARRAGE DE MONTÉE",
+      text: "Dernière minute du barrage décisif, 1-1. Coup franc aux 20 mètres pour {club} : tout un club, toute une ville, tout un rêve de montée suspendus à votre pied.",
+      options: [
+        { id: "curl", label: "Enrouler au-dessus du mur", base: 0.52, repWin: 3 },
+        { id: "power", label: "Fusiller le gardien en force", base: 0.46, repWin: 3 },
+        { id: "combo", label: "Jouer la combinaison répétée à l'entraînement", hint: "Collectif", base: 0.58 },
+        { id: "chip", label: "Chiper par-dessus le mur, à la Juninho", hint: "Audacieux", base: 0.4, repWin: 7, repFail: -4 },
+      ],
+      winText: "LA DÉLIVRANCE ! Le stade chavire, les tribunes se vident sur la pelouse : {club} MONTE, et c'est signé de votre pied !",
+      failText: "Le ballon frôle la lucarne… et s'envole avec le rêve de toute une ville. La montée attendra encore.",
+    }, {
+      title: "BARRAGE DE MONTÉE",
+      text: "90e minute du barrage, 0-0. Longue ouverture, vous voilà lancé seul face au gardien adverse — la montée au bout de la course.",
+      options: [
+        { id: "early", label: "Frapper tôt, avant qu'il ne sorte", base: 0.52, repWin: 3 },
+        { id: "lob", label: "Le lob de la folie", hint: "Panache", base: 0.4, repWin: 7, repFail: -4, traitWin: "showman" },
+        { id: "round", label: "L'éliminer et pousser au fond", base: 0.48, repWin: 5, repFail: -2 },
+        { id: "square", label: "Remettre en retrait au coéquipier", hint: "Collectif", base: 0.62, repWin: 2 },
+      ],
+      winText: "LE BUT DE LA MONTÉE ! Des larmes partout, des abonnés à vie : {club} change de division grâce à vous !",
+      failText: "Le gardien gagne son duel… et le barrage se perd dans la foulée. Toute une ville rentre en silence.",
+    }],
+    mil: {
+      title: "BARRAGE DE MONTÉE",
+      text: "Barrage décisif, 87e, 1-1. Le match est haché, le stade au bord de l'implosion — et le ballon revient toujours vers vous.",
+      options: [
+        { id: "vertical", label: "Oser la passe verticale décisive", hint: "Risqué", base: 0.5, repWin: 5, repFail: -2 },
+        { id: "drive", label: "Porter le ballon et casser les lignes vous-même", base: 0.48, repWin: 5, repFail: -2 },
+        { id: "calm", label: "Calmer le jeu et faire respirer l'équipe", hint: "Maîtrise", base: 0.6, repWin: 2 },
+        { id: "longshot", label: "Frapper de vingt-cinq mètres", base: 0.4, repWin: 7, repFail: -3 },
+      ],
+      winText: "C'est vous qui débloquez le barrage ! {club} MONTE, guidé par son métronome !",
+      failText: "Le verrou ne saute jamais… et le barrage se perd aux tirs au but. Si près, si loin.",
+    },
+    def: {
+      title: "BARRAGE DE MONTÉE",
+      text: "Barrage décisif, {club} mène 1-0 à la 89e. Leur avant-centre déborde votre côté, dernier duel avant la délivrance.",
+      options: [
+        { id: "tackle", label: "Le tacle qui doit tout finir", hint: "Quitte ou double", base: 0.48, repWin: 6, repFail: -4 },
+        { id: "jockey", label: "Reculer, temporiser, laisser le bloc revenir", hint: "Malin", base: 0.6, repWin: 2 },
+        { id: "clear", label: "Dégager en catastrophe en tribune", base: 0.56, repWin: 1 },
+        { id: "foul", label: "La faute tactique loin du but", hint: "Cynique", base: 0.62, repWin: 1, repFail: -2 },
+      ],
+      winText: "TENU ! Le duel est gagné, le coup de sifflet libère tout un peuple : {club} MONTE sur votre intervention !",
+      failText: "Le duel est perdu, l'égalisation tombe… et la montée s'évapore dans la nuit. Le vestiaire est un cimetière.",
+    },
+    gk: {
+      title: "BARRAGE DE MONTÉE",
+      text: "Tirs au but du barrage décisif. Un arrêt et {club} monte. Le tireur adverse pose son ballon, le stade retient son souffle derrière vos gants.",
+      options: [
+        { id: "read", label: "Lire ses appuis jusqu'au bout", hint: "Patient", base: 0.52 },
+        { id: "early", label: "Partir tôt sur son côté fort", base: 0.46 },
+        { id: "center", label: "Rester au centre", hint: "Culotté", base: 0.42, repWin: 5, repFail: -3 },
+        { id: "mind", label: "Gagner la guerre des nerfs", base: 0.48, repWin: 3, traitWin: "clutch" },
+      ],
+      winText: "L'ARRÊT DE LA MONTÉE ! Vous voilà héros éternel de {club} : la ville entière connaîtra vos gants par cœur !",
+      failText: "Le tir vous transperce. Le silence du stade dit tout : la montée s'échappe au pire moment.",
+    },
+  },
+};
+
+// --- Entraîneurs (noms générés) ---------------------------------------------
+const COACH_NAMES = [
+  "R. Falcone", "J. Van Dael", "M. Herrera", "P. Leroy", "K. Adeyemi",
+  "S. Novotný", "A. Guimarães", "T. Eriksson", "D. Marchetti", "H. Weiss",
+  "L. Fontaine", "C. Ferraro", "O. Sørensen", "B. Quintana", "G. Marlow",
+];
+
+// --- Traits de personnalité --------------------------------------------------
+const TRAITS = {
+  clutch: { name: "Sang froid", icon: "🧊", desc: "Décisif dans les grands rendez-vous." },
+  showman: { name: "Showman", icon: "🎭", desc: "La foule vous adore, les caméras aussi." },
+  leader: { name: "Leader né", icon: "🗣️", desc: "Le vestiaire vous suit les yeux fermés." },
+  ironman: { name: "Increvable", icon: "🦾", desc: "Un corps qui encaisse tout." },
+  glass: { name: "Verre fêlé", icon: "🩼", desc: "Votre corps vous lâche trop souvent." },
+  mercenary: { name: "Mercenaire", icon: "🪙", desc: "L'argent d'abord, le cœur ensuite." },
+  loyal: { name: "Cœur de club", icon: "❤️", desc: "Fidèle envers et contre tout." },
+  genius: { name: "Génie précoce", icon: "✨", desc: "Un talent qui saute aux yeux." },
+  party: { name: "Fêtard", icon: "🥂", desc: "Les nuits sont longues, les matins difficiles." },
+  zen: { name: "Zen", icon: "🧘", desc: "Imperturbable, quoi qu'il arrive." },
+};
+
+/* ============================================================
+   ÉVÉNEMENTS PRINCIPAUX — un par saison, choisi selon l'état
+   du joueur (âge, club, stats, poste, drapeaux d'histoire).
+   Par défaut : once = true (jamais revu dans une même carrière).
+   ============================================================ */
+const EVENTS = [
+
+  // ══════════════ JEUNESSE (16-19) ══════════════
+  {
+    id: "ev_academy_poach", cat: "Mercato", icon: "🏫", w: 14,
+    cond: { aMin: 16, aMax: 17 },
+    text: "Un centre de formation voisin, bien plus structuré, veut vous arracher à {club}.",
+    options: [
+      { label: "Rester fidèle à votre club formateur", outcomes: [
+        { weight: 45, text: "Vous progressez tranquillement, dans un environnement que vous connaissez par cœur.", fx: { t: 3, m: 2, mor: 4 } },
+        { weight: 25, text: "Un éducateur croit dur comme fer en vous : surclassé, vous brûlez les étapes.", fx: { t: 5, rep: 6, mor: 5, trait: "loyal" } },
+        { weight: 22, text: "Noyé dans une génération dorée, vous stagnez sur le banc des U19.", fx: { m: -3, form: -8, mor: -6 } },
+        { weight: 8, text: "Une blessure de croissance gâche votre saison.", fx: { p: -4, inj: 14, mor: -4 } },
+      ] },
+      { label: "Rejoindre la structure rivale", hint: "Ambitieux", outcomes: [
+        { weight: 40, text: "Vous faites vos valises. L'adaptation est studieuse et sans éclat : de bonnes bases pour la suite.", fx: { t: 3, p: 2, transfer: { d: 1, direct: true } } },
+        { weight: 28, text: "Vous faites vos valises, et les nouvelles méthodes de travail vous transcendent. Un cap est franchi.", fx: { t: 6, m: 3, rep: 4, transfer: { d: 1, direct: true } } },
+        { weight: 24, text: "Vous partez… et le mal du pays vous ronge, loin des vôtres.", fx: { m: -3, mor: -10, transfer: { d: 1, direct: true } } },
+        { weight: 8, text: "Vous partez, mais un cadre du nouveau vestiaire vous prend en grippe : saison cauchemardesque.", fx: { m: -4, form: -10, mor: -8, team: -6, transfer: { d: 1, direct: true } } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_all_in", cat: "Vie perso", icon: "🎲", w: 12,
+    cond: { aMin: 16, aMax: 17 },
+    text: "Un agent véreux jure que vous perdez votre temps à l'école : « Tout miser sur le foot, maintenant, ou rester un amateur. »",
+    options: [
+      { label: "Tout miser sur le football", hint: "Risqué", outcomes: [
+        { weight: 40, text: "Vous vous entraînez matin, midi et soir. Le pari tient, pour l'instant.", fx: { t: 5, p: 2, flag: "no_diploma" } },
+        { weight: 25, text: "Libéré de tout le reste, votre progression est fulgurante.", fx: { t: 8, rep: 5, trait: "genius", flag: "no_diploma" } },
+        { weight: 35, text: "À 16 ans, cette pression vous dévore. Vous ne dormez plus.", fx: { m: -5, mor: -12, flag: "no_diploma" } },
+      ] },
+      { label: "Garder les études en parallèle", hint: "Prudent", outcomes: [
+        { weight: 45, text: "L'équilibre études-foot vous structure, sans nuire à votre progression.", fx: { m: 4, mor: 4, flag: "diploma" } },
+        { weight: 30, text: "Votre maturité impressionne le staff : on vous confie déjà des responsabilités.", fx: { m: 7, c: 4, rep: 3, flag: "diploma" } },
+        { weight: 25, text: "Les copains du centre progressent plus vite : le doute s'installe.", fx: { t: -2, mor: -5, flag: "diploma" } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_viral_video", cat: "Réseaux", icon: "📱", w: 10,
+    cond: { aMin: 16, aMax: 19 },
+    text: "Un ami filme vos gestes techniques à l'entraînement. Il veut poster la compilation : « Frérot, tu vas exploser les compteurs. »",
+    options: [
+      { label: "Poster la vidéo", outcomes: [
+        { weight: 40, text: "2 millions de vues en une semaine. Les recruteurs demandent votre nom.", fx: { rep: 8, c: 4, mor: 5 } },
+        { weight: 30, text: "Le buzz est correct, mais le coach déteste « les influenceurs » : ambiance.", fx: { rep: 4, mor: -5 } },
+        { weight: 30, text: "Un montage moqueur de vos ratés circule encore plus vite. Humiliation.", fx: { rep: -3, m: -3, mor: -8 } },
+      ] },
+      { label: "Refuser, le terrain d'abord", outcomes: [
+        { weight: 55, text: "Vous restez dans l'ombre et travaillez. Le staff apprécie la discrétion.", fx: { t: 3, m: 3 } },
+        { weight: 45, text: "Un autre jeune du centre fait le buzz à votre place et vous passe devant dans la hiérarchie.", fx: { mor: -6, rep: -1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_street_cage", cat: "Vie perso", icon: "🏙️", w: 12,
+    cond: { aMin: 16, aMax: 18, origin: "quartier" },
+    text: "Le tournoi du quartier, celui où tout a commencé, tombe la veille d'un match officiel. Tout le monde vous attend au city-stade.",
+    options: [
+      { label: "Jouer le tournoi du quartier", hint: "Cœur", outcomes: [
+        { weight: 45, text: "Vous régalez le public au petit pont. La légende locale grandit, le coach ferme les yeux.", fx: { t: 4, c: 5, mor: 8, trait: "showman" } },
+        { weight: 30, text: "Une cheville tordue sur le bitume. Le club est furieux.", fx: { inj: 6, rep: -3, mor: -4 } },
+        { weight: 25, text: "Un recruteur incognito dans la foule note votre nom. Le bouche-à-oreille démarre.", fx: { rep: 6, mor: 5 } },
+      ] },
+      { label: "Faire l'impasse, place au match officiel", outcomes: [
+        { weight: 60, text: "Choix de pro. Titularisé, vous rendez une copie sérieuse.", fx: { m: 4, t: 2, form: 4 } },
+        { weight: 40, text: "Le quartier vous traite de vendu. Ça pique plus que prévu.", fx: { mor: -7, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_famous_dad", cat: "Vie perso", icon: "👔", w: 12,
+    cond: { aMin: 16, aMax: 19, origin: "sportif" },
+    text: "La presse ne parle que de votre père : « Le fils de… saura-t-il porter le nom ? » Chaque match devient un procès.",
+    options: [
+      { label: "Assumer l'héritage publiquement", outcomes: [
+        { weight: 40, text: "Votre franchise désarme les critiques. Le nom devient une force.", fx: { c: 6, m: 4, rep: 5 } },
+        { weight: 35, text: "Chaque contre-performance est un scandale national. C'est étouffant.", fx: { m: -5, mor: -8 } },
+        { weight: 25, text: "Votre père monte au créneau dans les médias. Le feuilleton vous dépasse.", fx: { rep: 3, mor: -5 } },
+      ] },
+      { label: "Exiger qu'on vous juge sur le terrain", outcomes: [
+        { weight: 50, text: "Vous coupez tout : plus d'interviews famille. Le calme revient peu à peu.", fx: { m: 6, mor: 5, trait: "zen" } },
+        { weight: 50, text: "Votre silence est pris pour de l'arrogance. La pression ne baisse pas.", fx: { rep: -2, mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_futsal_transition", cat: "Terrain", icon: "🎯", w: 12,
+    cond: { aMin: 16, aMax: 18, origin: "futsal" },
+    text: "Sur grand terrain, vos enchaînements de futsal font le show… mais le coach veut vous « normaliser » : moins de gestes, plus de courses.",
+    options: [
+      { label: "Garder votre patte futsal", outcomes: [
+        { weight: 45, text: "Vos gestes inarrêtables deviennent votre signature. Les tribunes se lèvent.", fx: { t: 6, c: 4, rep: 5, trait: "showman" } },
+        { weight: 55, text: "Trop de déchet dans le dur. Le coach vous cloue au banc pour l'exemple.", fx: { form: -8, mor: -6, m: 2 } },
+      ] },
+      { label: "Vous plier au moule athlétique", outcomes: [
+        { weight: 55, text: "Vous gagnez en volume physique sans perdre votre toucher. Le meilleur des deux mondes.", fx: { p: 6, t: 2, m: 3 } },
+        { weight: 45, text: "À force de brider votre instinct, vous devenez un joueur banal.", fx: { t: -3, p: 3, mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_growth_spurt", cat: "Physique", icon: "📏", w: 8,
+    cond: { aMin: 16, aMax: 17 },
+    text: "Dix centimètres en un an : votre corps change trop vite. Le staff médical propose un programme spécial, long et frustrant.",
+    options: [
+      { label: "Suivre le protocole à la lettre", outcomes: [
+        { weight: 65, text: "Six mois plus tard, vous voilà avec un châssis de pro.", fx: { p: 7, m: 2 } },
+        { weight: 35, text: "Le programme traîne en longueur, la saison est presque blanche.", fx: { p: 3, inj: 10, mor: -5 } },
+      ] },
+      { label: "Continuer à jouer coûte que coûte", outcomes: [
+        { weight: 45, text: "Vous serrez les dents et ne perdez pas votre place. Le corps suit, miracle.", fx: { m: 4, p: 2, trait: "ironman" } },
+        { weight: 55, text: "Fracture de fatigue. L'addition du forcing arrive vite.", fx: { inj: 16, p: -4, mor: -6, trait: "glass" } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_youth_tournament", cat: "Sélection", icon: "🌍", w: 10,
+    cond: { aMin: 17, aMax: 19, minRep: 20 },
+    text: "Convocation au grand tournoi international des moins de 19 ans : une vitrine mondiale, mais une saison rallongée de deux mois.",
+    options: [
+      { label: "Y aller et briller", outcomes: [
+        { weight: 35, text: "Élu meilleur jeune du tournoi ! L'Europe entière connaît désormais votre nom.", fx: { rep: 12, t: 3, c: 4, mor: 8 } },
+        { weight: 40, text: "Un tournoi honnête, une expérience précieuse au contact des meilleurs.", fx: { rep: 4, m: 3, t: 2 } },
+        { weight: 25, text: "Cramé par l'enchaînement, vous revenez sur les rotules.", fx: { form: -12, p: -2, mor: -4 } },
+      ] },
+      { label: "Décliner pour préserver votre corps", outcomes: [
+        { weight: 55, text: "Reposé, vous attaquez la saison suivante plein de jus.", fx: { form: 8, p: 3 } },
+        { weight: 45, text: "Votre remplaçant y devient une star. On vous oublie un peu.", fx: { rep: -4, mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_first_contract", cat: "Mercato", icon: "🖋️", w: 14,
+    cond: { aMin: 17, aMax: 19, levels: ["regional", "d2", "d1"] },
+    text: "{club} pose un premier contrat pro sur la table. Mais un club voisin promet du temps de jeu immédiat en prêt.",
+    options: [
+      { label: "Signer pro et gravir les échelons ici", outcomes: [
+        { weight: 40, text: "Contrat signé. L'ascension est lente mais réelle.", fx: { money: 0.2, rep: 3, t: 2 } },
+        { weight: 30, text: "Lancé dans le grand bain plus tôt que prévu, vous saisissez votre chance !", fx: { money: 0.2, t: 5, rep: 7, form: 6 } },
+        { weight: 30, text: "Le statut de pro vous écrase : vous jouez avec le frein à main.", fx: { money: 0.2, m: -4, form: -8 } },
+      ] },
+      { label: "Partir en prêt pour jouer", hint: "Formateur", outcomes: [
+        { weight: 40, text: "Quarante matchs dans les jambes : rien ne remplace la compétition.", fx: { t: 5, p: 3, m: 2 } },
+        { weight: 30, text: "Vous êtes LA révélation du championnat. Votre club vous rappelle en urgence.", fx: { t: 6, rep: 9, mor: 6 } },
+        { weight: 30, text: "Le club prêteur joue le maintien dans la douleur : dur apprentissage.", fx: { m: 4, form: -6, mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_agent_choice", cat: "Entourage", icon: "🕴️", w: 12,
+    cond: { aMin: 18, aMax: 21 },
+    text: "Un agent superstar aux dents longues veut vous représenter. Votre agent historique, lui, connaît le prénom de votre mère.",
+    options: [
+      { label: "Signer avec le requin international", outcomes: [
+        { weight: 35, text: "Son carnet d'adresses ouvre des portes que vous ne soupçonniez pas.", fx: { rep: 8, money: 0.5, flag: "big_agent" } },
+        { weight: 35, text: "Vous n'êtes qu'un nom parmi cinquante dans son portefeuille.", fx: { rep: 2, mor: -5, flag: "big_agent" } },
+        { weight: 30, text: "Il vous pousse vers chaque contrat lucratif, peu importe le projet sportif.", fx: { money: 0.8, m: -3, flag: "big_agent", trait: "mercenary" } },
+      ] },
+      { label: "Rester en famille", outcomes: [
+        { weight: 55, text: "Une confiance totale, zéro coup de poignard : ça n'a pas de prix.", fx: { m: 6, mor: 6, flag: "local_agent" } },
+        { weight: 45, text: "Il négocie avec deux trains de retard : vous laissez de l'argent sur la table.", fx: { m: 3, money: -0.2, flag: "local_agent" } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_bench_battle", cat: "Terrain", icon: "🪑", w: 12,
+    cond: { aMin: 17, aMax: 21 },
+    text: "Un international expérimenté verrouille votre poste. Le coach vous glisse : « Ton heure viendra. » Mais quand ?",
+    options: [
+      { label: "Taper du poing sur la table", hint: "Culotté", outcomes: [
+        { weight: 35, text: "Votre culot plaît. Titularisé au match suivant, vous marquez les esprits.", fx: { t: 4, rep: 7, m: 4, form: 6 } },
+        { weight: 35, text: "Le coach déteste les ultimatums. Direction la tribune quelques semaines.", fx: { mor: -8, rep: -2, form: -6 } },
+        { weight: 30, text: "Le vestiaire respecte l'audace, le staff moins. Statu quo tendu.", fx: { c: 3, mor: -3 } },
+      ] },
+      { label: "Apprendre dans l'ombre du titulaire", outcomes: [
+        { weight: 45, text: "Le vieux briscard vous prend sous son aile et vous lègue ses secrets.", fx: { m: 6, t: 3 } },
+        { weight: 30, text: "Votre patience paie : blessure du titulaire, vous ne rendrez jamais la place.", fx: { t: 4, rep: 5, form: 8 } },
+        { weight: 25, text: "Une saison entière à cirer le banc. La frustration ronge.", fx: { mor: -9, form: -6 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_hometown_derby", cat: "Terrain", icon: "🔥", w: 10,
+    cond: { aMin: 17, aMax: 22 },
+    text: "Premier derby de votre carrière. Le stade est une marmite, le coach hésite à lancer un si jeune joueur dans cette fournaise.",
+    options: [
+      { label: "Supplier de jouer ce match", outcomes: [
+        { weight: 35, text: "But décisif dans le derby ! Les ultras chantent déjà votre nom.", fx: { rep: 9, c: 5, mor: 10, trait: "clutch" } },
+        { weight: 35, text: "Le match vous dévore : dépassé par l'intensité, remplacé à la mi-temps.", fx: { m: -4, form: -6, mor: -6 } },
+        { weight: 30, text: "Une copie sobre et sérieuse dans un match piège. Le staff note.", fx: { m: 4, rep: 2 } },
+      ] },
+      { label: "Reconnaître que c'est trop tôt", outcomes: [
+        { weight: 60, text: "Vous observez, apprenez, engrangez. Votre heure viendra.", fx: { m: 4 } },
+        { weight: 40, text: "Le coach retient surtout que vous avez reculé devant l'obstacle.", fx: { rep: -3, mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_junk_food", cat: "Hygiène de vie", icon: "🍔", w: 8,
+    cond: { aMin: 17, aMax: 20 },
+    text: "Le nutritionniste du club tire la sonnette d'alarme : trop de fast-food, trop de sodas. Il propose un régime drastique.",
+    options: [
+      { label: "Adopter une hygiène de pro", outcomes: [
+        { weight: 70, text: "Trois kilos de muscle en plus, un cardio retrouvé : le corps vous dit merci.", fx: { p: 6, form: 6 } },
+        { weight: 30, text: "Le régime est un enfer social, mais le physique progresse.", fx: { p: 4, mor: -4 } },
+      ] },
+      { label: "On ne change pas une équipe qui gagne", outcomes: [
+        { weight: 45, text: "Votre métabolisme encaisse… pour l'instant.", fx: { mor: 3 } },
+        { weight: 55, text: "Pubalgie à répétition. Le staff médical vous l'avait dit.", fx: { p: -5, inj: 8, trait: "party" } },
+      ] },
+    ],
+  },
+
+  // ══════════════ SPÉCIALISATION (18-21, un par poste) ══════════════
+  {
+    id: "ev_spec_att", cat: "Identité de jeu", icon: "🧬", w: 22,
+    cond: { aMin: 18, aMax: 21, pos: ["att"] },
+    text: "Votre coach est cash : « Il est temps de choisir qui tu es sur un terrain. » Le style que vous ancrez maintenant façonnera toutes vos statistiques de carrière.",
+    options: [
+      { label: "🦊 Renard des surfaces — vivre pour le but", outcomes: [
+        { weight: 100, text: "Chaque séance devient un culte de la finition. Les défenseurs apprendront à vous détester dans les six mètres.", fx: { archetype: "fox", t: 2 } },
+      ] },
+      { label: "🎯 Attaquant complet — peser partout", outcomes: [
+        { weight: 100, text: "Pivot, remise, appel, frappe : vous travaillez tout, pour devenir le cauchemar total des défenses.", fx: { archetype: "complete", t: 1, m: 1 } },
+      ] },
+      { label: "🌀 Ailier dribbleur — l'art du déséquilibre", outcomes: [
+        { weight: 100, text: "Le un-contre-un devient votre langue maternelle. Les latéraux adverses dorment déjà mal.", fx: { archetype: "winger", t: 2, c: 1 } },
+      ] },
+      { label: "🎭 Faux neuf — l'attaquant chef d'orchestre", outcomes: [
+        { weight: 100, text: "Décrocher, attirer, libérer : vous apprenez à faire briller les autres pour mieux régner.", fx: { archetype: "false9", m: 2, t: 1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_spec_mil", cat: "Identité de jeu", icon: "🧬", w: 22,
+    cond: { aMin: 18, aMax: 21, pos: ["mil"] },
+    text: "Votre coach est cash : « Il est temps de choisir qui tu es sur un terrain. » Le style que vous ancrez maintenant façonnera toutes vos statistiques de carrière.",
+    options: [
+      { label: "⚓ Sentinelle — l'équilibre avant tout", outcomes: [
+        { weight: 100, text: "Lire, couper, orienter : vous devenez l'assurance-vie de votre équipe.", fx: { archetype: "anchor", m: 2 } },
+      ] },
+      { label: "🚂 Box-to-box — présent des deux côtés", outcomes: [
+        { weight: 100, text: "Votre moteur devient légendaire à l'entraînement. Surface à surface, sans s'arrêter.", fx: { archetype: "b2b", p: 2 } },
+      ] },
+      { label: "🎼 Maestro — dicter le tempo", outcomes: [
+        { weight: 100, text: "La dernière passe, l'angle impossible, le rythme du match : tout passera par votre pied.", fx: { archetype: "maestro", t: 2 } },
+      ] },
+      { label: "✨ Meneur offensif — jouer entre les lignes", outcomes: [
+        { weight: 100, text: "Là où l'espace n'existe pas, vous en inventez. Les matchs se décideront dans votre zone.", fx: { archetype: "cam", t: 2, c: 1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_spec_def", cat: "Identité de jeu", icon: "🧬", w: 22,
+    cond: { aMin: 18, aMax: 21, pos: ["def"] },
+    text: "Votre coach est cash : « Il est temps de choisir qui tu es sur un terrain. » Le style que vous ancrez maintenant façonnera toutes vos statistiques de carrière.",
+    options: [
+      { label: "🧱 Stoppeur — gagner chaque duel", outcomes: [
+        { weight: 100, text: "L'impact, le timing, l'intimidation : votre zone devient une frontière.", fx: { archetype: "stopper", p: 2 } },
+      ] },
+      { label: "🧭 Relanceur — construire depuis derrière", outcomes: [
+        { weight: 100, text: "Votre première passe casse des lignes entières. La construction commence par vous.", fx: { archetype: "libero", t: 2 } },
+      ] },
+      { label: "🛩️ Latéral offensif — dévorer le couloir", outcomes: [
+        { weight: 100, text: "Cent allers-retours par match : votre couloir devient une autoroute personnelle.", fx: { archetype: "wingback", p: 2, t: 1 } },
+      ] },
+      { label: "🛡️ Patron de défense — commander la ligne", outcomes: [
+        { weight: 100, text: "Votre voix porte, replace, rassure. Une défense entière apprendra à vivre à votre rythme.", fx: { archetype: "boss", m: 2, c: 1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_spec_gk", cat: "Identité de jeu", icon: "🧬", w: 22,
+    cond: { aMin: 18, aMax: 21, pos: ["gk"] },
+    text: "Votre entraîneur des gardiens est cash : « Il est temps de choisir quel gardien tu veux être. » Le style que vous ancrez maintenant façonnera toute votre carrière.",
+    options: [
+      { label: "🥅 Gardien de ligne — infranchissable", outcomes: [
+        { weight: 100, text: "Placement, appuis, angles fermés : votre ligne devient un mur.", fx: { archetype: "line", m: 2 } },
+      ] },
+      { label: "🧹 Gardien moderne — jouer au pied", outcomes: [
+        { weight: 100, text: "Onzième joueur de champ : vos relances lancent désormais les attaques.", fx: { archetype: "sweeper", t: 2 } },
+      ] },
+      { label: "🪂 Maître des airs — régner sur les centres", outcomes: [
+        { weight: 100, text: "Chaque ballon aérien devient votre propriété privée.", fx: { archetype: "aerial", p: 2 } },
+      ] },
+      { label: "⚡ Gardien réflexes — l'arrêt impossible", outcomes: [
+        { weight: 100, text: "Vos réflexes défient la physique. Les attaquants frapperont parfaitement… et rageront quand même.", fx: { archetype: "reflex", p: 1, m: 1 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ ASCENSION (20-25) ══════════════
+  {
+    id: "ev_first_natcall", cat: "Sélection", icon: "📞", w: 16,
+    cond: { aMin: 17, aMax: 27, nat: false, minRep: 35, minOvr: 66 },
+    text: "Le téléphone sonne : c'est le sélectionneur national. « Petit, prépare ton sac. » La sélection vous tend les bras.",
+    options: [
+      { label: "Répondre présent, évidemment", outcomes: [
+        { weight: 40, text: "Débuts internationaux réussis : l'hymne, le frisson, tout y est.", fx: { rep: 8, m: 4, mor: 8, natCall: true } },
+        { weight: 30, text: "Entrée en jeu discrète, mais vous voilà dans le groupe pour de bon.", fx: { rep: 4, natCall: true } },
+        { weight: 30, text: "Le rythme international vous gifle : hors du coup, remplacé à la pause.", fx: { rep: 2, m: -3, mor: -4, natCall: true } },
+      ] },
+      { label: "Décliner : « Je ne me sens pas prêt »", outcomes: [
+        { weight: 50, text: "Le sélectionneur apprécie l'honnêteté. « Je reviendrai te chercher. »", fx: { m: 4 } },
+        { weight: 50, text: "La presse vous découpe : « Il a refusé le maillot national ! »", fx: { rep: -6, mor: -6 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_captain_or_leave", cat: "Vestiaire", icon: "©️", w: 12,
+    cond: { aMin: 21, aMax: 24, levels: ["d2", "d1"], minRep: 35 },
+    text: "Le club rebâtit tout autour de vous et propose le brassard. Au même moment, un cador vous veut comme pari d'avenir.",
+    options: [
+      { label: "Prendre le brassard et rester", outcomes: [
+        { weight: 40, text: "Le brassard révèle une dimension de patron que personne ne soupçonnait.", fx: { m: 7, c: 5, rep: 5, trait: "leader", flag: "captain" } },
+        { weight: 30, text: "Capitaine correct, sans plus. La question du départ reviendra.", fx: { m: 3, c: 2, flag: "captain" } },
+        { weight: 30, text: "Le poids du brassard vous éteint. Vous n'osez plus jouer libéré.", fx: { m: -5, form: -8, flag: "captain" } },
+      ] },
+      { label: "Forcer le départ vers le sommet", hint: "Ambitieux", outcomes: [
+        { weight: 40, text: "Le grand saut réussi : vous vous imposez chez les cadors.", fx: { t: 4, rep: 8, transfer: { d: 1 } } },
+        { weight: 35, text: "Le transfert se fait, mais le niveau est brutal : il va falloir s'accrocher.", fx: { rep: 3, form: -6, transfer: { d: 1 } } },
+        { weight: 25, text: "Votre bras de fer pour partir laisse des traces : les supporters vous conspuent.", fx: { rep: -5, mor: -6, transfer: { d: 1 } } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_comeback_protocol", cat: "Blessure", icon: "🏥", w: 10,
+    cond: { aMin: 20, aMax: 26 },
+    text: "Rechute ou renaissance : après des semaines d'infirmerie, le staff médical hésite à vous relancer pour le sprint final.",
+    options: [
+      { label: "Forcer le retour pour les matchs décisifs", hint: "Risqué", outcomes: [
+        { weight: 30, text: "Retour messianique : vous portez l'équipe dans le money-time !", fx: { rep: 9, m: 5, mor: 8, trait: "clutch" } },
+        { weight: 30, text: "Vous tenez votre rang sans exploser. Le pari passe, ric-rac.", fx: { rep: 3, p: -1 } },
+        { weight: 40, text: "Rechute sévère. Des mois de rééducation envolés en un sprint.", fx: { inj: 18, p: -6, mor: -8, trait: "glass" } },
+      ] },
+      { label: "Respecter le protocole jusqu'au bout", outcomes: [
+        { weight: 60, text: "Vous revenez plus affûté qu'avant la blessure. La patience paie toujours.", fx: { p: 5, m: 3, form: 6 } },
+        { weight: 40, text: "L'équipe a appris à gagner sans vous. Il faudra reconquérir votre place.", fx: { form: -5, mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_style_reinvention", cat: "Terrain", icon: "🧪", w: 10,
+    cond: { aMin: 22, aMax: 27 },
+    text: "Un entraîneur visionnaire veut réinventer votre poste : nouveau rôle, nouvelles courses, nouveau logiciel. Tout casser pour tout reconstruire.",
+    options: [
+      { label: "Accepter la mue tactique", outcomes: [
+        { weight: 40, text: "La transformation fait de vous un joueur unique en son genre. Les analystes s'emballent.", fx: { t: 7, m: 4, rep: 6 } },
+        { weight: 35, text: "Des mois d'ajustement laborieux pour un gain réel mais modeste.", fx: { t: 3, form: -4 } },
+        { weight: 25, text: "Vous vous perdez complètement entre l'ancien et le nouveau rôle.", fx: { t: -3, m: -4, form: -8 } },
+      ] },
+      { label: "Défendre ce qui fait votre force", outcomes: [
+        { weight: 50, text: "Vos certitudes tiennent bon : la saison est solide, dans votre registre.", fx: { t: 2, m: 3, form: 4 } },
+        { weight: 50, text: "Le coach vous étiquette « ingérable » et le fait savoir en interne.", fx: { rep: -3, mor: -6 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_big_final", cat: "Terrain", icon: "🏟️", w: 14,
+    cond: { aMin: 21, aMax: 33, levels: ["elite"], chance: 0.7 },
+    text: "Finale de la Coupe des Champions. 80 000 personnes, le monde entier devant sa télé. La veille, l'insomnie vous guette.",
+    options: [
+      { label: "Prendre le match à votre compte", hint: "Quitte ou double", outcomes: [
+        { weight: 30, text: "MONUMENTAL. Votre nom entre dans l'histoire de la compétition !", fx: { rep: 14, c: 5, mor: 10, trophy: "continental", trait: "clutch" } },
+        { weight: 35, text: "Une grande finale de votre part… mais la défaite au bout. Cruel.", fx: { rep: 5, mor: -8 } },
+        { weight: 35, text: "Vous forcez chaque geste et traversez la finale comme un fantôme. Défaite.", fx: { rep: -5, m: -4, mor: -10 } },
+      ] },
+      { label: "Jouer simple, pour l'équipe", outcomes: [
+        { weight: 40, text: "Sobre, juste, précieux : le collectif l'emporte et vous avec.", fx: { rep: 7, m: 5, trophy: "continental" } },
+        { weight: 60, text: "Trop sage pour faire basculer le destin. Le trophée s'envole.", fx: { m: 2, mor: -6 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_red_card_derby", cat: "Terrain", icon: "🟥", w: 9,
+    cond: { aMin: 20, aMax: 32 },
+    text: "Le derby s'envenime : leur capitaine vous insulte, vous provoque, marche sur votre cheville en douce. L'arbitre ne voit rien.",
+    options: [
+      { label: "Répondre sur le terrain, œil pour œil", outcomes: [
+        { weight: 40, text: "Rouge direct. Quatre matchs de suspension et une réputation de sanguin.", fx: { rep: -4, inj: 4, mor: -5, dis: -5 } },
+        { weight: 35, text: "Vous lui rendez coup pour coup sans franchir la ligne. Le public adore.", fx: { c: 4, rep: 3, mor: 5 } },
+        { weight: 25, text: "Votre riposte réveille l'équipe : le derby bascule pour vous !", fx: { rep: 5, m: 4, mor: 6 } },
+      ] },
+      { label: "L'ignorer royalement", outcomes: [
+        { weight: 60, text: "Votre flegme le rend fou : c'est LUI qui prend rouge. Victoire.", fx: { m: 5, rep: 4, trait: "zen" } },
+        { weight: 40, text: "On salue votre calme, mais certains supporters réclament plus de grinta.", fx: { m: 3, rep: -1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_dressing_crisis", cat: "Vestiaire", icon: "💢", w: 10,
+    cond: { aMin: 21, aMax: 30 },
+    text: "Le vestiaire est coupé en deux : clans, fuites dans la presse, coach fragilisé. Quelqu'un doit recoller les morceaux.",
+    options: [
+      { label: "Prendre la parole devant tout le groupe", outcomes: [
+        { weight: 45, text: "Votre discours retourne le vestiaire. L'équipe repart unie derrière vous.", fx: { c: 6, m: 5, rep: 5, trait: "leader" } },
+        { weight: 30, text: "Les mots sont justes, l'effet modeste. Au moins, vous avez essayé.", fx: { c: 2, m: 2 } },
+        { weight: 25, text: "Un cadre vous humilie : « Tu es qui, toi, pour parler ? » Glacial.", fx: { mor: -8, c: -2 } },
+      ] },
+      { label: "Rester loin des embrouilles", outcomes: [
+        { weight: 55, text: "Vous traversez la crise sans une éclaboussure, concentré sur le jeu.", fx: { form: 4, m: 2 } },
+        { weight: 45, text: "La crise emporte la saison de l'équipe, et un peu la vôtre.", fx: { form: -6, mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_coach_clash", cat: "Vestiaire", icon: "🧨", w: 10,
+    cond: { aMin: 20, aMax: 31 },
+    text: "Le nouveau coach, {coach}, vous sort du onze sans explication. En conférence de presse, il lâche : « Personne n'est intouchable. »",
+    options: [
+      { label: "Déballer votre vérité dans les médias", hint: "Brûlant", outcomes: [
+        { weight: 30, text: "L'opinion prend votre parti, la direction recadre le coach. Vous rejouez.", fx: { rep: 4, form: 5, mor: 5, coach: -8 } },
+        { weight: 40, text: "Guerre ouverte. Le club veut vous vendre au prochain mercato.", fx: { rep: -3, mor: -6, coach: -12, transfer: { d: 0 } } },
+        { weight: 30, text: "Le vestiaire vous lâche : on ne lave pas le linge sale en public.", fx: { rep: -5, c: -3, mor: -7, team: -8, coach: -8 } },
+      ] },
+      { label: "Le faire plier à l'entraînement", outcomes: [
+        { weight: 55, text: "Injouable pendant deux mois de séances : il craque et vous relance. Respect mutuel.", fx: { t: 4, m: 6, form: 6, coach: 10, dis: 4 } },
+        { weight: 45, text: "Il ne pliera jamais : c'était personnel. Une demi-saison gâchée en tribune.", fx: { form: -10, mor: -8, coach: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_goldenboot_race", cat: "Terrain", icon: "👟", w: 10,
+    cond: { aMin: 21, aMax: 32, pos: ["att"], minOvr: 74 },
+    text: "À trois journées de la fin, vous êtes à deux buts du titre de meilleur buteur. Vos coéquipiers proposent de tout jouer pour vous.",
+    options: [
+      { label: "Accepter d'être servi en priorité", outcomes: [
+        { weight: 45, text: "Titre de meilleur buteur décroché dans un dernier match d'anthologie !", fx: { rep: 8, mor: 8, award: "top_scorer" } },
+        { weight: 30, text: "Le titre de buteur file pour un but. La frustration est immense.", fx: { mor: -6, form: -3 } },
+        { weight: 25, text: "À jouer perso, l'équipe perd des points précieux. On vous le reproche.", fx: { rep: -4, c: -3, mor: -4 } },
+      ] },
+      { label: "Refuser : l'équipe avant tout", outcomes: [
+        { weight: 60, text: "Votre altruisme force le respect du vestiaire, du staff, du public.", fx: { c: 5, m: 4, rep: 4 } },
+        { weight: 40, text: "Élégant… mais les récompenses individuelles ne s'offrent pas deux fois.", fx: { m: 2, mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_gk_penalty_wall", cat: "Terrain", icon: "🧤", w: 12,
+    cond: { aMin: 20, aMax: 34, pos: ["gk"] },
+    text: "Finale de coupe, séance de tirs au but. Votre analyste vidéo vous glisse une antisèche sur les tireurs… interdite par le règlement.",
+    options: [
+      { label: "Consulter l'antisèche discrètement", outcomes: [
+        { weight: 45, text: "Trois arrêts ! Héros de la finale — et personne n'a rien vu.", fx: { rep: 10, mor: 8, trophy: "cup", trait: "clutch" } },
+        { weight: 30, text: "Même avec l'antisèche, ils tirent tous parfaitement. Défaite.", fx: { mor: -6 } },
+        { weight: 25, text: "La caméra vous surprend. Scandale, amende, et une réputation entachée.", fx: { rep: -7, money: -0.5, mor: -6 } },
+      ] },
+      { label: "Jouer à l'instinct, dans les règles", outcomes: [
+        { weight: 40, text: "Deux parades divines à l'instinct pur : le trophée est pour vous !", fx: { rep: 8, m: 5, trophy: "cup", trait: "clutch" } },
+        { weight: 60, text: "Vous plongez du mauvais côté à chaque fois. Le foot est cruel.", fx: { mor: -6, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_def_masterclass", cat: "Terrain", icon: "🛡️", w: 12,
+    cond: { aMin: 20, aMax: 33, pos: ["def"] },
+    text: "Le meilleur attaquant du monde débarque avec son équipe. Toute la semaine, la presse annonce votre « exécution publique ».",
+    options: [
+      { label: "Le marquer à la culotte, duel d'hommes", outcomes: [
+        { weight: 40, text: "Il ne touche pas un ballon. Masterclass défensive relayée dans le monde entier.", fx: { rep: 9, m: 5, t: 3, mor: 8 } },
+        { weight: 35, text: "Un duel âpre et équilibré : il marque, vous aussi votre territoire.", fx: { m: 3, rep: 2 } },
+        { weight: 25, text: "Triplé dans votre zone. Les compilations de vos misères font le tour du web.", fx: { rep: -5, m: -4, mor: -8 } },
+      ] },
+      { label: "Miser sur le bloc collectif", outcomes: [
+        { weight: 55, text: "Le piège collectif fonctionne : clean sheet et démonstration tactique.", fx: { m: 5, rep: 4 } },
+        { weight: 45, text: "Le plan vole en éclats dès la 10e minute. Soirée interminable.", fx: { form: -5, mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_mil_maestro", cat: "Terrain", icon: "🎼", w: 12,
+    cond: { aMin: 20, aMax: 33, pos: ["mil"] },
+    text: "Le coach vous confie les clés du jeu : « Tout passera par toi. » Liberté totale — et responsabilité totale en cas d'échec.",
+    options: [
+      { label: "Endosser le costume de maestro", outcomes: [
+        { weight: 40, text: "Vous dictez chaque tempo. La presse vous surnomme « le Métronome ».", fx: { t: 6, m: 4, rep: 7 } },
+        { weight: 35, text: "De belles partitions, quelques fausses notes : un rôle en construction.", fx: { t: 3, m: 2 } },
+        { weight: 25, text: "Trop de ballons, trop de pertes : le système s'écroule sur vous.", fx: { m: -4, rep: -3, form: -6 } },
+      ] },
+      { label: "Demander un rôle plus cadré", outcomes: [
+        { weight: 55, text: "Dans un rôle précis, vous devenez d'une régularité chirurgicale.", fx: { m: 4, t: 2, form: 5 } },
+        { weight: 45, text: "Le coach, déçu, confie les clés à un autre. Vous voilà simple rouage.", fx: { mor: -5, rep: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_video_game_cover", cat: "Médias", icon: "🎮", w: 8,
+    cond: { aMin: 21, aMax: 30, minRep: 60 },
+    text: "Le plus grand jeu vidéo de football veut votre visage en couverture mondiale. Gloire planétaire… et la fameuse « malédiction de la jaquette ».",
+    options: [
+      { label: "Accepter la couverture", outcomes: [
+        { weight: 50, text: "Votre visage dans tous les salons du monde. Iconique.", fx: { rep: 9, c: 5, money: 2.5 } },
+        { weight: 50, text: "La malédiction frappe : blessure trois semaines après la sortie du jeu.", fx: { rep: 6, money: 2.5, inj: 10, mor: -4 } },
+      ] },
+      { label: "Décliner par superstition", outcomes: [
+        { weight: 60, text: "Les fans rient de votre superstition… avec tendresse. Saison sereine.", fx: { m: 3, form: 3 } },
+        { weight: 40, text: "Votre rival de toujours prend la couverture à votre place. Rageant.", fx: { mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_paparazzi_romance", cat: "Vie perso", icon: "💘", w: 9,
+    cond: { aMin: 21, aMax: 29, minRep: 45 },
+    text: "Votre idylle avec une pop star fuite en une des tabloïds. Les paparazzis campent devant le centre d'entraînement.",
+    options: [
+      { label: "Officialiser en grande pompe", outcomes: [
+        { weight: 45, text: "Couple star planétaire : votre notoriété explose bien au-delà du foot.", fx: { rep: 8, c: 6, money: 1.5, flag: "romance" } },
+        { weight: 55, text: "Chaque baisse de forme devient « la faute du couple ». Le feuilleton use.", fx: { rep: 4, form: -6, mor: -4, flag: "romance" } },
+      ] },
+      { label: "Protéger votre vie privée", outcomes: [
+        { weight: 60, text: "Vous imposez le silence. La relation s'épanouit loin des flashs.", fx: { m: 4, mor: 7, flag: "romance" } },
+        { weight: 40, text: "La traque des paparazzis devient invivable et la relation n'y survit pas.", fx: { mor: -9, m: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_wedding", cat: "Vie perso", icon: "💍", w: 10,
+    cond: { aMin: 24, aMax: 32, flag: "romance" },
+    text: "Demande en mariage acceptée ! Reste à choisir : mariage mondial retransmis en direct, ou cérémonie secrète en petit comité.",
+    options: [
+      { label: "Le mariage du siècle", outcomes: [
+        { weight: 50, text: "Un événement planétaire. Les sponsors se battent pour être au carton d'invitation.", fx: { rep: 6, c: 4, money: 1.2, mor: 6 } },
+        { weight: 50, text: "L'organisation pharaonique vous épuise en pleine saison.", fx: { rep: 4, money: -2, form: -8, mor: 4 } },
+      ] },
+      { label: "Une cérémonie secrète", outcomes: [
+        { weight: 70, text: "Un moment parfait, rien qu'à vous. L'équilibre de vie idéal.", fx: { mor: 10, m: 4 } },
+        { weight: 30, text: "Un drone de paparazzi gâche la surprise. Fureur, mais beau souvenir quand même.", fx: { mor: 6, rep: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_first_child", cat: "Vie perso", icon: "👶", w: 8,
+    cond: { aMin: 25, aMax: 33, flag: "romance" },
+    text: "Vous allez être papa ! Le terme est prévu… la semaine du plus gros match de la saison.",
+    options: [
+      { label: "Être à la maternité, quoi qu'il arrive", outcomes: [
+        { weight: 60, text: "Vous ratez le match, mais rien n'égalera ce moment. Le vestiaire applaudit.", fx: { mor: 12, m: 5, c: 3, flag: "parent" } },
+        { weight: 40, text: "L'équipe perd sans vous, certains supporters grognent. Vous ne regrettez rien.", fx: { mor: 10, rep: -2, flag: "parent" } },
+      ] },
+      { label: "Jouer le match, l'avion juste après", outcomes: [
+        { weight: 50, text: "Décisif, célébration pouce dans la bouche, et arrivée à temps pour la naissance. Parfait.", fx: { rep: 5, mor: 10, flag: "parent" } },
+        { weight: 50, text: "Vous ratez la naissance pour une défaite insipide. Ce choix vous hantera.", fx: { mor: -8, m: -3, flag: "parent" } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_crypto_teammate", cat: "Finance", icon: "📉", w: 9,
+    cond: { aMin: 21, aMax: 32, minMoney: 2 },
+    text: "Un coéquipier surexcité vous montre son portefeuille crypto : « +400% en trois mois, frérot. Mets une brique, tu me remercieras. »",
+    options: [
+      { label: "Investir gros", hint: "YOLO", outcomes: [
+        { weight: 30, text: "Le jeton explose à la hausse. Vous passez pour un génie de la finance.", fx: { money: 4, c: 2, mor: 5 } },
+        { weight: 55, text: "Rug pull. Le fondateur disparaît avec la caisse, votre brique avec.", fx: { money: -1.5, mor: -6 } },
+        { weight: 15, text: "Le fisc s'intéresse de très près à ce montage. Frayeur et redressement.", fx: { money: -2.5, rep: -3, mor: -5 } },
+      ] },
+      { label: "Refuser poliment", outcomes: [
+        { weight: 65, text: "Six mois plus tard, le coéquipier vend sa Lamborghini. Vous aviez vu juste.", fx: { m: 3 } },
+        { weight: 35, text: "Le jeton fait fois dix. Vous calculez mentalement le manque à gagner à chaque entraînement.", fx: { mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_casino_night", cat: "Hygiène de vie", icon: "🎰", w: 8,
+    cond: { aMin: 20, aMax: 30, minMoney: 1 },
+    text: "Après une victoire, les cadres vous embarquent : jet privé, casino, champagne. « C'est comme ça qu'on soude un vestiaire, gamin. »",
+    options: [
+      { label: "Foncer, c'est la vie de star", outcomes: [
+        { weight: 35, text: "Une soirée d'anthologie qui soude le groupe. Et vous repartez gagnant !", fx: { c: 4, mor: 6, money: 0.5, trait: "party" } },
+        { weight: 40, text: "Photos qui fuitent à 5h du matin. Le club vous inflige une amende salée.", fx: { money: -0.8, rep: -4, form: -5, dis: -6, trait: "party" } },
+        { weight: 25, text: "Vous perdez une somme indécente à la roulette. Silence radio.", fx: { money: -1.5, mor: -5 } },
+      ] },
+      { label: "Rentrer dormir comme un moine", outcomes: [
+        { weight: 60, text: "« Le robot », se moquent-ils gentiment. Vos stats parlent pour vous.", fx: { form: 6, p: 2 } },
+        { weight: 40, text: "Vous restez un peu à l'écart du noyau dur du vestiaire.", fx: { form: 4, c: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_charity_foundation", cat: "Vie perso", icon: "🤝", w: 8,
+    cond: { aMin: 24, aMax: 34, minMoney: 5 },
+    text: "Votre conseiller propose de créer une fondation à votre nom : écoles de foot, bourses d'études, retour aux sources.",
+    options: [
+      { label: "Créer la fondation, en grand", outcomes: [
+        { weight: 60, text: "Des centaines de gamins équipés et scolarisés. Votre image dépasse le sport.", fx: { money: -3, rep: 8, mor: 8, c: 4, trait: "zen" } },
+        { weight: 40, text: "Un partenaire indélicat détourne des fonds : scandale malgré vous, vite éteint.", fx: { money: -3, rep: -2, mor: -5 } },
+      ] },
+      { label: "Donner discrètement, sans structure", outcomes: [
+        { weight: 70, text: "Personne ne le sait, et c'est très bien comme ça. Votre karma vous remercie.", fx: { money: -1, mor: 6 } },
+        { weight: 30, text: "Un journaliste révèle vos dons cachés : l'effet est encore plus fort.", fx: { money: -1, rep: 6, mor: 5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_docuseries", cat: "Médias", icon: "🎬", w: 8,
+    cond: { aMin: 23, aMax: 33, minRep: 55 },
+    text: "Une plateforme mondiale veut tourner une série documentaire sur votre saison : caméras au vestiaire, à la maison, partout.",
+    options: [
+      { label: "Ouvrir toutes les portes", outcomes: [
+        { weight: 45, text: "La série cartonne : le public découvre l'humain derrière le joueur.", fx: { rep: 8, c: 6, money: 2 } },
+        { weight: 30, text: "Une dispute de vestiaire filmée fuite au montage. Le groupe est furieux.", fx: { rep: 4, money: 2, mor: -7, c: -2 } },
+        { weight: 25, text: "Les caméras pèsent sur votre spontanéité : une saison sous surveillance.", fx: { rep: 5, money: 2, form: -7 } },
+      ] },
+      { label: "Refuser : le vestiaire est sacré", outcomes: [
+        { weight: 70, text: "Le groupe apprécie. Ce qui se passe au vestiaire reste au vestiaire.", fx: { c: 3, m: 3, mor: 4 } },
+        { weight: 30, text: "La plateforme filme votre rival à la place. Sa cote médiatique explose.", fx: { mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_sponsor_war", cat: "Finance", icon: "👕", w: 8,
+    cond: { aMin: 22, aMax: 31, minRep: 50 },
+    text: "Votre équipementier personnel et celui du club entrent en guerre : chaussures floutées, menaces de procès. Il faut choisir un camp.",
+    options: [
+      { label: "Rester fidèle à votre marque, quitte à payer l'amende", outcomes: [
+        { weight: 55, text: "Votre marque récompense la loyauté : contrat à vie signé.", fx: { money: 3, rep: 3 } },
+        { weight: 45, text: "Le club retient l'affront : vos relations avec la direction se glacent.", fx: { money: 1.5, mor: -5, rep: -2 } },
+      ] },
+      { label: "Plier face au club", outcomes: [
+        { weight: 60, text: "La paix vaut mieux qu'un procès. Le club vous revalorise en douce.", fx: { money: 0.8, m: 2 } },
+        { weight: 40, text: "Votre équipementier vous lâche pour un jeune plus docile.", fx: { money: -1, mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_worldrecord_bid", cat: "Mercato", icon: "💎", w: 10,
+    cond: { aMin: 23, aMax: 28, minRep: 82, minOvr: 86 },
+    text: "Une offre de transfert RECORD DU MONDE tombe. Le président convoque la presse en urgence. La planète foot ne parle que de vous.",
+    options: [
+      { label: "Accepter le transfert du siècle", outcomes: [
+        { weight: 40, text: "Le prix devient un détail : vous êtes à la hauteur de l'événement dès le premier match.", fx: { rep: 10, money: 4, transfer: { d: 1, cross: true } } },
+        { weight: 35, text: "Chaque contrôle raté est mis en rapport avec le montant. Une pression inhumaine.", fx: { rep: 4, money: 4, m: -5, form: -8, transfer: { d: 1, cross: true } } },
+        { weight: 25, text: "Le transfert capote au dernier jour du mercato : dossier médical contesté. Malaise général.", fx: { mor: -8, rep: -3 } },
+      ] },
+      { label: "Refuser et prolonger ici", outcomes: [
+        { weight: 60, text: "Le stade entier chante votre nom. Statue en préparation.", fx: { rep: 7, mor: 8, money: 2, trait: "loyal" } },
+        { weight: 40, text: "Le club vend un cadre pour compenser… et l'équipe régresse.", fx: { mor: -5, form: -4, money: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_toxic_socials", cat: "Réseaux", icon: "🌪️", w: 9,
+    cond: { aMin: 20, aMax: 32, maxForm: 55 },
+    text: "Après trois matchs ratés, les réseaux deviennent un déversoir : menaces, montages humiliants, votre famille est visée.",
+    options: [
+      { label: "Tout couper : détox numérique totale", outcomes: [
+        { weight: 65, text: "Le silence numérique vous ressource. Vous redécouvrez le plaisir de jouer.", fx: { m: 6, mor: 8, form: 6, trait: "zen" } },
+        { weight: 35, text: "L'absence alimente les rumeurs de départ, mais votre tête va mieux.", fx: { m: 4, mor: 5, rep: -2 } },
+      ] },
+      { label: "Répondre par une lettre ouverte", outcomes: [
+        { weight: 45, text: "Votre lettre digne et poignante retourne l'opinion. Le stade vous ovationne.", fx: { rep: 6, c: 5, mor: 7 } },
+        { weight: 55, text: "Chaque phrase est disséquée, moquée, détournée. Vous avez nourri le monstre.", fx: { rep: -4, mor: -7 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_burnout", cat: "Vie perso", icon: "🕳️", w: 10,
+    cond: { aMin: 22, aMax: 33, maxMor: 32 },
+    text: "Plus d'envie, plus de sommeil, plus de plaisir. Vous connaissez le mot mais n'osez pas le prononcer : dépression.",
+    options: [
+      { label: "En parler publiquement", hint: "Courageux", outcomes: [
+        { weight: 60, text: "Votre témoignage libère la parole dans tout le sport. Un courage salué unanimement.", fx: { m: 8, mor: 12, rep: 6, c: 4 } },
+        { weight: 40, text: "Certains y voient une faiblesse. Mais vous vous êtes choisi, et c'est l'essentiel.", fx: { m: 6, mor: 10, rep: -2 } },
+      ] },
+      { label: "Consulter en secret et serrer les dents", outcomes: [
+        { weight: 55, text: "Le suivi psychologique porte ses fruits, loin des regards.", fx: { m: 5, mor: 8 } },
+        { weight: 45, text: "Le masque tient en public, mais le poids reste là, tapi.", fx: { mor: 4, form: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_tax_scheme", cat: "Finance", icon: "🏝️", w: 8,
+    cond: { aMin: 24, aMax: 33, minMoney: 12 },
+    text: "Un conseiller en gestion « très demandé » propose un montage offshore : « Tout le monde le fait. Optimisation, pas fraude. »",
+    options: [
+      { label: "Signer le montage", hint: "Glissant", outcomes: [
+        { weight: 100, text: "Des millions économisés, un sourire en coin. Le montage tient… tant que personne ne fouille.", fx: { money: 3, sched: { id: "ev_offshore_raid", inYears: 3 } } },
+      ] },
+      { label: "Payer vos impôts, dormir tranquille", outcomes: [
+        { weight: 100, text: "Votre comptable soupire, votre sommeil vous remercie.", fx: { m: 3, mor: 4 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ STORYLINE : Le Clan (agence familiale) ══════════════
+  {
+    id: "ev_clan_1", cat: "Entourage", icon: "🤵", w: 9,
+    cond: { aMin: 19, aMax: 23 },
+    text: "Votre grand frère lâche son travail : « Je deviens ton agent. La famille d'abord, on se fera jamais trahir. »",
+    options: [
+      { label: "Confier votre carrière au clan", outcomes: [
+        { weight: 55, text: "Le clan se structure autour de vous. Un cocon en béton armé.", fx: { mor: 7, m: 3, flag: "clan" } },
+        { weight: 45, text: "Il apprend le métier sur le tas… et rate quelques belles fenêtres de tir.", fx: { mor: 4, money: -0.5, flag: "clan" } },
+      ] },
+      { label: "Refuser avec tact", outcomes: [
+        { weight: 55, text: "Il comprend, à contrecœur. Les repas de famille restent un peu froids.", fx: { mor: -4 } },
+        { weight: 45, text: "Il le vit comme une trahison. La fracture familiale vous poursuit.", fx: { mor: -8, m: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_clan_2", cat: "Entourage", icon: "💼", w: 12,
+    cond: { aMin: 24, aMax: 31, flag: "clan" },
+    text: "Le clan a grandi : votre frère gère désormais cinq joueurs. Un audit révèle des commissions douteuses prélevées… sur VOS contrats.",
+    options: [
+      { label: "Couvrir la famille, régler ça en interne", outcomes: [
+        { weight: 50, text: "Explication virile, remboursement, pacte refondé. Le clan en sort plus fort.", fx: { mor: 5, m: 4, money: 1 } },
+        { weight: 50, text: "Il recommence deux ans plus tard. L'argent aura eu raison du sang.", fx: { money: -3, mor: -10 } },
+      ] },
+      { label: "Rompre professionnellement, publiquement", outcomes: [
+        { weight: 55, text: "Douloureux mais net. Un agent pro reprend vos intérêts, vos revenus décollent.", fx: { money: 2.5, mor: -6, rep: 2 } },
+        { weight: 45, text: "La presse people se régale du déballage familial. Tout le monde y perd.", fx: { rep: -4, mor: -9 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ STORYLINE : Rivalité directe ══════════════
+  {
+    id: "ev_rival_duel", cat: "Rivalité", icon: "⚔️", w: 11,
+    cond: { aMin: 23, aMax: 31, minRep: 55 },
+    text: "Les médias ont trouvé leur feuilleton : {rival} contre vous. Ce soir, confrontation directe au sommet, le monde entier compare.",
+    options: [
+      { label: "Attiser le duel en interview d'avant-match", outcomes: [
+        { weight: 40, text: "Vous gagnez le match ET le duel de punchlines. {rival} rumine.", fx: { rep: 7, c: 5, mor: 7 } },
+        { weight: 35, text: "{rival} marche sur vous pendant 90 minutes. Vos mots se retournent en mèmes.", fx: { rep: -4, mor: -7 } },
+        { weight: 25, text: "Match nul épique, duel dans le duel : le foot est gagnant, vous aussi.", fx: { rep: 4, c: 3 } },
+      ] },
+      { label: "Laisser parler le terrain", outcomes: [
+        { weight: 55, text: "Performance majuscule sans un mot de trop. La classe à l'état pur.", fx: { rep: 5, m: 4, form: 4 } },
+        { weight: 45, text: "{rival} fait le show, vous restez dans l'ombre. Round perdu.", fx: { mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_rival_respect", cat: "Rivalité", icon: "🤝", w: 10,
+    cond: { aMin: 28, aMax: 34, minRep: 60 },
+    text: "Blessé, {rival} traverse la pire période de sa carrière. Un journaliste vous tend le micro : « Un mot pour votre rival de toujours ? »",
+    options: [
+      { label: "Un hommage sincère et public", outcomes: [
+        { weight: 70, text: "Votre message émeut le monde du foot. {rival} répond : « Le plus grand, c'est lui. »", fx: { rep: 6, c: 5, mor: 6 } },
+        { weight: 30, text: "Certains fans y voient de la condescendance déguisée. On ne peut pas plaire à tous.", fx: { rep: 2, c: 2 } },
+      ] },
+      { label: "Une pique bien sentie", hint: "Sans pitié", outcomes: [
+        { weight: 40, text: "La punchline devient culte. Cruelle, mais culte.", fx: { c: 4, rep: 3, mor: 3 } },
+        { weight: 60, text: "Frapper un homme à terre : l'opinion ne vous le pardonne pas.", fx: { rep: -6, mor: -4 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ ANNÉES CDM ══════════════
+  {
+    id: "ev_wc_prep", cat: "Sélection", icon: "🏆", w: 18,
+    cond: { aMin: 19, aMax: 36, nat: true, wc: true }, once: false,
+    text: "Année de Coupe du Monde. Le sélectionneur vous laisse choisir votre préparation : gestion fine ou charge maximale en club.",
+    options: [
+      { label: "Se préserver pour le Mondial", outcomes: [
+        { weight: 60, text: "Vous arrivez au tournoi frais comme un gardon, affamé de gloire.", fx: { form: 10, p: 2, flag: "wc_fresh" } },
+        { weight: 40, text: "Le club tousse : votre gestion « personnelle » agace en interne.", fx: { form: 8, rep: -2, mor: -3, flag: "wc_fresh" } },
+      ] },
+      { label: "Tout donner sur les deux tableaux", outcomes: [
+        { weight: 45, text: "Une saison XXL de bout en bout : vous arrivez lancé comme une fusée.", fx: { t: 2, rep: 4, form: 4 } },
+        { weight: 55, text: "L'organisme sature juste avant le tournoi. Mauvais timing.", fx: { form: -10, p: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_nat_bench", cat: "Sélection", icon: "😤", w: 9,
+    cond: { aMin: 26, aMax: 33, nat: true },
+    text: "En sélection, un petit nouveau a pris votre place. Le sélectionneur ne vous appelle plus que pour « l'expérience ».",
+    options: [
+      { label: "Prendre votre retraite internationale", outcomes: [
+        { weight: 55, text: "Départ digne, hommage national. Votre corps vous dit merci chaque week-end.", fx: { form: 6, mor: 4, natRetire: true } },
+        { weight: 45, text: "Six mois plus tard, la sélection s'écroule sans vous. Trop tard pour revenir.", fx: { form: 5, mor: -4, natRetire: true } },
+      ] },
+      { label: "Vous battre pour reconquérir le maillot", outcomes: [
+        { weight: 45, text: "Votre abnégation force la main du sélectionneur : de nouveau titulaire !", fx: { m: 5, rep: 4, mor: 6 } },
+        { weight: 55, text: "Des bancs de touche en tribunes d'honneur : une lente humiliation.", fx: { mor: -7, form: -4 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ CAP DES 27+ : L'OFFRE DORÉE ══════════════
+  {
+    id: "ev_desert_gold", cat: "Mercato", icon: "🏜️", w: 12,
+    cond: { aMin: 27, aMax: 34, minRep: 55, exoticClub: false },
+    text: "Un émissaire du Golfe pose une offre irréelle sur la table : le triple de votre salaire, un palace, un rôle d'icône. Le sportif, lui…",
+    options: [
+      { label: "Prendre l'or du désert", hint: "Jackpot", outcomes: [
+        { weight: 50, text: "Accueil pharaonique. Votre compte en banque ne connaîtra plus jamais l'inquiétude.", fx: { money: 8, rep: -4, transfer: { d: -1, exotic: true }, trait: "mercenary" } },
+        { weight: 50, text: "L'argent coule, mais le niveau vous manque. L'Europe continue sans vous.", fx: { money: 8, rep: -6, mor: -5, transfer: { d: -1, exotic: true } } },
+      ] },
+      { label: "Refuser : la compétition avant tout", outcomes: [
+        { weight: 60, text: "Le peuple du foot salue le choix du cœur. Votre légende sportive s'épaissit.", fx: { rep: 5, mor: 5 } },
+        { weight: 40, text: "Un an plus tard, l'offre a été retirée pour toujours. Votre banquier ne s'en remet pas.", fx: { m: 2, mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_release_clause", cat: "Mercato", icon: "📜", w: 9,
+    cond: { aMin: 23, aMax: 29, minRep: 60, levels: ["d2", "d1"] },
+    text: "Un géant active votre clause libératoire. Votre président, en larmes, supplie publiquement : « Reste un an de plus, on jouera le titre. »",
+    options: [
+      { label: "Partir : la clause est la clause", outcomes: [
+        { weight: 55, text: "Un départ propre, dans les règles. Le grand saut tant attendu.", fx: { rep: 3, transfer: { d: 1 } } },
+        { weight: 45, text: "Les adieux sont glacés : votre nom est sifflé à chaque retour au stade.", fx: { rep: -3, mor: -4, transfer: { d: 1 } } },
+      ] },
+      { label: "Rester l'année de la gagne", outcomes: [
+        { weight: 40, text: "Pari gagné : une saison héroïque et un titre historique avec votre club de cœur !", fx: { rep: 8, mor: 10, trophy: "league", trait: "loyal" } },
+        { weight: 60, text: "Le titre échappe de peu, et le géant a recruté ailleurs. La fenêtre s'est refermée.", fx: { mor: -6, trait: "loyal" } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_abroad_adventure", cat: "Mercato", icon: "✈️", w: 10,
+    cond: { aMin: 24, aMax: 30, abroad: false },
+    text: "Un championnat étranger réputé pour son intensité tactique vous fait une cour assidue depuis des mois.",
+    options: [
+      { label: "Tenter l'aventure à l'étranger", outcomes: [
+        { weight: 40, text: "Le dépaysement vous révèle : nouveau pays, nouveau statut de star.", fx: { t: 3, rep: 7, transfer: { d: 0, cross: true } } },
+        { weight: 35, text: "L'adaptation est correcte, l'expérience humaine inoubliable.", fx: { m: 4, c: 3, transfer: { d: 0, cross: true } } },
+        { weight: 25, text: "La langue, la tactique, la solitude : tout est plus dur que prévu.", fx: { m: -4, mor: -8, transfer: { d: 0, cross: true } } },
+      ] },
+      { label: "Rester dans votre zone de confort", outcomes: [
+        { weight: 55, text: "Vos repères font votre force : une saison de patron.", fx: { form: 5, m: 2 } },
+        { weight: 45, text: "Le confort endort : votre progression stagne doucement.", fx: { t: -1, mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_mentor_returns", cat: "Vestiaire", icon: "🧓", w: 8,
+    cond: { aMin: 26, aMax: 33 },
+    text: "Votre tout premier éducateur, celui qui vous a mis un ballon dans les pieds, devient adjoint au club. Il n'a pas changé : exigeant et cash.",
+    options: [
+      { label: "Retravailler les bases avec lui", outcomes: [
+        { weight: 65, text: "Retour aux fondamentaux, redécouverte du plaisir brut. Une cure de jouvence.", fx: { t: 4, mor: 8, form: 6 } },
+        { weight: 35, text: "Ses méthodes à l'ancienne passent mal auprès du reste du groupe, mais vous, vous savez.", fx: { t: 3, mor: 4, c: -1 } },
+      ] },
+      { label: "Garder une distance polie", outcomes: [
+        { weight: 50, text: "Chacun son rôle, le respect demeure.", fx: { m: 2 } },
+        { weight: 50, text: "Son regard déçu à chaque croisement dans le couloir pèse plus que prévu.", fx: { mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_intl_disillusion", cat: "Sélection", icon: "🇺🇳", w: 8,
+    cond: { aMin: 24, aMax: 30, nat: true, maxForm: 60 },
+    text: "En sélection, l'ambiance est délétère : primes contestées, clans, fédération dépassée. Des cadres préparent un boycott.",
+    options: [
+      { label: "Rejoindre la fronde des cadres", outcomes: [
+        { weight: 45, text: "Le rapport de force paie : la fédération cède, le groupe ressoudé vous respecte.", fx: { c: 5, m: 3, rep: 3 } },
+        { weight: 55, text: "L'opinion publique massacre les « millionnaires ingrats ». Votre image trinque.", fx: { rep: -6, mor: -5 } },
+      ] },
+      { label: "Rester neutre et jouer au foot", outcomes: [
+        { weight: 60, text: "Au-dessus de la mêlée, vous êtes épargné par le scandale.", fx: { m: 3 } },
+        { weight: 40, text: "« Ni chaud ni froid » : les deux camps vous le reprochent.", fx: { c: -2, mor: -4 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ FIN DE CARRIÈRE (30+) ══════════════
+  {
+    id: "ev_mentor_role", cat: "Vestiaire", icon: "🧭", w: 11,
+    cond: { aMin: 30, aMax: 34 },
+    text: "Le club vous propose un nouveau rôle : moins de matchs, plus de transmission. Derrière vous, une pépite de 18 ans piaffe.",
+    options: [
+      { label: "Devenir le mentor de la pépite", outcomes: [
+        { weight: 55, text: "Votre héritage prend forme : la pépite explose et vous cite à chaque interview.", fx: { m: 6, c: 5, rep: 5, trait: "leader" } },
+        { weight: 45, text: "Élégant crépuscule : moins de gloire, plus de sens.", fx: { m: 4, mor: 5 } },
+      ] },
+      { label: "Défendre votre place, point final", outcomes: [
+        { weight: 40, text: "Été indien : vous réalisez une de vos meilleures saisons !", fx: { t: 4, rep: 7, form: 8 } },
+        { weight: 60, text: "Le corps proteste : les blessures s'enchaînent, la pépite en profite.", fx: { p: -6, inj: 10, mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_tv_offer", cat: "Médias", icon: "📺", w: 8,
+    cond: { aMin: 30, aMax: 35, minRep: 45 },
+    text: "Une grande chaîne vous veut comme consultant vedette, en parallèle de votre fin de carrière. Double casquette, double exposition.",
+    options: [
+      { label: "Accepter le rôle TV", outcomes: [
+        { weight: 50, text: "Le naturel crève l'écran : une reconversion en or se dessine.", fx: { c: 6, rep: 5, money: 1.5, flag: "media_career" } },
+        { weight: 50, text: "Analyser ses futurs adversaires crée des frictions : « De quel côté es-tu ? »", fx: { money: 1.5, mor: -5, form: -4 } },
+      ] },
+      { label: "Pas tant que vous êtes joueur", outcomes: [
+        { weight: 100, text: "À 100% joueur jusqu'au bout. La télé attendra bien un peu.", fx: { form: 4, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_boardroom_path", cat: "Reconversion", icon: "🏛️", w: 8,
+    cond: { aMin: 31, aMax: 35 },
+    text: "Le président vous imagine dans son fauteuil un jour : il propose de vous former aux coulisses — budgets, mercato, politique interne.",
+    options: [
+      { label: "Découvrir les coulisses du pouvoir", outcomes: [
+        { weight: 55, text: "Le costume vous va étonnamment bien : un avenir de dirigeant se dessine.", fx: { m: 5, c: 4, flag: "boardroom" } },
+        { weight: 45, text: "Les vestiaires vous voient désormais comme « l'œil de la direction ». Ambigu.", fx: { c: -2, mor: -4, flag: "boardroom" } },
+      ] },
+      { label: "Joueur un jour, joueur toujours", outcomes: [
+        { weight: 60, text: "Concentré sur le terrain, vous savourez chaque minute restante.", fx: { form: 5, mor: 4 } },
+        { weight: 40, text: "L'occasion ne se représentera pas de sitôt.", fx: { m: 1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_family_pull", cat: "Vie perso", icon: "🏡", w: 9,
+    cond: { aMin: 31, aMax: 35, abroad: true },
+    text: "Les valises n'ont jamais pesé aussi lourd. Un club proche de votre ville natale offre un dernier contrat, à vingt minutes de la maison familiale.",
+    options: [
+      { label: "Rentrer au pays", outcomes: [
+        { weight: 55, text: "Jouer devant les vôtres, dormir chez vous : le foot redevient un jeu.", fx: { mor: 10, m: 4, transfer: { d: -1, home: true } } },
+        { weight: 45, text: "Le niveau local vous fait mesurer le chemin parcouru… et celui qui reste.", fx: { mor: 5, rep: -3, transfer: { d: -1, home: true } } },
+      ] },
+      { label: "Finir au sommet, loin des vôtres", outcomes: [
+        { weight: 50, text: "Le haut niveau jusqu'à la dernière goutte. La famille comprend.", fx: { rep: 3, form: 4 } },
+        { weight: 50, text: "Les visios ne remplacent rien. Le vague à l'âme s'installe.", fx: { mor: -7 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_testimonial", cat: "Hommage", icon: "🎗️", w: 8,
+    cond: { aMin: 33, aMax: 41, minRep: 65, minClubSeasons: 5 },
+    text: "Votre club organise un match d'hommage : anciennes gloires, stade complet, recettes au choix — pour vous ou pour une cause.",
+    options: [
+      { label: "Reverser la recette à une cause", outcomes: [
+        { weight: 100, text: "Une soirée magique et deux millions reversés. La classe, jusqu'au bout.", fx: { rep: 7, mor: 10, c: 4 } },
+      ] },
+      { label: "Une retraite, ça se prépare", outcomes: [
+        { weight: 60, text: "Personne ne vous en tient rigueur : vous avez tant donné.", fx: { money: 2, mor: 5 } },
+        { weight: 40, text: "Quelques éditorialistes tiquent sur « l'hommage payant ».", fx: { money: 2, rep: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_coach_diploma", cat: "Reconversion", icon: "📋", w: 8,
+    cond: { aMin: 32, aMax: 36 },
+    text: "Les diplômes d'entraîneur se préparent maintenant ou jamais : cours du soir, mémoires, stages — en parallèle des matchs.",
+    options: [
+      { label: "Passer les diplômes en jouant", outcomes: [
+        { weight: 60, text: "Diplômé avec les félicitations. Le banc de touche n'attend plus que vous.", fx: { m: 6, flag: "coach_diploma" } },
+        { weight: 40, text: "Le cumul est épuisant, mais le papier est en poche.", fx: { m: 4, form: -5, flag: "coach_diploma" } },
+      ] },
+      { label: "Chaque chose en son temps", outcomes: [
+        { weight: 100, text: "Le terrain d'abord. La reconversion attendra la retraite.", fx: { form: 3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_statue", cat: "Hommage", icon: "🗿", w: 9,
+    cond: { aMin: 32, aMax: 36, minRep: 85, minClubSeasons: 7 },
+    text: "Le club annonce l'inauguration de VOTRE statue devant le stade. Le sculpteur vous montre la maquette… et le nez est raté.",
+    options: [
+      { label: "Sourire et inaugurer quand même", outcomes: [
+        { weight: 60, text: "Le nez raté devient culte : les selfies affluent du monde entier.", fx: { rep: 5, c: 4, mor: 6 } },
+        { weight: 40, text: "L'émotion balaie tout : votre légende est coulée dans le bronze.", fx: { rep: 6, mor: 8 } },
+      ] },
+      { label: "Demander discrètement une retouche", outcomes: [
+        { weight: 50, text: "Retouche faite, inauguration grandiose six mois plus tard.", fx: { rep: 5, mor: 6 } },
+        { weight: 50, text: "« Le joueur qui a fait refaire sa statue » : la presse s'amuse, vous un peu moins.", fx: { rep: 2, mor: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_club_buyout", cat: "Reconversion", icon: "🏦", w: 8,
+    cond: { aMin: 33, aMax: 36, minMoney: 30, originLevel: ["regional", "d2"] },
+    text: "Votre club formateur est au bord de la faillite. Votre fortune pourrait le sauver : rachat, présidence, projet de renaissance.",
+    options: [
+      { label: "Racheter le club de vos débuts", outcomes: [
+        { weight: 55, text: "L'enfant du club devient son sauveur. Une deuxième histoire d'amour commence.", fx: { money: -15, rep: 9, mor: 10, flag: "club_owner" } },
+        { weight: 45, text: "Le sauvetage est un gouffre financier, mais le club vit. Aucun regret.", fx: { money: -20, rep: 6, mor: 6, flag: "club_owner" } },
+      ] },
+      { label: "Aider sans reprendre les rênes", outcomes: [
+        { weight: 70, text: "Votre prêt relais sauve les meubles. Le club vous doit sa survie, en toute discrétion.", fx: { money: -5, mor: 5, rep: 3 } },
+        { weight: 30, text: "Sans pilote, le club replonge deux ans plus tard. Vous aurez essayé.", fx: { money: -5, mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_last_dance", cat: "Retraite", icon: "🕺", w: 14,
+    cond: { aMin: 34, aMax: 40 },
+    text: "Le corps envoie des factures, la tête hésite. Tout le monde pose LA question : encore une saison, ou tirer sa révérence ?",
+    options: [
+      { label: "Une dernière danse", outcomes: [
+        { weight: 40, text: "Une tournée d'adieux dans chaque stade : le foot vous dit merci.", fx: { mor: 8, rep: 4 } },
+        { weight: 35, text: "Une saison honorable, sans plus. Il fallait la vivre pour le savoir.", fx: { mor: 3 } },
+        { weight: 25, text: "Le physique lâche pour de bon : une saison de trop, disent-ils.", fx: { p: -8, inj: 12, mor: -6 } },
+      ] },
+      { label: "Annoncer la retraite en fin de saison", outcomes: [
+        { weight: 60, text: "Libéré de tout calcul, vous savourez chaque match comme un cadeau.", fx: { mor: 8, form: 6, retire: true } },
+        { weight: 40, text: "L'annonce émeut la planète foot. Chaque stade se lève à votre sortie.", fx: { rep: 5, mor: 8, retire: true } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_player_coach", cat: "Retraite", icon: "🎓", w: 10,
+    cond: { aMin: 35, aMax: 41 },
+    text: "Un club modeste vous offre un rôle de joueur-entraîneur pour votre toute dernière saison : transmettre en jouant encore un peu.",
+    options: [
+      { label: "Accepter cette passation", outcomes: [
+        { weight: 60, text: "Vous descendez de plusieurs étages pour marquer ce petit club à jamais : chaque jeune retient vos leçons.", fx: { m: 5, rep: 4, mor: 8, retire: true, flag: "coach_diploma", transfer: { toLevel: "regional", direct: true } } },
+        { weight: 40, text: "Le double rôle dans ce club modeste est bancal, mais l'expérience est unique.", fx: { m: 3, mor: 4, retire: true, transfer: { toLevel: "regional", direct: true } } },
+      ] },
+      { label: "Rester simple joueur jusqu'au bout", outcomes: [
+        { weight: 60, text: "Une dernière saison tout en fraîcheur, comme un gamin.", fx: { mor: 7, form: 4 } },
+        { weight: 40, text: "Une fin discrète, presque anonyme. Le rideau tombe doucement.", fx: { mor: 2 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ GÉNÉRIQUES (rejouables, faible poids) ══════════════
+  {
+    id: "gen_training_camp", cat: "Préparation", icon: "⛰️", w: 4, once: false,
+    cond: { aMin: 17, aMax: 34 },
+    text: "Le club propose un stage commando en altitude pendant la trêve : une semaine de souffrance pour préparer la suite.",
+    options: [
+      { label: "S'infliger le stage", outcomes: [
+        { weight: 65, text: "Revenu affûté comme une lame.", fx: { p: 4, form: 6 } },
+        { weight: 35, text: "Trop de charge : l'organisme proteste.", fx: { form: -4, p: 1 } },
+      ] },
+      { label: "Préférer une vraie coupure", outcomes: [
+        { weight: 60, text: "Des batteries pleines et la tête légère.", fx: { mor: 6, form: 3 } },
+        { weight: 40, text: "La reprise pique un peu plus que pour les autres.", fx: { form: -3, mor: 3 } },
+      ] },
+    ],
+  },
+  {
+    id: "gen_new_signing", cat: "Vestiaire", icon: "🆕", w: 4, once: false,
+    cond: { aMin: 19, aMax: 34 },
+    text: "Le club recrute une doublure ambitieuse à votre poste, présentée en grande pompe. Le message est limpide.",
+    options: [
+      { label: "En faire un moteur de motivation", outcomes: [
+        { weight: 60, text: "La concurrence vous tire vers le haut : votre niveau grimpe.", fx: { t: 3, form: 5, m: 2 } },
+        { weight: 40, text: "Le duel est usant, mais votre place tient.", fx: { m: 3, form: 2, mor: -2 } },
+      ] },
+      { label: "Ignorer le signal", outcomes: [
+        { weight: 50, text: "Votre statut parle de lui-même : la recrue s'installe sur le banc.", fx: { form: 2 } },
+        { weight: 50, text: "La recrue grignote vos minutes, match après match.", fx: { form: -6, mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "gen_asia_tour", cat: "Médias", icon: "🛫", w: 3, once: false,
+    cond: { aMin: 20, aMax: 33, minRep: 40 },
+    text: "Tournée promotionnelle en Asie : quatre pays en huit jours, bains de foule, matchs d'exhibition à minuit heure locale.",
+    options: [
+      { label: "Jouer le jeu à fond", outcomes: [
+        { weight: 60, text: "Des millions de nouveaux fans scandant votre nom. Le marketing jubile.", fx: { rep: 5, c: 3, money: 0.8, form: -4 } },
+        { weight: 40, text: "Le décalage horaire vous poursuit toute la reprise.", fx: { rep: 3, money: 0.8, form: -7 } },
+      ] },
+      { label: "Négocier une dispense partielle", outcomes: [
+        { weight: 60, text: "Deux jours sur place, l'essentiel préservé.", fx: { rep: 1, form: 3 } },
+        { weight: 40, text: "Le service marketing vous inscrit sur sa liste noire.", fx: { mor: -3, form: 3 } },
+      ] },
+    ],
+  },
+  {
+    id: "gen_tactics_shift", cat: "Terrain", icon: "♟️", w: 4, once: false,
+    cond: { aMin: 18, aMax: 35 },
+    text: "Nouveau système de jeu au club : votre rôle change sensiblement. Le staff attend votre adhésion.",
+    options: [
+      { label: "Adhérer sans réserve", outcomes: [
+        { weight: 60, text: "Vous êtes le premier relais du coach sur le terrain.", fx: { m: 3, t: 2 } },
+        { weight: 40, text: "Le système bride un peu vos qualités, mais le collectif gagne.", fx: { m: 2, form: -3 } },
+      ] },
+      { label: "Émettre des réserves en privé", outcomes: [
+        { weight: 50, text: "Le coach amende son plan avec vos idées : un duo qui fonctionne.", fx: { m: 4, c: 2 } },
+        { weight: 50, text: "Vos réserves fuitent. Ambiance méfiante pendant des semaines.", fx: { mor: -4, c: -1 } },
+      ] },
+    ],
+  },
+  {
+    id: "gen_keep_fit", cat: "Préparation", icon: "🧬", w: 3, once: false,
+    cond: { aMin: 28, aMax: 36 },
+    text: "Un préparateur de renom propose un protocole personnalisé « longévité » : cryothérapie, sommeil monitored, données à la seconde.",
+    options: [
+      { label: "Investir dans votre corps", outcomes: [
+        { weight: 70, text: "Des jambes de 25 ans dans un corps qui n'en a plus. Bluffant.", fx: { p: 5, form: 5, money: -0.6 } },
+        { weight: 30, text: "Le protocole est contraignant pour des gains marginaux.", fx: { p: 2, money: -0.6, mor: -2 } },
+      ] },
+      { label: "Rester sur vos routines", outcomes: [
+        { weight: 55, text: "Vos vieilles recettes tiennent encore la route.", fx: { form: 2 } },
+        { weight: 45, text: "Les données ne mentent pas : vous déclinez plus vite que les autres.", fx: { p: -3, mor: -3 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ JEUNESSE & FAMILLE (v3) ══════════════
+  {
+    id: "ev_parents_divorce", cat: "Vie perso", icon: "💔", w: 9,
+    cond: { aMin: 16, aMax: 18 },
+    text: "Vos parents se séparent en pleine saison. Les valises, les silences, les week-ends coupés en deux. Le centre de formation devient votre seul repère.",
+    options: [
+      { label: "Vous réfugier dans le travail", outcomes: [
+        { weight: 55, text: "Le terrain devient votre exutoire : vous n'avez jamais autant progressé.", fx: { t: 4, dis: 6, mor: -4 } },
+        { weight: 45, text: "Vous encaissez en silence, mais quelque chose s'est fissuré.", fx: { m: -3, mor: -8, dis: 4 } },
+      ] },
+      { label: "Prendre du temps pour votre famille", outcomes: [
+        { weight: 60, text: "Vous aidez chacun à retomber sur ses pieds. Une maturité qui changera l'homme, donc le joueur.", fx: { m: 6, mor: 4, form: -4 } },
+        { weight: 40, text: "Les allers-retours vous épuisent, la saison passe au second plan.", fx: { form: -8, m: 3, mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_school_finals", cat: "Vie perso", icon: "📚", w: 9,
+    cond: { aMin: 17, aMax: 18, flag: "diploma" },
+    text: "Les examens finaux tombent la semaine d'un tournoi décisif avec les U19. Le lycée refuse de déplacer les épreuves.",
+    options: [
+      { label: "Passer les examens, rater le tournoi", outcomes: [
+        { weight: 65, text: "Diplôme en poche. Une sécurité pour toute la vie, quoi qu'il arrive sur le terrain.", fx: { m: 5, dis: 4, mor: 3, flag: "graduated" } },
+        { weight: 35, text: "Diplômé… pendant que votre remplaçant brillait au tournoi devant les recruteurs.", fx: { m: 4, rep: -3, flag: "graduated" } },
+      ] },
+      { label: "Jouer le tournoi, tant pis pour les épreuves", outcomes: [
+        { weight: 45, text: "Un tournoi majuscule qui fait parler les recruteurs. L'école attendra… pour toujours.", fx: { rep: 6, t: 2, clearFlag: "diploma", flag: "no_diploma" } },
+        { weight: 55, text: "Un tournoi quelconque, un diplôme envolé. Le pire des deux mondes.", fx: { mor: -6, clearFlag: "diploma", flag: "no_diploma" } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_academy_hazing", cat: "Vestiaire", icon: "🐣", w: 8,
+    cond: { aMin: 16, aMax: 17 },
+    text: "Le rituel du centre : les nouveaux chantent debout sur une chaise devant tout le réfectoire. Votre tour arrive, et le vestiaire vous observe.",
+    options: [
+      { label: "Faire le show à fond", outcomes: [
+        { weight: 65, text: "Votre interprétation catastrophique devient culte : le groupe vous adopte instantanément.", fx: { team: 8, c: 4, mor: 5 } },
+        { weight: 35, text: "Le trou de mémoire total. On vous surnommera « Playback » pendant deux ans.", fx: { team: 4, c: 2, mor: -2 } },
+      ] },
+      { label: "Refuser ce cirque", outcomes: [
+        { weight: 40, text: "Votre aplomb impose le respect : certains anciens détestent, les éducateurs approuvent.", fx: { m: 4, team: -4, dis: 3 } },
+        { weight: 60, text: "Le vestiaire vous catalogue « pas des nôtres ». L'intégration sera longue.", fx: { team: -8, mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_first_love", cat: "Vie perso", icon: "🌹", w: 8,
+    cond: { aMin: 17, aMax: 19 },
+    text: "Premier grand amour. Elle habite à deux heures de route du centre de formation, et chaque permission de sortie devient une négociation.",
+    options: [
+      { label: "Vivre cette histoire à fond", outcomes: [
+        { weight: 50, text: "Cet équilibre affectif vous apaise : vous jouez libéré.", fx: { mor: 9, m: 3, flag: "romance" } },
+        { weight: 50, text: "Les trajets nocturnes et les têtes ailleurs : le staff s'arrache les cheveux.", fx: { mor: 5, form: -7, dis: -5, flag: "romance" } },
+      ] },
+      { label: "Le foot d'abord, le reste attendra", outcomes: [
+        { weight: 55, text: "Une rupture douloureuse mais une saison pleine. Le prix à payer, dites-vous.", fx: { form: 5, dis: 4, mor: -6 } },
+        { weight: 45, text: "Elle n'a pas attendu. Vous non plus, à en croire votre saison correcte.", fx: { form: 3, mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_position_retrain", cat: "Terrain", icon: "🔀", w: 8,
+    cond: { aMin: 16, aMax: 18 },
+    text: "Le directeur du centre est formel : votre morphologie et votre profil correspondent à un autre registre. Il propose une reconversion partielle de votre jeu.",
+    options: [
+      { label: "Élargir votre palette", outcomes: [
+        { weight: 55, text: "Vous devenez un joueur hybride, capable de tout faire. Les coachs adorent ce profil.", fx: { t: 3, m: 4, p: 2 } },
+        { weight: 45, text: "À force de tout travailler, vous ne brillez nulle part.", fx: { t: -2, m: 2, mor: -4 } },
+      ] },
+      { label: "Rester un pur produit de votre poste", outcomes: [
+        { weight: 60, text: "Votre spécialisation extrême fait de vous une référence à votre poste.", fx: { t: 5, form: 3 } },
+        { weight: 40, text: "Dès qu'un système ne vous convient pas, vous disparaissez des radars.", fx: { t: 2, form: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_trial_elite", cat: "Mercato", icon: "🎫", w: 10,
+    cond: { aMin: 16, aMax: 18, levels: ["regional", "d2"], chance: 0.6 },
+    text: "Un recruteur d'un centre de formation d'élite vous a repéré en tournoi. Il offre un essai d'une semaine — une chance sur cent, mais une vraie.",
+    options: [
+      { label: "Tenter l'essai de votre vie", outcomes: [
+        { weight: 30, text: "ESSAI TRANSFORMÉ ! Le grand centre vous ouvre ses portes. Votre vie bascule.", fx: { rep: 6, mor: 8, transfer: { d: 2 } } },
+        { weight: 40, text: "Correct, sans plus. « On te rappellera. » Ils ne rappelleront pas, mais vous savez désormais où placer la barre.", fx: { m: 4, t: 2, mor: -3 } },
+        { weight: 30, text: "Une semaine cauchemardesque, dévoré par le stress. Retour à la case départ, l'ego en miettes.", fx: { m: -4, mor: -7 } },
+      ] },
+      { label: "Refuser : trop tôt, trop loin", outcomes: [
+        { weight: 55, text: "Vous continuez de mûrir près des vôtres. Le train repassera peut-être.", fx: { m: 3, mor: 3 } },
+        { weight: 45, text: "Le doute vous rongera longtemps : et si c'était LE train ?", fx: { mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_gaming_addiction", cat: "Hygiène de vie", icon: "🎮", w: 8,
+    cond: { aMin: 16, aMax: 19 },
+    text: "Les sessions de jeu vidéo s'éternisent jusqu'à 3h du matin. Le staff a remarqué vos cernes — et vos réflexes émoussés au réveil.",
+    options: [
+      { label: "Instaurer un couvre-feu strict", outcomes: [
+        { weight: 70, text: "Le sommeil retrouvé se voit immédiatement dans les données physiques.", fx: { dis: 6, form: 5, p: 2 } },
+        { weight: 30, text: "Vous craquez régulièrement, mais l'effort est réel.", fx: { dis: 3, form: 2 } },
+      ] },
+      { label: "Assumer : ça vous détend", outcomes: [
+        { weight: 45, text: "Votre chaîne de streaming décolle : les fans adorent ce côté accessible.", fx: { rep: 4, c: 3, dis: -4, form: -3 } },
+        { weight: 55, text: "Endormi sur la table de massage. Amende, moqueries, et une réputation de dilettante.", fx: { dis: -6, form: -5, rep: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_fake_agent", cat: "Entourage", icon: "🎭", w: 8,
+    cond: { aMin: 16, aMax: 18 },
+    text: "Un « agent FIFA certifié » tourne autour de votre famille : contrats mirobolants, clubs prestigieux… il demande juste 2 000 € de « frais de dossier ».",
+    options: [
+      { label: "Payer : on ne rate pas une telle chance", outcomes: [
+        { weight: 70, text: "L'homme disparaît avec l'argent de vos parents. La leçon coûte cher — et n'est peut-être pas finie.", fx: { money: -0.02, mor: -7, m: 2, sched: { id: "ev_scam_return", inYears: 3 } } },
+        { weight: 30, text: "Contre toute attente, il décroche un vrai contact. Un escroc avec un carnet d'adresses, ça existe.", fx: { rep: 3, mor: 3 } },
+      ] },
+      { label: "Vérifier sa licence auprès de la fédération", outcomes: [
+        { weight: 100, text: "Licence inexistante, pedigree de faussaire. Votre vigilance sauve les économies familiales.", fx: { m: 5, dis: 3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_scam_return", cat: "Entourage", icon: "🕵️", scheduledOnly: true, w: 1,
+    text: "Le faux agent qui avait escroqué votre famille refait surface — cette fois, il monnaie de « vieilles photos compromettantes » de vos années centre de formation.",
+    options: [
+      { label: "Porter plainte immédiatement", outcomes: [
+        { weight: 70, text: "Il est arrêté : il faisait chanter six autres joueurs. Votre courage inspire les autres victimes.", fx: { rep: 4, m: 5, mor: 5 } },
+        { weight: 30, text: "Le procès s'éternise et les photos fuitent quand même. Beaucoup de bruit pour des clichés banals.", fx: { rep: -3, mor: -5 } },
+      ] },
+      { label: "Payer pour enterrer l'affaire", outcomes: [
+        { weight: 100, text: "Vous payez. Il reviendra, évidemment. Les maîtres-chanteurs reviennent toujours.", fx: { money: -1.5, mor: -6, m: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_crew_pressure", cat: "Entourage", icon: "🚨", w: 10,
+    cond: { aMin: 18, aMax: 24, flag: "crew_entourage" },
+    text: "Votre bande d'enfance vit à vos crochets : voyages, boîtes, voitures de location. Le club s'inquiète des « fréquentations » qui traînent au parking du centre.",
+    options: [
+      { label: "Poser des limites claires", outcomes: [
+        { weight: 55, text: "Les vrais restent, les parasites s'évaporent. Vous y voyez enfin clair.", fx: { dis: 6, m: 5, mor: -3, clearFlag: "crew_entourage" } },
+        { weight: 45, text: "Le quartier vous traite d'ingrat. La rupture est brutale, mais nécessaire.", fx: { dis: 5, mor: -7, clearFlag: "crew_entourage" } },
+      ] },
+      { label: "On ne lâche pas ses frères", outcomes: [
+        { weight: 40, text: "Votre loyauté est belle — et votre entourage vous le rend dans les coups durs.", fx: { mor: 6, c: 3, money: -0.8 } },
+        { weight: 60, text: "Une bagarre en boîte impliquant votre bande finit dans la presse. Le club est furieux.", fx: { rep: -6, dis: -4, coach: -6, money: -0.5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_shark_betrayal", cat: "Entourage", icon: "🦈", w: 10,
+    cond: { aMin: 20, aMax: 26, flag: "shark_agent" },
+    text: "Vous découvrez que votre agent touche des commissions occultes sur VOS transferts depuis le début. Son carnet d'adresses reste le meilleur du marché.",
+    options: [
+      { label: "Rompre le contrat, quoi qu'il en coûte", outcomes: [
+        { weight: 55, text: "Le divorce est violent — il vous traîne en justice — mais vous récupérez votre carrière.", fx: { money: -1, m: 5, dis: 4, clearFlag: "shark_agent" } },
+        { weight: 45, text: "Libéré, mais son réseau se ferme : certains clubs ne répondent plus.", fx: { rep: -4, mor: -4, clearFlag: "shark_agent" } },
+      ] },
+      { label: "Fermer les yeux : il vous rend riche", outcomes: [
+        { weight: 50, text: "Le pacte du diable fonctionne : les contrats pleuvent, les scrupules s'entassent.", fx: { money: 2, mor: -4, trait: "mercenary" } },
+        { weight: 50, text: "Un scandale de corruption l'emporte — et éclabousse tous ses joueurs, vous compris.", fx: { rep: -7, money: 1, mor: -6 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ ENTRAÎNEMENT & PROGRESSION (v3) ══════════════
+  {
+    id: "ev_personal_trainer", cat: "Préparation", icon: "🏋️", w: 8,
+    cond: { aMin: 20, aMax: 30, minMoney: 0.5 },
+    text: "Un préparateur physique privé, référence des stars, propose un programme individuel — hors du cadre du club, qui voit ça d'un mauvais œil.",
+    options: [
+      { label: "Le payer de votre poche", outcomes: [
+        { weight: 60, text: "Des progrès physiques spectaculaires. Le club râle mais copie discrètement ses méthodes.", fx: { p: 6, form: 5, money: -0.5, dis: 3 } },
+        { weight: 40, text: "Les séances doublées fatiguent plus qu'elles ne renforcent, et le staff est vexé.", fx: { p: 2, money: -0.5, coach: -5, form: -3 } },
+      ] },
+      { label: "Faire confiance au staff du club", outcomes: [
+        { weight: 60, text: "Le staff apprécie la loyauté et personnalise votre programme.", fx: { coach: 5, p: 3 } },
+        { weight: 40, text: "Le programme collectif reste générique : progression standard.", fx: { p: 1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_extra_training", cat: "Préparation", icon: "🌙", w: 9,
+    cond: { aMin: 17, aMax: 24 },
+    text: "Chaque soir après l'entraînement, le terrain annexe reste allumé. Certains rentrent, d'autres restent travailler leur gamme. Une habitude se choisit maintenant.",
+    options: [
+      { label: "Rester après chaque séance", outcomes: [
+        { weight: 60, text: "Mille frappes, mille contrôles : la répétition forge un toucher au-dessus du lot.", fx: { t: 5, dis: 6 } },
+        { weight: 40, text: "Le corps finit par dire stop : à trop en faire, on se blesse bêtement.", fx: { t: 2, dis: 4, inj: 5 } },
+      ] },
+      { label: "Privilégier la récupération", outcomes: [
+        { weight: 55, text: "Frais et lucide chaque week-end, vous durez toute la saison.", fx: { form: 5, p: 2 } },
+        { weight: 45, text: "Pendant ce temps, un concurrent au poste travaille ses gammes. Ça se voit.", fx: { form: 3, t: -1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_data_revolution", cat: "Préparation", icon: "📈", w: 8,
+    cond: { aMin: 22, aMax: 30 },
+    text: "La cellule data du club a disséqué votre jeu : 40 pages d'analyses, des heatmaps, et trois défauts « statistiquement évidents » à corriger.",
+    options: [
+      { label: "Plonger dans les données", outcomes: [
+        { weight: 60, text: "Les corrections chirurgicales gomment vos défauts un à un. Le progrès est mesurable — littéralement.", fx: { t: 4, m: 4 } },
+        { weight: 40, text: "À trop penser aux chiffres, vous perdez l'instinct. Le juste milieu prendra du temps.", fx: { m: 2, form: -4 } },
+      ] },
+      { label: "« Le foot ne se joue pas sur Excel »", outcomes: [
+        { weight: 50, text: "Votre instinct assume, et il tient la baraque.", fx: { form: 3 } },
+        { weight: 50, text: "Les adversaires, eux, ont lu votre heatmap. Vos points faibles deviennent des cibles.", fx: { form: -5, rep: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_mental_coach", cat: "Préparation", icon: "🧠", w: 9,
+    cond: { aMin: 22, aMax: 33, maxMor: 55 },
+    text: "Un préparateur mental réputé propose un accompagnement : visualisation, gestion de la pression, routines d'avant-match. Dans le vestiaire, certains ricanent.",
+    options: [
+      { label: "Commencer le travail mental", outcomes: [
+        { weight: 65, text: "Les outils changent tout : la pression devient un carburant.", fx: { m: 7, mor: 8, form: 4 } },
+        { weight: 35, text: "Les séances aident, doucement. Rome ne s'est pas faite en un jour.", fx: { m: 3, mor: 4 } },
+      ] },
+      { label: "Gérer ça à l'ancienne", outcomes: [
+        { weight: 45, text: "Votre carapace tient. Pour l'instant.", fx: { m: 1 } },
+        { weight: 55, text: "Les doutes s'accumulent sans soupape. La cocotte siffle.", fx: { mor: -6, form: -4 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ RELATIONS COACH / VESTIAIRE / SUPPORTERS (v3) ══════════════
+  {
+    id: "ev_teammate_leak", cat: "Vestiaire", icon: "🗞️", w: 9,
+    cond: { aMin: 20, aMax: 30 },
+    text: "Vos confidences privées sur le coach se retrouvent mot pour mot dans la presse. Le traître est forcément dans le vestiaire — et vous avez un nom en tête.",
+    options: [
+      { label: "Le confronter devant le groupe", outcomes: [
+        { weight: 45, text: "Il craque et avoue devant tout le monde. Le vestiaire respecte l'audace — méfiance générale.", fx: { team: 5, c: 4, coach: -3 } },
+        { weight: 55, text: "Vous vous êtes trompé de coupable. La honte absolue, et une amitié brisée.", fx: { team: -8, mor: -7 } },
+      ] },
+      { label: "Ne plus rien dire à personne", outcomes: [
+        { weight: 60, text: "Le silence devient votre armure. Solitaire, mais insoupçonnable.", fx: { m: 4, team: -3 } },
+        { weight: 40, text: "Votre retrait passe pour du mépris : le groupe se referme sans vous.", fx: { team: -6, mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_coach_son", cat: "Vestiaire", icon: "👨‍👦", w: 8,
+    cond: { aMin: 18, aMax: 24 },
+    text: "Le fils du coach vient d'être promu dans le groupe pro… à votre poste exactement. Chaque titularisation devient un débat national dans la presse locale.",
+    options: [
+      { label: "L'écraser par le niveau, sans un mot", outcomes: [
+        { weight: 55, text: "L'écart est tel que même papa doit s'incliner : vous êtes intouchable.", fx: { t: 3, form: 5, coach: 3 } },
+        { weight: 45, text: "Le fiston joue quand même. Le mérite a parfois un nom de famille.", fx: { coach: -6, mor: -6, form: -3 } },
+      ] },
+      { label: "En faire un allié plutôt qu'un rival", outcomes: [
+        { weight: 60, text: "Votre binôme fonctionne à merveille — et le coach vous adore pour ça.", fx: { coach: 8, team: 5, m: 3 } },
+        { weight: 40, text: "Votre gentillesse est prise pour de la faiblesse : il prend votre place en douceur.", fx: { team: 3, form: -5, mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_ultras_invitation", cat: "Supporters", icon: "🔥", w: 8,
+    cond: { aMin: 20, aMax: 31, minRep: 30 },
+    text: "Le groupe ultra historique du club vous invite dans son local : fumigènes, tifos en préparation, et un code d'honneur non négociable — « ici, on ne trahit pas ».",
+    options: [
+      { label: "Accepter l'invitation", outcomes: [
+        { weight: 60, text: "Une soirée dans le ventre du club. Le virage entier chantera votre nom, dans les bons ET les mauvais jours.", fx: { rep: 5, mor: 6, c: 4, flag: "ultras_bond" } },
+        { weight: 40, text: "La photo fuite : la direction déteste voir un joueur « politiser » sa relation aux tribunes.", fx: { rep: 3, coach: -4, mor: 3, flag: "ultras_bond" } },
+      ] },
+      { label: "Garder une distance professionnelle", outcomes: [
+        { weight: 55, text: "Respectueux mais distant : personne ne vous le reprochera vraiment.", fx: { m: 2 } },
+        { weight: 45, text: "Le virage retient les noms de ceux qui snobent. Vos mauvais matchs seront sifflés plus fort.", fx: { rep: -2, mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_training_fight", cat: "Vestiaire", icon: "🥊", w: 8,
+    cond: { aMin: 21, aMax: 32 },
+    text: "Un taquet en plein entraînement dégénère : deux cadres se battent devant les caméras des réseaux du club. Tout le monde regarde… vous, le plus proche.",
+    options: [
+      { label: "Les séparer physiquement", outcomes: [
+        { weight: 60, text: "Vous encaissez un coup perdu mais éteignez l'incendie. Le vestiaire retient qui a fait l'homme.", fx: { team: 7, c: 4, m: 3 } },
+        { weight: 40, text: "En les séparant, vous vous faites mal bêtement. Le foot est parfois ingrat.", fx: { team: 5, inj: 3 } },
+      ] },
+      { label: "Laisser le staff gérer", outcomes: [
+        { weight: 55, text: "Chacun son rôle. La sanction interne tombe, l'ordre revient.", fx: { dis: 2 } },
+        { weight: 45, text: "« Tu étais là et tu n'as rien fait » : les deux clans vous le reprochent.", fx: { team: -5, mor: -3 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ PRÊT & TEMPS DE JEU (v3) ══════════════
+  {
+    id: "ev_loan_decision", cat: "Mercato", icon: "🔄", w: 12,
+    cond: { aMin: 18, aMax: 22, levels: ["d1", "elite"] },
+    text: "Le directeur sportif est cash : « Tu es notre avenir, mais devant toi il y a deux internationaux. Un prêt d'une saison te ferait exploser. Ou tu restes et tu t'accroches. »",
+    options: [
+      { label: "Partir en prêt pour jouer", hint: "Temps de jeu", outcomes: [
+        { weight: 100, text: "Direction un club plus modeste, avec une mission claire : jouer, briller, revenir plus fort.", fx: { loan: true } },
+      ] },
+      { label: "Rester et bousculer la hiérarchie", outcomes: [
+        { weight: 35, text: "Une blessure devant vous, une opportunité saisie : vous voilà lancé dans le grand bain.", fx: { t: 3, rep: 5, form: 6, coach: 5 } },
+        { weight: 40, text: "Des miettes de temps de jeu, mais un quotidien au contact des meilleurs. Le directeur sportif regrette votre refus.", fx: { t: 2, form: -5, mor: -4, coach: -4 } },
+        { weight: 25, text: "Une saison en tribune. Le staff vous le dit sans détour : « On te l'avait proposé, ce prêt. »", fx: { form: -9, mor: -7, t: -1, coach: -6 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ SANTÉ & LONG TERME (v3) ══════════════
+  {
+    id: "ev_knee_specialist", cat: "Blessure", icon: "🩻", w: 10,
+    cond: { aMin: 22, aMax: 32, flag: "big_injury" },
+    text: "Depuis votre grave blessure, le genou grince. Un chirurgien de renom propose une opération préventive : quatre mois d'arrêt maintenant, ou une bombe à retardement dans la jambe.",
+    options: [
+      { label: "Opérer maintenant", outcomes: [
+        { weight: 70, text: "L'opération est un succès total. Le genou redevient un genou, pas une loterie.", fx: { inj: 16, p: 4, clearFlag: "big_injury", mor: 4 } },
+        { weight: 30, text: "L'opération se passe bien, la rééducation traîne. Mais le spectre s'éloigne.", fx: { inj: 22, p: 2, clearFlag: "big_injury" } },
+      ] },
+      { label: "Jouer avec, advienne que pourra", outcomes: [
+        { weight: 55, text: "Le genou tient, match après match. Vous vivez avec l'épée de Damoclès.", fx: { form: 2, sched: { id: "ev_knee_timebomb", inYears: 2 } } },
+        { weight: 45, text: "Le staff adapte vos entraînements : moins de séances, plus de soins. Un équilibre précaire.", fx: { p: -2, form: 3, sched: { id: "ev_knee_timebomb", inYears: 3 } } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_knee_timebomb", cat: "Blessure", icon: "💥", scheduledOnly: true, w: 1,
+    text: "Sur un appui anodin, le genou que vous n'avez jamais fait opérer lâche. Le verdict du scanner tombe comme un couperet.",
+    options: [
+      { label: "Se battre, encore une fois", outcomes: [
+        { weight: 55, text: "Une rééducation de forcené. Vous reviendrez — diminué, mais debout.", fx: { inj: 24, p: -7, m: 4, trait: "ironman" } },
+        { weight: 35, text: "Le retour est long et le niveau d'avant ne reviendra jamais complètement.", fx: { inj: 28, p: -10, mor: -8 } },
+        { weight: 10, text: "Les chirurgiens sont formels : le football professionnel, c'est terminé.", fx: { end: "injury" } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_painkillers", cat: "Blessure", icon: "💊", w: 8,
+    cond: { aMin: 25, aMax: 33 },
+    text: "Pour tenir le rythme, le staff médical propose des infiltrations avant chaque gros match. « Tout le monde le fait », dit-on dans le couloir des vestiaires.",
+    options: [
+      { label: "Accepter les infiltrations", outcomes: [
+        { weight: 100, text: "La douleur disparaît, les performances tiennent. Le corps, lui, prend note de chaque piqûre.", fx: { form: 6, p: 1, sched: { id: "ev_painkiller_toll", inYears: 2 } } },
+      ] },
+      { label: "Refuser de masquer la douleur", outcomes: [
+        { weight: 60, text: "Vous manquez quelques matchs, mais votre corps vous dira merci dans dix ans.", fx: { inj: 4, dis: 4, m: 3 } },
+        { weight: 40, text: "Le coach peste contre vos absences. Principe coûteux à court terme.", fx: { inj: 4, coach: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_painkiller_toll", cat: "Blessure", icon: "🧾", scheduledOnly: true, w: 1,
+    text: "L'addition des infiltrations arrive : douleurs chroniques, examens alarmants. Le médecin est grave : « On a hypothéqué votre cartilage pour gagner des matchs. »",
+    options: [
+      { label: "Lever le pied et se soigner enfin", outcomes: [
+        { weight: 60, text: "Six mois de soins intensifs stabilisent les dégâts. Il était moins une.", fx: { inj: 14, p: -4, dis: 3 } },
+        { weight: 40, text: "Les soins limitent la casse, mais le physique a pris dix ans d'un coup.", fx: { p: -8, form: -5, mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_offshore_raid", cat: "Finance", icon: "🚔", scheduledOnly: true, w: 1,
+    text: "6h du matin : perquisition. Votre montage offshore d'il y a trois ans est au cœur d'une enquête internationale. Votre nom s'affiche en une des « Football Leaks ».",
+    options: [
+      { label: "Coopérer et tout régulariser", outcomes: [
+        { weight: 65, text: "Redressement massif, amende record, mais l'affaire se referme. Plus jamais ça.", fx: { money: -6, rep: -5, mor: -6, dis: 3 } },
+        { weight: 35, text: "Votre coopération est saluée : la justice se montre clémente, l'opinion aussi.", fx: { money: -4, rep: -2, m: 3 } },
+      ] },
+      { label: "Nier et prendre les meilleurs avocats", outcomes: [
+        { weight: 40, text: "Vice de procédure : vous échappez au pire. L'image, elle, reste durablement tachée.", fx: { money: -2, rep: -7 } },
+        { weight: 60, text: "Le procès s'éternise, les gros titres aussi. Condamnation avec sursis et opprobre général.", fx: { money: -8, rep: -10, mor: -8 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ MOMENTS CLÉS DE SAISON (v3) ══════════════
+  {
+    id: "ev_relegation_battle", cat: "Terrain", icon: "🪂", w: 9,
+    cond: { aMin: 19, aMax: 34, levels: ["regional", "d2"] },
+    text: "Votre club joue sa survie : dernière journée, victoire impérative. Toute la ville retient son souffle — les salaires de trente familles aussi.",
+    options: [
+      { label: "Porter l'équipe sur vos épaules", outcomes: [
+        { weight: 45, text: "LE match de votre vie au meilleur moment : le club est sauvé, la ville vous appartient.", fx: { rep: 7, mor: 10, team: 6, trait: "clutch" } },
+        { weight: 30, text: "Vous donnez tout, mais la relégation tombe quand même. Personne ne vous en veut : vous étiez au-dessus du lot.", fx: { rep: 3, mor: -6, m: 4 } },
+        { weight: 25, text: "La pression vous broie : passé au travers le jour où il ne fallait pas.", fx: { rep: -4, mor: -9, m: -3 } },
+      ] },
+      { label: "Jouer votre partition, sobrement", outcomes: [
+        { weight: 55, text: "Un match sérieux dans une victoire collective arrachée. Le maintien a le goût d'un titre.", fx: { mor: 6, team: 4 } },
+        { weight: 45, text: "Trop timide dans un match d'hommes. La relégation laissera des traces.", fx: { mor: -7, rep: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_promotion_push", cat: "Terrain", icon: "🚀", w: 9,
+    cond: { aMin: 18, aMax: 33, levels: ["d2"] },
+    text: "À trois journées de la fin, votre club touche du doigt la montée en première division. Le stade affiche complet trois semaines à l'avance.",
+    options: [
+      { label: "Prendre le sprint final à votre compte", outcomes: [
+        { weight: 45, text: "MONTÉE ! Vos performances dans le money-time entrent dans la légende du club — et l'élite vous a repéré.", fx: { rep: 8, mor: 10, t: 2, trait: "clutch" } },
+        { weight: 30, text: "La montée se joue au goal-average, du mauvais côté. Cruel, mais votre saison parle pour vous.", fx: { rep: 4, mor: -6 } },
+        { weight: 25, text: "Vous forcez, vous vous crispez, l'équipe cale. L'occasion s'envole.", fx: { mor: -8, rep: -2, form: -4 } },
+      ] },
+      { label: "Rester dans le collectif", outcomes: [
+        { weight: 50, text: "Le groupe monte ensemble, soudé comme jamais. Une aventure humaine inoubliable.", fx: { mor: 8, team: 6, rep: 3 } },
+        { weight: 50, text: "Le rêve s'écroule dans les dernières minutes de la saison. Le vestiaire pleure en silence.", fx: { mor: -7, team: 3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_giant_killing", cat: "Terrain", icon: "🗡️", w: 10,
+    cond: { aMin: 17, aMax: 34, levels: ["regional", "d2"] },
+    text: "Miracle du tirage : un géant de l'élite débarque dans votre petit stade pour la coupe nationale. Les caméras du pays entier découvrent votre vestiaire préfabriqué.",
+    options: [
+      { label: "Jouer crânement votre chance", outcomes: [
+        { weight: 30, text: "EXPLOIT HISTORIQUE ! Le géant tombe chez vous, et votre nom fait la une nationale.", fx: { rep: 9, mor: 10, c: 4, team: 5 } },
+        { weight: 40, text: "Défaite honorable après avoir fait douter le géant. Votre performance individuelle est remarquée en haut lieu.", fx: { rep: 5, m: 3, mor: 4 } },
+        { weight: 30, text: "La leçon de réalisme : 5-0 et un grand écart de niveau exposé en mondovision.", fx: { mor: -5, m: 2 } },
+      ] },
+      { label: "Fermer le jeu et espérer les tirs au but", outcomes: [
+        { weight: 35, text: "0-0 héroïque, séance de tirs au but remportée ! Le plan parfait exécuté à la perfection.", fx: { rep: 7, mor: 9, m: 4 } },
+        { weight: 65, text: "Le verrou saute à la 85e. Frustrant, mais le combat force le respect.", fx: { mor: -3, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_winter_slump", cat: "Terrain", icon: "❄️", w: 9,
+    cond: { aMin: 20, aMax: 33, maxForm: 45 },
+    text: "Décembre gris : plus une passe ne trouve preneur, plus un appel n'est vu. La spirale de la méforme s'installe, et les regards changent au centre d'entraînement.",
+    options: [
+      { label: "Travailler deux fois plus", outcomes: [
+        { weight: 55, text: "La sortie de crise par le travail : un but libérateur, et la machine repart.", fx: { form: 10, m: 4, dis: 4 } },
+        { weight: 45, text: "Vous ajoutez de la fatigue à la méforme. Il fallait peut-être… souffler ?", fx: { form: -3, p: -2, mor: -4 } },
+      ] },
+      { label: "Demander une semaine de coupure au coach", outcomes: [
+        { weight: 50, text: "Le coach accepte. Vous revenez transformé : parfois, le repos est le meilleur entraînement.", fx: { form: 9, mor: 6, coach: 3 } },
+        { weight: 50, text: "« Une coupure ? En pleine saison ? » Le coach n'en revient pas. Le banc vous attend.", fx: { coach: -7, form: 2, mor: -4 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ SÉLECTION NATIONALE (v3) ══════════════
+  {
+    id: "ev_nat_qualifiers", cat: "Sélection", icon: "🎗️", w: 9,
+    cond: { aMin: 22, aMax: 32, nat: true, chance: 0.6 },
+    text: "Barrage retour décisif pour la qualification au Mondial. Le sélectionneur hésite à vous titulariser : vous sortez d'un mois moyen en club.",
+    options: [
+      { label: "Réclamer votre place de titulaire", outcomes: [
+        { weight: 40, text: "Vous répondez présent dans LE match qui compte : la nation entière vous embrasse.", fx: { rep: 8, mor: 8, m: 4, trait: "clutch" } },
+        { weight: 35, text: "Un match correct dans une qualification arrachée. L'essentiel est là.", fx: { rep: 3, mor: 4 } },
+        { weight: 25, text: "Transparent le soir où tout un pays regardait. L'ascenseur émotionnel est brutal.", fx: { rep: -5, mor: -8 } },
+      ] },
+      { label: "Accepter un rôle de joker", outcomes: [
+        { weight: 50, text: "Votre entrée change le match : parfois, 25 minutes valent une carrière.", fx: { rep: 6, mor: 6 } },
+        { weight: 50, text: "Depuis le banc, vous vivez la qualification en spectateur. Mi-figue, mi-raisin.", fx: { mor: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_nat_captaincy", cat: "Sélection", icon: "🎖️", w: 9,
+    cond: { aMin: 28, aMax: 33, nat: true, minRep: 60 },
+    text: "Le capitaine historique de la sélection prend sa retraite internationale. Le sélectionneur vous propose le brassard — avec tout ce qu'il pèse dans un pays entier.",
+    options: [
+      { label: "Accepter l'honneur suprême", outcomes: [
+        { weight: 55, text: "Le brassard national transcende votre jeu et votre statut : vous voilà patron d'une nation.", fx: { rep: 7, m: 6, c: 5, trait: "leader" } },
+        { weight: 45, text: "Chaque défaite nationale devient VOTRE défaite. Le plus lourd des privilèges.", fx: { rep: 4, m: -3, mor: -4 } },
+      ] },
+      { label: "Suggérer un joueur plus jeune", outcomes: [
+        { weight: 60, text: "Votre humilité renforce paradoxalement votre aura de sage du groupe.", fx: { m: 4, team: 4, rep: 2 } },
+        { weight: 40, text: "Le sélectionneur y voit un manque d'ambition. Votre statut s'effrite doucement.", fx: { rep: -3, mor: -2 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ VIE PERSONNELLE & ARGENT (v3) ══════════════
+  {
+    id: "ev_house_parents", cat: "Vie perso", icon: "🏠", w: 9,
+    cond: { aMin: 20, aMax: 28, minMoney: 2 },
+    text: "Le rêve de tout gamin devenu pro : offrir une maison à ses parents. Vous avez repéré la villa parfaite — le prix aussi est parfait… ement indécent.",
+    options: [
+      { label: "Acheter la villa, sans compter", outcomes: [
+        { weight: 100, text: "Les larmes de votre mère en découvrant la maison. Aucun trophée ne procurera jamais ça.", fx: { money: -1.8, mor: 12, m: 4 } },
+      ] },
+      { label: "Choisir une maison raisonnable", outcomes: [
+        { weight: 60, text: "Une belle maison, un budget tenu, des parents comblés. La sagesse même.", fx: { money: -0.7, mor: 8, dis: 3 } },
+        { weight: 40, text: "Vos parents sont ravis. Un coéquipier poste sa villa à lui sur Instagram. Petit pincement.", fx: { money: -0.7, mor: 5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_friend_loan", cat: "Vie perso", icon: "🤲", w: 8,
+    cond: { aMin: 22, aMax: 32, minMoney: 5 },
+    text: "Votre meilleur ami d'enfance veut ouvrir un restaurant : « Frérot, il me manque 300 000. Tu me connais, je te rembourse en deux ans. »",
+    options: [
+      { label: "Prêter sans hésiter", outcomes: [
+        { weight: 40, text: "Le restaurant cartonne : remboursé avec les intérêts, et une table à vie au fond de la salle.", fx: { money: 0.3, mor: 7 } },
+        { weight: 60, text: "Le restaurant coule en dix-huit mois. L'argent est perdu — l'amitié, presque.", fx: { money: -0.3, mor: -7 } },
+      ] },
+      { label: "Refuser mais offrir votre réseau", outcomes: [
+        { weight: 55, text: "Vous lui présentez de vrais investisseurs : le projet se monte mieux, sans mélanger argent et amitié.", fx: { m: 4, mor: 4 } },
+        { weight: 45, text: "« T'as changé. » La phrase qui tue. Les appels s'espacent.", fx: { mor: -6 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_car_madness", cat: "Hygiène de vie", icon: "🏎️", w: 7,
+    cond: { aMin: 22, aMax: 30, minMoney: 15 },
+    text: "Le parking du centre d'entraînement est un concours permanent. Un concessionnaire vous propose LA pièce rare : édition limitée à sept exemplaires au monde.",
+    options: [
+      { label: "Craquer pour le bolide", outcomes: [
+        { weight: 50, text: "La photo fait dix millions de vues. Le coach, lui, compte les chevaux et fronce les sourcils.", fx: { money: -2.5, rep: 3, c: 3, dis: -3 } },
+        { weight: 50, text: "Flashé à 190 km/h trois semaines plus tard. Permis, amende, unes moqueuses : le combo.", fx: { money: -3, rep: -5, dis: -6, coach: -4 } },
+      ] },
+      { label: "Investir dans la pierre à la place", outcomes: [
+        { weight: 100, text: "Trois appartements mis en location. Votre banquier encadre votre photo dans son bureau.", fx: { money: 1.5, dis: 4, m: 2 } },
+      ] },
+    ],
+  },
+  // ══════════════ VIE DU CLUB (v4.1) ══════════════
+  {
+    id: "ev_investor", cat: "Club", icon: "🏗️", w: 8,
+    cond: { aMin: 17, aMax: 32, levels: ["regional", "d2"] },
+    text: "Coup de tonnerre : un investisseur milliardaire rachète {club}. Conférence de presse surréaliste : « Dans cinq ans, nous jouerons la {contCup}. » Le vestiaire oscille entre rêve et méfiance.",
+    options: [
+      { label: "S'engager corps et âme dans le projet", outcomes: [
+        { weight: 45, text: "Les promesses se concrétisent : recrues, nouveau centre d'entraînement, ambitions… Le club change de dimension, et vous êtes son visage.", fx: { clubBoost: 1, money: 0.5, rep: 4, mor: 6 } },
+        { weight: 30, text: "Le projet avance par à-coups, mais le club grandit réellement, saison après saison.", fx: { clubBoost: 1, mor: 3 } },
+        { weight: 25, text: "Fonds fantômes : six mois plus tard, l'investisseur disparaît des radars. Le club frôle le dépôt de bilan, le vestiaire se serre les coudes.", fx: { mor: -8, rep: -2, team: 4 } },
+      ] },
+      { label: "Rester lucide et exiger des garanties", outcomes: [
+        { weight: 55, text: "Votre prudence est récompensée : contrat revalorisé et clauses en béton, quoi qu'il arrive au club.", fx: { money: 0.8, dis: 3, m: 3 } },
+        { weight: 45, text: "La direction prend très mal votre méfiance : « Personne ne freinera ce projet. »", fx: { coach: -5, mor: -3 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ VARIÉTÉ & VIE DU FOOTBALLEUR (v4.3) ══════════════
+  {
+    id: "ev_captain_stripped", cat: "Vestiaire", icon: "🎗️", w: 7,
+    cond: { aMin: 24, aMax: 32, minRep: 40 },
+    text: "Sans prévenir, le coach confie « votre » brassard à une recrue arrivée il y a six mois. Devant les caméras, il parle de « choix de management ».",
+    options: [
+      { label: "Avaler la couleuvre et jouer pour l'équipe", outcomes: [
+        { weight: 60, text: "Votre attitude irréprochable retourne le vestiaire : brassard ou pas, le patron, c'est vous.", fx: { team: 7, m: 4, rep: 3 } },
+        { weight: 40, text: "Vous encaissez en silence, mais quelque chose s'est éteint.", fx: { mor: -5, m: 2 } },
+      ] },
+      { label: "Exiger des explications devant le groupe", hint: "Frontal", outcomes: [
+        { weight: 45, text: "L'explication tourne à votre avantage : le coach reconnaît sa maladresse.", fx: { coach: 4, c: 3, mor: 3 } },
+        { weight: 55, text: "Le bras de fer public vous isole : ni brassard, ni soutien.", fx: { coach: -7, team: -4, mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_referee_feud", cat: "Terrain", icon: "🟨", w: 6,
+    cond: { aMin: 22, aMax: 32 },
+    text: "Le même arbitre vous sanctionne match après match, au moindre contact. La presse parle d'un « contentieux personnel ». Ce soir, c'est encore lui au sifflet.",
+    options: [
+      { label: "Le tester dès le premier duel", hint: "Provocation", outcomes: [
+        { weight: 40, text: "Il ne bronche pas, vous non plus : le duel psychologique tourne à votre avantage.", fx: { m: 4, c: 3 } },
+        { weight: 60, text: "Jaune à la 12e, rouge à la 60e. Il a gagné, vous êtes suspendu.", fx: { inj: 3, dis: -5, rep: -3, mor: -4 } },
+      ] },
+      { label: "Jouer les 90 minutes en moine", outcomes: [
+        { weight: 65, text: "Zéro faute, zéro mot : votre discipline désarme même la presse.", fx: { dis: 5, m: 3 } },
+        { weight: 35, text: "À force de retenue, vous traversez le match sans exister.", fx: { form: -4, dis: 3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_viral_celebration", cat: "Réseaux", icon: "🕺", w: 6,
+    cond: { aMin: 20, aMax: 30, minRep: 45 },
+    text: "Votre célébration improvisée du week-end est devenue un mème planétaire : des gamins la reproduisent de Tokyo à São Paulo. Votre sponsor veut la déposer comme marque.",
+    options: [
+      { label: "En faire votre signature officielle", outcomes: [
+        { weight: 55, text: "La célébration devient une marque mondiale. Chaque grand match devient un événement marketing.", fx: { rep: 6, c: 4, money: 1.2, trait: "showman" } },
+        { weight: 45, text: "À force de la vendre partout, la magie s'évente et les puristes grincent.", fx: { rep: 3, money: 0.8, mor: -2 } },
+      ] },
+      { label: "Laisser le mème vivre sa vie", outcomes: [
+        { weight: 70, text: "Le geste appartient aux fans : ce refus de tout monétiser force la sympathie.", fx: { rep: 4, mor: 4 } },
+        { weight: 30, text: "Un rappeur célèbre la dépose à votre place. L'occasion s'envole en musique.", fx: { mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_sick_fan", cat: "Supporters", icon: "🏥", w: 6,
+    cond: { aMin: 21, aMax: 36, pos: ["att", "mil", "def"] },
+    text: "La lettre d'une famille arrive au centre d'entraînement : leur fils de 9 ans, gravement malade, ne rate aucun de vos matchs depuis sa chambre d'hôpital.",
+    options: [
+      { label: "Aller le voir sans caméras, avec un maillot dédicacé", outcomes: [
+        { weight: 100, text: "Deux heures hors du temps. Le gamin promet de guérir « pour venir au stade ». Certains moments valent tous les trophées.", fx: { mor: 8, m: 4 } },
+      ] },
+      { label: "Lui dédier publiquement votre prochain but", outcomes: [
+        { weight: 60, text: "Le but arrive, la dédicace émeut le pays entier — et la chambre 214 explose de joie.", fx: { rep: 5, mor: 7 } },
+        { weight: 40, text: "Le but ne vient pas ce week-end… mais votre visite surprise du lundi répare tout.", fx: { mor: 5, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_sick_fan_gk", cat: "Supporters", icon: "🏥", w: 6,
+    cond: { aMin: 21, aMax: 36, pos: ["gk"] },
+    text: "La lettre d'une famille arrive au centre d'entraînement : leur fils de 9 ans, gravement malade, ne rate aucun de vos matchs depuis sa chambre d'hôpital. Il dort avec une réplique de vos gants.",
+    options: [
+      { label: "Aller le voir sans caméras, avec vos gants du dernier match", outcomes: [
+        { weight: 100, text: "Deux heures hors du temps. Le gamin promet de guérir « pour venir garder le but avec vous ». Certains moments valent tous les trophées.", fx: { mor: 8, m: 4 } },
+      ] },
+      { label: "Lui promettre publiquement une cage inviolée", outcomes: [
+        { weight: 60, text: "Clean sheet, et les gants levés vers la caméra au coup de sifflet — la chambre 214 explose de joie.", fx: { rep: 5, mor: 7 } },
+        { weight: 40, text: "Un penalty injuste vous prive de la promesse… mais votre visite surprise du lundi répare tout.", fx: { mor: 5, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_tactics_rift", cat: "Vestiaire", icon: "🪓", w: 7,
+    cond: { aMin: 23, aMax: 33 },
+    text: "Le vestiaire se fracture en deux clans : les fidèles du coach et les partisans du jeu d'avant. Chaque mot devient politique, et votre voix compte.",
+    options: [
+      { label: "Défendre le coach publiquement", outcomes: [
+        { weight: 55, text: "Votre soutien stabilise le navire : le coach s'en souviendra toute sa vie.", fx: { coach: 9, team: -3, m: 3 } },
+        { weight: 45, text: "Le clan adverse vous étiquette « vendu ». L'ambiance reste toxique.", fx: { coach: 6, team: -7, mor: -4 } },
+      ] },
+      { label: "Porter la parole des joueurs", hint: "Risqué", outcomes: [
+        { weight: 45, text: "Votre médiation impose des compromis : le groupe repart, soudé autour de vous.", fx: { team: 8, c: 5, coach: -3, trait: "leader" } },
+        { weight: 55, text: "Le coach y voit une mutinerie — et les mutins finissent rarement titulaires.", fx: { coach: -9, form: -5, mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_stadium_name", cat: "Hommage", icon: "🏟️", w: 5,
+    cond: { aMin: 28, aMax: 36, minRep: 70 },
+    text: "Votre ville natale l'annonce en conseil municipal : le stade où tout a commencé portera désormais votre nom. La cérémonie est prévue cet été.",
+    options: [
+      { label: "Y aller en famille, loin du show", outcomes: [
+        { weight: 100, text: "Devant le city-stade de votre enfance rebaptisé, les souvenirs remontent. La boucle est bouclée.", fx: { mor: 9, m: 3, rep: 2 } },
+      ] },
+      { label: "Offrir une rénovation complète du stade", cond: { minMoney: 3 }, outcomes: [
+        { weight: 100, text: "Pelouse neuve, vestiaires refaits, éclairage : les gamins du quartier joueront mieux lotis que vous ne l'étiez.", fx: { money: -1.5, rep: 6, mor: 8 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ ENDGAME VARIÉ (v4.3) ══════════════
+  {
+    id: "ev_homecoming_finale", cat: "Retraite", icon: "🏠", w: 10,
+    cond: { aMin: 33, aMax: 36, notAtOriginClub: true },
+    text: "Votre club formateur appelle : « Reviens finir où tout a commencé. » Le vestiaire de vos 16 ans, le stade de vos débuts, la boucle parfaite.",
+    options: [
+      { label: "Rentrer boucler la boucle", hint: "Cœur", outcomes: [
+        { weight: 60, text: "Le retour de l'enfant prodige : le stade est plein comme jamais pour votre premier match retour.", fx: { mor: 10, rep: 4, transfer: { origin: true, direct: true } } },
+        { weight: 40, text: "Le retour est plus discret que dans les rêves, mais chaque entraînement a un goût de madeleine.", fx: { mor: 6, transfer: { origin: true, direct: true } } },
+      ] },
+      { label: "Refuser : on ne revient jamais en arrière", outcomes: [
+        { weight: 55, text: "Vous préférez garder le souvenir intact. Le club comprend, la porte reste ouverte… pour le staff.", fx: { m: 3, flag: "coach_diploma" } },
+        { weight: 45, text: "La lettre ouverte des supporters de votre enfance vous hantera un peu.", fx: { mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_last_selection", cat: "Sélection", icon: "📯", w: 12,
+    cond: { aMin: 33, aMax: 36, wc: true, minRep: 60 },
+    text: "Le sélectionneur en personne fait le déplacement : « Le groupe est jeune, il me faut ton vécu pour le Mondial. Une dernière danse en bleu de travail ? »",
+    options: [
+      { label: "Répondre à l'appel de la nation", outcomes: [
+        { weight: 60, text: "Le doyen du groupe : chaque jeune boit vos paroles, le pays savoure ce dernier tour de piste.", fx: { natCall: true, mor: 7, rep: 4, m: 3 } },
+        { weight: 40, text: "Le corps proteste contre le rythme international, mais certains rendez-vous ne se refusent pas.", fx: { natCall: true, form: -5, mor: 5 } },
+      ] },
+      { label: "Laisser la place aux jeunes", outcomes: [
+        { weight: 100, text: "Un refus plein de classe, salué par le sélectionneur lui-même. La relève est prête, grâce à vous aussi.", fx: { rep: 3, m: 4, mor: 3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_body_countdown", cat: "Retraite", icon: "⏳", w: 9,
+    cond: { aMin: 34, aMax: 41, maxForm: 55 },
+    text: "Le staff médical pose les radios sur la table : « Chaque match est un risque maintenant. Tu peux t'arrêter en héros, ou repousser encore. »",
+    options: [
+      { label: "Annoncer la retraite, la tête haute", outcomes: [
+        { weight: 100, text: "Vous choisissez de partir debout. L'annonce, digne et sereine, force le respect du monde entier.", fx: { retire: true, mor: 6, rep: 3 } },
+      ] },
+      { label: "Repousser : le corps suivra bien encore un an", hint: "Têtu", outcomes: [
+        { weight: 40, text: "Le mental fait tenir le physique : une saison d'équilibriste, mais une saison quand même.", fx: { m: 4, form: 4 } },
+        { weight: 60, text: "Le corps encaisse de moins en moins : l'infirmerie devient votre résidence secondaire.", fx: { inj: 10, p: -5, mor: -5 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ STATUT & VIE DE JOUEUR (v5) ══════════════
+  {
+    id: "ev_idol_meeting", cat: "Vie perso", icon: "🤩", w: 7,
+    cond: { aMin: 17, aMax: 20 },
+    text: "Votre idole d'enfance — celle du poster au-dessus de votre lit — vous croise en zone mixte et vous glisse : « Je t'ai vu jouer, gamin. Appelle-moi si tu veux bosser. »",
+    options: [
+      { label: "Accepter des séances avec la légende", outcomes: [
+        { weight: 60, text: "Des heures de secrets de champion transmis en direct. Vous grandissez à vue d'œil.", fx: { t: 4, m: 3, mor: 6 } },
+        { weight: 40, text: "L'ombre de l'idole est écrasante : vous copiez au lieu de créer.", fx: { t: 2, m: -2, mor: 3 } },
+      ] },
+      { label: "Rester concentré sur votre propre chemin", outcomes: [
+        { weight: 65, text: "Poli mais indépendant : votre identité de jeu vous appartient.", fx: { m: 4, dis: 2 } },
+        { weight: 35, text: "L'occasion ne se représentera pas. Le poster vous nargue chaque soir.", fx: { mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_first_car", cat: "Hygiène de vie", icon: "🚗", w: 6,
+    cond: { aMin: 18, aMax: 21, minMoney: 0.3 },
+    text: "Premier vrai salaire, premier grand choix de jeune pro : le bolide qui claque sur le parking, ou la citadine discrète que conseille votre entourage ?",
+    options: [
+      { label: "Le bolide, évidemment", outcomes: [
+        { weight: 45, text: "Le parking du centre vous adore, les réseaux aussi. Le coach lève un sourcil.", fx: { money: -0.25, c: 3, rep: 2, dis: -3 } },
+        { weight: 55, text: "Une rayure au premier créneau et des assurances hors de prix : la leçon est chère.", fx: { money: -0.35, dis: -2, mor: -2 } },
+      ] },
+      { label: "La citadine et un livret d'épargne", outcomes: [
+        { weight: 100, text: "Votre banquier applaudit, les anciens du vestiaire hochent la tête : ce petit a compris.", fx: { money: 0.1, dis: 4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_school_return", cat: "Vie perso", icon: "🏫", w: 6,
+    cond: { aMin: 19, aMax: 24, minRep: 30 },
+    text: "Votre ancien collège vous invite pour parler aux élèves. La classe où vous rêviez en dessinant des terrains au fond du cahier.",
+    options: [
+      { label: "Y passer la journée entière", outcomes: [
+        { weight: 100, text: "Cent gamins suspendus à vos lèvres, votre ancien prof ému aux larmes. On se souvient d'où l'on vient.", fx: { mor: 7, m: 3, rep: 2 } },
+      ] },
+      { label: "Envoyer un message vidéo, faute de temps", outcomes: [
+        { weight: 60, text: "La vidéo fait le job, mais quelque chose vous dit que vous avez raté un moment.", fx: { mor: -2, rep: 1 } },
+        { weight: 40, text: "La vidéo devient virale dans toute l'académie : effet inattendu.", fx: { rep: 3, mor: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_coach_protege", cat: "Vestiaire", icon: "🤝", w: 7,
+    cond: { aMin: 21, aMax: 27, minCoach: 65 },
+    text: "Le coach vous a choisi : vous êtes son relais tactique, son « joueur-miroir ». Certains cadres commencent à parler de favoritisme.",
+    options: [
+      { label: "Assumer ce rôle de bras droit", outcomes: [
+        { weight: 55, text: "Vous devenez l'extension du coach sur le terrain : votre lecture du jeu explose.", fx: { m: 5, coach: 6, team: -3 } },
+        { weight: 45, text: "« Le chouchou » : le surnom colle, et le vestiaire se méfie.", fx: { coach: 5, team: -6, mor: -3 } },
+      ] },
+      { label: "Garder une distance saine", outcomes: [
+        { weight: 60, text: "Ni chouchou, ni frondeur : l'équilibre parfait entre staff et vestiaire.", fx: { m: 3, team: 3 } },
+        { weight: 40, text: "Le coach prend vos distances pour de l'ingratitude.", fx: { coach: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_bench_rebellion", cat: "Vestiaire", icon: "🪑", w: 7,
+    cond: { aMin: 22, aMax: 30, maxCoach: 45 },
+    text: "Le clan des remplaçants prépare une fronde : entretien collectif avec la direction pour dénoncer la gestion du coach. Ils veulent votre signature en premier.",
+    options: [
+      { label: "Signer et mener la fronde", hint: "Risqué", outcomes: [
+        { weight: 40, text: "La direction tranche… en votre faveur : le coach doit rééquilibrer les temps de jeu.", fx: { form: 6, team: 5, coach: -6 } },
+        { weight: 60, text: "La fronde fuite, le coach reste, et les signataires découvrent la tribune de haut.", fx: { ban: 5, coach: -8, mor: -6 } },
+      ] },
+      { label: "Refuser : on règle ça sur le terrain", outcomes: [
+        { weight: 55, text: "Votre refus discret arrive aux oreilles du coach. Le message passe mieux qu'une pétition.", fx: { coach: 6, dis: 3 } },
+        { weight: 45, text: "Les frondeurs vous traitent de carriériste. Ambiance de mercato en février.", fx: { team: -5, mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_captain_vote", cat: "Vestiaire", icon: "🗳️", w: 8,
+    cond: { aMin: 24, aMax: 31, minTeam: 62, minClubSeasons: 3 },
+    text: "Le vestiaire vote pour son nouveau capitaine, et votre nom circule avec insistance. Le doyen du groupe, lui, estime que c'est « son tour ».",
+    options: [
+      { label: "Faire campagne, assumer l'ambition", outcomes: [
+        { weight: 55, text: "Élu ! Le brassard récompense des années d'exemplarité — et le doyen vous serre la main.", fx: { c: 5, m: 4, team: 5, rep: 3, trait: "leader", flag: "captain" } },
+        { weight: 45, text: "Le doyen l'emporte d'une voix. Votre campagne laisse quelques traces.", fx: { team: -4, mor: -4 } },
+      ] },
+      { label: "Soutenir publiquement le doyen", outcomes: [
+        { weight: 60, text: "Votre geste force le respect : le doyen prend le brassard et fait de vous son héritier officiel.", fx: { team: 7, m: 3, mor: 4 } },
+        { weight: 40, text: "Élu quand même, contre votre gré ! Le vestiaire a tranché : c'est vous, le patron.", fx: { c: 4, team: 5, trait: "leader", flag: "captain" } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_record_chase", cat: "Records", icon: "📈", w: 7,
+    cond: { aMin: 26, aMax: 34, pos: ["att"], minClubSeasons: 5, minRep: 55 },
+    text: "Plus que quelques buts pour effacer le record historique du club, détenu depuis quarante ans par une légende locale — qui suit chacun de vos matchs en tribune.",
+    options: [
+      { label: "Chasser le record match après match", outcomes: [
+        { weight: 55, text: "Record battu ! La légende descend vous enlacer sur la pelouse. Deux histoires liées à jamais.", fx: { rep: 7, mor: 8, form: 4 } },
+        { weight: 45, text: "L'obsession du record grippe votre jeu : il tombera, mais plus tard.", fx: { form: -5, mor: -3 } },
+      ] },
+      { label: "Laisser le record venir naturellement", outcomes: [
+        { weight: 65, text: "Sans y penser, les buts s'enchaînent : le record tombe dans un match anodin, et c'est encore plus beau.", fx: { rep: 5, mor: 5 } },
+        { weight: 35, text: "Un transfert, une blessure, une méforme… le record attendra une autre vie.", fx: { mor: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_pundit_feud", cat: "Médias", icon: "📺", w: 6,
+    cond: { aMin: 23, aMax: 31, minRep: 45 },
+    text: "Le consultant vedette de la télé vous démonte chaque semaine : « surcoté », « fantôme des grands matchs ». Ce soir, vous êtes invité sur son plateau.",
+    options: [
+      { label: "Y aller et régler ça en face", hint: "Frontal", outcomes: [
+        { weight: 45, text: "Votre calme et vos statistiques le désarment en direct. L'extrait tourne en boucle.", fx: { rep: 5, c: 5, m: 3 } },
+        { weight: 55, text: "Il vous pousse à la faute en direct : le clash vous poursuit des semaines.", fx: { rep: -3, mor: -5 } },
+      ] },
+      { label: "Décliner et répondre sur le terrain", outcomes: [
+        { weight: 60, text: "Un match XXL le week-end suivant, célébré main sur l'oreille. Le consultant change de sujet.", fx: { form: 5, rep: 3, mor: 4 } },
+        { weight: 40, text: "Le silence est pris pour un aveu. Les critiques continuent de pleuvoir.", fx: { mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_ultras_tifo", cat: "Supporters", icon: "🎨", w: 6,
+    cond: { aMin: 24, aMax: 34, minRep: 55, minClubSeasons: 4 },
+    text: "Au coup d'envoi, tout le virage se lève : un tifo géant à VOTRE effigie recouvre la tribune. Des mois de travail secret des ultras.",
+    options: [
+      { label: "Aller saluer le virage après le match", outcomes: [
+        { weight: 100, text: "Écharpe au poing devant le virage : une communion que même les trophées n'offrent pas.", fx: { mor: 8, rep: 3, team: 3 } },
+      ] },
+      { label: "Financer discrètement leur prochain tifo", cond: { minMoney: 1 }, outcomes: [
+        { weight: 60, text: "Le secret tient six mois, puis fuite : « Il paie les tifos des autres. » La classe absolue.", fx: { money: -0.4, rep: 5, mor: 6 } },
+        { weight: 40, text: "Le geste reste secret à jamais, comme il se doit. Le virage vous appartient.", fx: { money: -0.4, mor: 7 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_burglary", cat: "Vie perso", icon: "🚨", w: 5,
+    cond: { aMin: 22, aMax: 33, minMoney: 5 },
+    text: "Pendant que vous jouiez, des cambrioleurs ont vidé votre villa — le match était diffusé, ils savaient que vous n'y étiez pas. Votre famille est choquée.",
+    options: [
+      { label: "Déménager dans une résidence sécurisée", outcomes: [
+        { weight: 100, text: "Nouvelle adresse, gardes, caméras. La sérénité a un prix, la famille dort à nouveau.", fx: { money: -1.2, mor: -3, m: 2 } },
+      ] },
+      { label: "Renforcer la maison et rester", outcomes: [
+        { weight: 55, text: "La maison devient un coffre-fort, et le quartier s'organise. On ne vous délogera pas.", fx: { money: -0.5, m: 3 } },
+        { weight: 45, text: "Chaque déplacement devient une angoisse pour vos proches. Le foot s'en ressent.", fx: { money: -0.5, mor: -6, form: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_lookalike", cat: "Insolite", icon: "👥", w: 4,
+    cond: { aMin: 22, aMax: 33, minRep: 50 },
+    text: "Un sosie presque parfait écume les boîtes du pays en signant des autographes et en promettant des maillots. La presse s'en amuse, vos sponsors moins.",
+    options: [
+      { label: "En rire publiquement et l'inviter au stade", outcomes: [
+        { weight: 70, text: "La photo avec votre sosie fait le tour du monde. Coup de com' involontaire et génial.", fx: { rep: 4, c: 3, mor: 4 } },
+        { weight: 30, text: "Encouragé, le sosie redouble d'escroqueries. Vos avocats s'arrachent les cheveux.", fx: { money: -0.3, mor: -3 } },
+      ] },
+      { label: "Envoyer les avocats", outcomes: [
+        { weight: 60, text: "L'affaire se règle vite et discrètement. Chacun retrouve son visage.", fx: { money: -0.2, dis: 2 } },
+        { weight: 40, text: "« La star attaque son sosie au chômage » : la presse people se régale, pas vous.", fx: { rep: -3, mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_decline_bench", cat: "Crise", icon: "🕰️", w: 8,
+    cond: { aMin: 31, aMax: 35, maxForm: 55 },
+    text: "Les jeunes vont plus vite, le coach « fait tourner », et votre nom glisse doucement vers le bas de la feuille de match. Le déclin a commencé — reste à choisir comment le vivre.",
+    options: [
+      { label: "Accepter le rôle de doublure de luxe", outcomes: [
+        { weight: 60, text: "Entrées décisives, conseils aux jeunes, zéro vague : le vestiaire vous surnomme « le Sage ».", fx: { m: 5, team: 6, mor: 4 } },
+        { weight: 40, text: "Le banc pèse plus lourd que prévu. Chaque échauffement sans entrer est une petite mort.", fx: { mor: -5, form: -3 } },
+      ] },
+      { label: "Refuser le déclin : régime, data, préparation", hint: "Guerrier", outcomes: [
+        { weight: 45, text: "Le corps répond une dernière fois : vous arrachez encore une saison de titulaire.", fx: { p: 4, form: 7, m: 4 } },
+        { weight: 55, text: "La machine casse : le forcing se paie à l'infirmerie.", fx: { inj: 8, p: -3, mor: -4 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ RIVALITÉ INCARNÉE (v5) ══════════════
+  {
+    id: "ev_rival_same_club", cat: "Rivalité", icon: "🤯", w: 8,
+    cond: { aMin: 24, aMax: 30, minRep: 55, chance: 0.5 },
+    text: "Coup de tonnerre au mercato : {rival} signe dans VOTRE club. Le duel de toute une génération va se jouer… à l'entraînement, tous les matins.",
+    options: [
+      { label: "En faire votre moteur quotidien", outcomes: [
+        { weight: 55, text: "Chaque séance devient une finale : vous progressez comme jamais, et le duo fascine l'Europe.", fx: { t: 4, form: 6, rep: 4 } },
+        { weight: 45, text: "La cohabitation est électrique : le vestiaire choisit ses camps, le coach jongle.", fx: { form: 3, team: -4, mor: -3 } },
+      ] },
+      { label: "Exiger des garanties sur votre statut", outcomes: [
+        { weight: 50, text: "La direction vous confirme numéro un. {rival} devra faire avec.", fx: { coach: 4, mor: 4 } },
+        { weight: 50, text: "« Personne n'est au-dessus du club. » La réponse claque, le doute s'installe.", fx: { coach: -4, mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_rival_trash", cat: "Rivalité", icon: "🎙️", w: 8,
+    cond: { aMin: 20, aMax: 26 },
+    text: "Après vous avoir battu, {rival} lâche en interview : « Lui ? Il joue bien… pour un joueur moyen. » Le clip fait dix millions de vues en 24 heures.",
+    options: [
+      { label: "Répondre par une punchline", hint: "Clash", outcomes: [
+        { weight: 45, text: "Votre réplique enterre la sienne : le round médiatique est pour vous.", fx: { c: 4, rep: 4, mor: 4 } },
+        { weight: 55, text: "L'escalade vous dessert : « occupez-vous du terrain », soupire votre coach.", fx: { rep: -2, coach: -3, mor: -3 } },
+      ] },
+      { label: "Encadrer la phrase dans votre vestiaire", hint: "Carburant", outcomes: [
+        { weight: 60, text: "La phrase devient votre carburant : votre saison décolle, et le monde le remarque.", fx: { form: 6, m: 4, mor: 4 } },
+        { weight: 40, text: "L'obsession du rival vous sort de votre jeu par séquences.", fx: { form: -3, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_rival_ballon_race", cat: "Rivalité", icon: "⭐", w: 9,
+    cond: { aMin: 26, aMax: 32, minRep: 72, minOvr: 82 },
+    text: "La presse mondiale n'a qu'un sujet : {rival} ou vous pour le prochain Ballon d'Or. Chaque match devient un référendum, chaque interview un plaidoyer.",
+    options: [
+      { label: "Jouer le jeu médiatique à fond", outcomes: [
+        { weight: 50, text: "Votre storytelling est parfait : le récit de la saison penche de votre côté.", fx: { rep: 6, c: 4, form: -2 } },
+        { weight: 50, text: "Trop de plateaux, pas assez de terrain : {rival} brille pendant que vous parlez.", fx: { rep: 2, form: -5, mor: -3 } },
+      ] },
+      { label: "Disparaître des médias, tout mettre dans le jeu", outcomes: [
+        { weight: 55, text: "Votre silence devient un statement : les performances parlent, assourdissantes.", fx: { form: 6, m: 4, rep: 3 } },
+        { weight: 45, text: "{rival} occupe tout l'espace médiatique. Dans les votes, ça compte aussi.", fx: { form: 4, rep: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_rival_jubilee", cat: "Rivalité", icon: "🎊", w: 9,
+    cond: { aMin: 34, aMax: 36, minRep: 55 },
+    text: "{rival} organise son jubilé d'adieux et vous invite comme capitaine de l'équipe adverse : « Sans toi, ma carrière n'aurait pas eu le même goût. »",
+    options: [
+      { label: "Accepter et jouer le jubilé à fond", outcomes: [
+        { weight: 100, text: "Une soirée d'anthologie : petits ponts, accolades, larmes au coup de sifflet final. Deux carrières, une seule histoire.", fx: { mor: 9, rep: 4, m: 3 } },
+      ] },
+      { label: "Décliner : la rivalité ne se met pas en scène", outcomes: [
+        { weight: 55, text: "Votre absence fait jaser, mais {rival} comprend : « C'est exactement pour ça que je le respecte. »", fx: { m: 3, mor: -2 } },
+        { weight: 45, text: "Le public y voit de la rancune. Le beau récit de votre rivalité se ternit un peu.", fx: { rep: -3, mor: -3 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ COUPS DURS & SORTIES FORCÉES (v4.2) ══════════════
+  // Ces événements peuvent réellement casser une saison — et parfois,
+  // rester au club n'est plus une option.
+  {
+    id: "ev_loft", cat: "Crise", icon: "🚪", w: 9,
+    cond: { aMin: 21, aMax: 32, maxCoach: 38 },
+    text: "Le verdict tombe : mis au loft. Plus de vestiaire principal, entraînements à part avec les indésirables. Le club est clair : « Trouve-toi une porte de sortie. » Rester n'est plus une option.",
+    options: [
+      { label: "Faire jouer votre statut pour un bon transfert", hint: "Réputation", cond: { minRep: 60 }, outcomes: [
+        { weight: 60, text: "Votre nom pèse encore : un club sérieux vous sort du placard la tête haute.", fx: { ban: 4, mor: -3, transfer: { d: 0 } } },
+        { weight: 40, text: "Les négociations traînent, l'hiver au loft est long, mais la sortie arrive.", fx: { ban: 8, mor: -6, form: -5, transfer: { d: 0 } } },
+      ] },
+      { label: "Accepter un club moins huppé pour rejouer vite", outcomes: [
+        { weight: 65, text: "Vous redescendez d'un étage sans faire la fine bouche : le terrain d'abord.", fx: { ban: 3, mor: -2, dis: 3, transfer: { d: -1 } } },
+        { weight: 35, text: "La descente pique l'ego, mais au moins, vous rejouez au ballon.", fx: { ban: 3, mor: -5, transfer: { d: -1 } } },
+      ] },
+      { label: "Un prêt de la dernière chance", outcomes: [
+        { weight: 100, text: "Six mois pour tout prouver ailleurs. Le football vous offre rarement deux lofts de suite.", fx: { ban: 3, loan: true } },
+      ] },
+      { label: "Repartir de zéro à l'étranger", hint: "Risqué", outcomes: [
+        { weight: 55, text: "L'exil comme électrochoc : nouveau pays, nouvelle faim.", fx: { ban: 4, m: 3, transfer: { d: -1, cross: true } } },
+        { weight: 45, text: "Partir si loin pour se relancer… le pari est osé, la solitude réelle.", fx: { ban: 4, mor: -5, transfer: { d: -1, cross: true } } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_star_signing", cat: "Crise", icon: "🌠", w: 8,
+    cond: { aMin: 22, aMax: 31, levels: ["d1", "elite"], minOvr: 72 },
+    text: "Coup de tonnerre au mercato : le club signe une superstar mondiale… à VOTRE poste exact. En conférence de presse, le président parle de « concurrence saine ». Personne n'y croit.",
+    options: [
+      { label: "Relever le défi, quitte à souffrir", outcomes: [
+        { weight: 35, text: "Vous surjouez la superstar à l'entraînement puis en match : le banc, c'est pour l'autre.", fx: { t: 3, form: 6, rep: 5, coach: 6 } },
+        { weight: 40, text: "La rotation s'installe : deux coqs pour une place, et des miettes pour chacun.", fx: { form: -6, mor: -5 } },
+        { weight: 25, text: "Le combat est perdu d'avance : votre temps de jeu fond comme neige au soleil.", fx: { ban: 6, form: -9, mor: -8, coach: -4 } },
+      ] },
+      { label: "Exiger un départ immédiat", hint: "Cash", outcomes: [
+        { weight: 60, text: "Le club comprend et facilite une sortie propre vers un projet où vous serez central.", fx: { transfer: { d: 0 } } },
+        { weight: 40, text: "Le départ se négocie mal : vous partez, mais en claquant la porte.", fx: { rep: -3, mor: -4, transfer: { d: -1 } } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_press_blunder", cat: "Crise", icon: "🎤", w: 7,
+    cond: { aMin: 20, aMax: 31, minRep: 35 },
+    text: "Fin de match tendue, micro tendu, fatigue : votre phrase assassine sur le club et le staff tourne en boucle. « Ce club n'a aucune ambition, on joue comme des morts. » Le président exige des comptes.",
+    options: [
+      { label: "Assumer chaque mot", hint: "Brûlant", outcomes: [
+        { weight: 30, text: "Votre franchise électrocute le club : la direction recrute, l'équipe se réveille. Coup de poker gagnant.", fx: { rep: 4, c: 4, coach: -4, mor: 4 } },
+        { weight: 40, text: "Amende record, brassard confisqué, vestiaire glacial. Vos mots vous suivent partout.", fx: { money: -0.8, rep: -4, team: -6, coach: -8, dis: -3 } },
+        { weight: 30, text: "Le point de non-retour : le club vous met en vente dès l'ouverture du mercato.", fx: { rep: -3, mor: -5, coach: -10, transfer: { d: -1 } } },
+      ] },
+      { label: "S'excuser publiquement", outcomes: [
+        { weight: 60, text: "Des excuses dignes, en personne, devant le groupe. L'incident se referme.", fx: { dis: 3, m: 2, mor: -2 } },
+        { weight: 40, text: "Les excuses passent pour du rétropédalage. Ni les fans ni le vestiaire ne sont dupes.", fx: { rep: -2, team: -3, mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_confidence_spiral", cat: "Crise", icon: "🌪️", w: 8,
+    cond: { aMin: 19, aMax: 30, maxForm: 48 },
+    text: "Trois matchs sans exister, un penalty manqué, des jambes en coton : la spirale de la confiance perdue vous aspire. Chaque contrôle devient une épreuve.",
+    options: [
+      { label: "S'appuyer sur un ancien mentor", outcomes: [
+        { weight: 60, text: "De longues heures de vidéo et de vérités bien senties : la confiance revient par le travail.", fx: { form: 9, m: 5, mor: 6 } },
+        { weight: 40, text: "Les conseils aident, mais la sortie du tunnel est encore loin.", fx: { form: 4, m: 2 } },
+      ] },
+      { label: "Forcer, encore et encore", hint: "Tête baissée", outcomes: [
+        { weight: 40, text: "À force d'insister, un but chanceux fait tout basculer. Le football est parfois simple.", fx: { form: 8, mor: 6 } },
+        { weight: 60, text: "Plus vous forcez, plus tout se dérobe : la saison s'enfonce, la technique se grippe.", fx: { t: -3, form: -7, mor: -7 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ AGENT & CONTRAT (v4.2) ══════════════
+  {
+    id: "ev_agent_demands", cat: "Entourage", icon: "💼", w: 5, once: false,
+    cond: { aMin: 20, aMax: 33, minRep: 40 },
+    text: "Rendez-vous au sommet avec votre agent : « Ton contrat ne reflète plus ce que tu es. On attaque le club, mais choisis bien l'angle. »",
+    options: [
+      { label: "Exiger une revalorisation salariale", outcomes: [
+        { weight: 45, text: "Le club plie : contrat revalorisé, statut assumé. Votre agent savoure.", fx: { salaryMult: 1.35, mor: 5, rep: 2 } },
+        { weight: 30, text: "Refus poli mais ferme. La relation se tend, les négociations reprendront.", fx: { coach: -5, mor: -3 } },
+        { weight: 25, text: "Le club prend très mal l'ultimatum : vous voilà officiellement sur la liste des transferts.", fx: { coach: -8, mor: -4, flag: "listed" } },
+      ] },
+      { label: "Négocier une clause libératoire", outcomes: [
+        { weight: 55, text: "Clause obtenue : votre avenir vous appartient désormais, noir sur blanc.", fx: { flag: "release_clause", mor: 3 } },
+        { weight: 45, text: "« Hors de question. » Le club verrouille, votre agent enrage.", fx: { coach: -3 } },
+      ] },
+      { label: "Réclamer un statut de patron", hint: "Ambitieux", cond: { minRep: 55 }, outcomes: [
+        { weight: 50, text: "Le coach officialise : vous êtes désormais un cadre du projet, dans le onze et dans le vestiaire.", fx: { team: 6, c: 4, coach: 5, mor: 4 } },
+        { weight: 50, text: "La démarche fuite et le vestiaire grince : « Il se prend pour qui ? »", fx: { team: -6, rep: -2, mor: -3 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ COHÉRENCE NARRATIVE (v4) ══════════════
+  {
+    id: "ev_homesick_abroad", cat: "Vie perso", icon: "🏠", w: 10,
+    cond: { aMin: 19, aMax: 31, abroad: true },
+    text: "L'expatriation pèse plus que prévu : la langue, la cuisine, les appels vidéo qui remplacent les dimanches en famille. Votre agent le sent : « Si tu veux rentrer au pays, dis-le maintenant. »",
+    options: [
+      { label: "Organiser le retour au pays", outcomes: [
+        { weight: 55, text: "Des clubs de chez vous se manifestent aussitôt : l'enfant du pays rentre à la maison.", fx: { mor: 6, transfer: { d: 0, home: true } } },
+        { weight: 45, text: "Le retour s'organise, avec une petite concession sportive assumée.", fx: { mor: 8, rep: -2, transfer: { d: -1, home: true } } },
+      ] },
+      { label: "Serrer les dents et s'intégrer pour de bon", outcomes: [
+        { weight: 55, text: "Cours de langue intensifs, sorties avec les coéquipiers : le déclic arrive enfin.", fx: { m: 5, mor: 6, c: 3, trait: "zen" } },
+        { weight: 45, text: "Le vague à l'âme reste votre colocataire. Vous jouez, mais sans joie.", fx: { mor: -6, form: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_rival_club_bid", cat: "Mercato", icon: "😈", w: 9,
+    cond: { aMin: 21, aMax: 30, minRep: 45 },
+    text: "L'impensable : l'ennemi juré de vos supporters — LE club qu'on ne rejoint jamais — propose de doubler votre salaire. Votre vestiaire vous observe, les réseaux s'embrasent déjà.",
+    options: [
+      { label: "Signer chez l'ennemi", hint: "Trahison", outcomes: [
+        { weight: 55, text: "Vous franchissez la ligne rouge. Vos anciens supporters brûlent votre maillot en place publique.", fx: { rep: -6, money: 2, mor: -4, flag: "traitor", sched: { id: "ev_traitor_return", inYears: 1 }, transfer: { d: 1, domestic: true, direct: true } } },
+        { weight: 45, text: "Le transfert de la trahison s'écrit en une des journaux. Sportivement, difficile de dire non.", fx: { rep: -4, money: 2, flag: "traitor", sched: { id: "ev_traitor_return", inYears: 1 }, transfer: { d: 1, domestic: true, direct: true } } },
+      ] },
+      { label: "Refuser : certaines lignes ne se franchissent pas", outcomes: [
+        { weight: 60, text: "Votre refus fuite. Le virage vous érige en symbole : « LUI, il a compris le club. »", fx: { rep: 5, mor: 6, team: 4, trait: "loyal" } },
+        { weight: 40, text: "Vous refusez sans bruit. L'argent envolé pique un peu, la conscience est tranquille.", fx: { mor: 3, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_traitor_return", cat: "Terrain", icon: "🔥", scheduledOnly: true, w: 1,
+    text: "Premier retour dans votre ancien stade depuis la trahison. Banderoles hostiles, sifflets assourdissants dès l'échauffement, votre nom conspué à chaque ballon touché.",
+    options: [
+      { label: "Répondre sur le terrain et célébrer face au virage", hint: "Provocateur", outcomes: [
+        { weight: 40, text: "Match immense, célébré bras croisés devant le virage. Iconique pour les uns, impardonnable pour les autres.", fx: { rep: 5, c: 4, mor: 6, trait: "showman" } },
+        { weight: 35, text: "Match quelconque, sifflets interminables : la soirée la plus longue de votre carrière.", fx: { mor: -6, form: -3 } },
+        { weight: 25, text: "Votre provocation dégénère en incidents en tribune. Le match est terni, votre image aussi.", fx: { rep: -6, mor: -5, dis: -4 } },
+      ] },
+      { label: "Jouer sobrement, sans célébrer", outcomes: [
+        { weight: 60, text: "Décisif, puis les mains levées en signe de respect vers votre ancien public. Même vos détracteurs saluent la classe.", fx: { rep: 4, m: 4, mor: 4 } },
+        { weight: 40, text: "Un match neutre, digne, vite oublié. Le feu s'éteint doucement.", fx: { m: 3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_late_degree", cat: "Reconversion", icon: "🎓", w: 8,
+    cond: { aMin: 30, aMax: 35, flag: "graduated" },
+    text: "Votre vieux diplôme vous ouvre les portes d'un master en management du sport, à distance. L'après-carrière se prépare maintenant — entre deux entraînements.",
+    options: [
+      { label: "S'inscrire au master", outcomes: [
+        { weight: 65, text: "Diplômé avec mention. Les clubs vous voient déjà directeur sportif — votre cerveau vaut votre pied droit.", fx: { m: 6, flag: "boardroom", mor: 4 } },
+        { weight: 35, text: "Le cumul est rude, mais le papier tombe. L'avenir s'éclaircit.", fx: { m: 4, form: -4, flag: "boardroom" } },
+      ] },
+      { label: "Le terrain d'abord, toujours", outcomes: [
+        { weight: 100, text: "Chaque chose en son temps. Mais le temps, justement, file.", fx: { form: 2 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ GARDIENS & DÉFENSEURS (batch v8) ══════════════
+  {
+    id: "ev_gk_understudy", cat: "Terrain", icon: "🧤", w: 12,
+    cond: { aMin: 18, aMax: 22, pos: ["gk"], maxOvr: 78 },
+    text: "Le gardien titulaire, monument du club, se blesse à l'échauffement d'un choc au sommet. Le coach se tourne vers vous : « T'es prêt, gamin ? »",
+    options: [
+      { label: "Y aller, sans trembler", outcomes: [
+        { weight: 45, text: "Trois arrêts décisifs, cage inviolée, standing ovation : un titulaire est né ce soir.", fx: { rep: 7, m: 5, form: 6, coach: 8 } },
+        { weight: 30, text: "Une copie sérieuse, sans éclat. Le staff note le sang-froid.", fx: { m: 3, form: 3, coach: 4 } },
+        { weight: 25, text: "Une sortie hasardeuse coûte le match. Retour au banc, tête basse.", fx: { mor: -8, rep: -3, coach: -4 } },
+      ] },
+      { label: "Avouer que vous ne vous sentez pas prêt", hint: "Honnête", outcomes: [
+        { weight: 50, text: "Le coach salue la lucidité… mais la hiérarchie se fige pour longtemps.", fx: { m: 4, coach: 2, form: -4, mor: -4 } },
+        { weight: 50, text: "Le vestiaire l'apprend. Dur de porter l'étiquette de celui qui a dit non.", fx: { mor: -8, team: -4, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_gk_blunder", cat: "Terrain", icon: "🫣", w: 10,
+    cond: { aMin: 20, aMax: 31, pos: ["gk"] },
+    text: "Un ballon anodin glisse entre vos gants et finit au fond : la boulette de l'année, en boucle sur tous les écrans du pays.",
+    options: [
+      { label: "Assumer face caméra le soir même", outcomes: [
+        { weight: 55, text: "« C'est ma faute, jugez-moi sur la suite. » Le courage force le respect général.", fx: { c: 5, m: 4, rep: 3 } },
+        { weight: 45, text: "Vos excuses deviennent un mème de plus. Il faudra répondre sur le terrain.", fx: { mor: -5, rep: -1 } },
+      ] },
+      { label: "Couper les réseaux et bosser en silence", outcomes: [
+        { weight: 60, text: "Trois clean sheets plus tard, la boulette est oubliée. Le travail lave tout.", fx: { form: 6, m: 4, dis: 4 } },
+        { weight: 40, text: "Le doute s'invite à chaque sortie aérienne. Une saison à frissons.", fx: { m: -4, form: -5, mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_gk_captain", cat: "Vestiaire", icon: "©️", w: 9,
+    cond: { aMin: 27, aMax: 34, pos: ["gk"], minRep: 45, minTeam: 55 },
+    text: "Le coach veut un capitaine qui voit TOUT le jeu : vous. Un gardien avec le brassard — la presse adore le débat, le vestiaire attend votre réponse.",
+    options: [
+      { label: "Prendre le brassard", outcomes: [
+        { weight: 55, text: "Depuis votre surface, vous dirigez tout. Le débat est clos en trois matchs.", fx: { c: 5, m: 4, team: 6, trait: "leader" } },
+        { weight: 45, text: "Diriger à quarante mètres de l'action a ses limites : certains cadres tiquent.", fx: { c: 3, team: -4, mor: -2 } },
+      ] },
+      { label: "Suggérer un joueur de champ", hint: "Collectif", outcomes: [
+        { weight: 60, text: "Votre humilité renforce votre autorité morale. Capitaine sans brassard.", fx: { m: 4, team: 5, mor: 3 } },
+        { weight: 40, text: "Le coach voulait VOTRE voix. Il range l'idée, un peu déçu.", fx: { coach: -3, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_def_own_goal", cat: "Terrain", icon: "🥅", w: 10,
+    cond: { aMin: 19, aMax: 32, pos: ["def"] },
+    text: "90e minute d'un match capital : votre dégagement en catastrophe termine dans vos propres filets. Le silence du stade vous transperce.",
+    options: [
+      { label: "Prendre le micro en zone mixte", outcomes: [
+        { weight: 50, text: "L'interview la plus dure de votre vie — et la plus respectée.", fx: { c: 4, m: 4, rep: 2 } },
+        { weight: 50, text: "Les mots sonnent faux, les réseaux s'enflamment. Semaine interminable.", fx: { mor: -6, rep: -2 } },
+      ] },
+      { label: "Répondre par un match parfait", hint: "Revanche", outcomes: [
+        { weight: 55, text: "Muraille infranchissable le week-end suivant : voilà la vraie réponse.", fx: { m: 5, form: 5, rep: 3 } },
+        { weight: 45, text: "La peur de la faute paralyse votre jeu pendant des semaines.", fx: { form: -4, m: -3, mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_def_butcher_tag", cat: "Médias", icon: "🥩", w: 9,
+    cond: { aMin: 22, aMax: 32, pos: ["def"] },
+    text: "Après un tacle appuyé qui envoie une star adverse à l'infirmerie, la presse vous colle une étiquette : « le Boucher ».",
+    options: [
+      { label: "Assumer le personnage", hint: "Rugueux", outcomes: [
+        { weight: 45, text: "Les attaquants n'osent plus entrer dans votre zone. La peur a changé de camp.", fx: { rep: 4, c: 3, m: 3, team: 4 } },
+        { weight: 30, text: "Les arbitres vous sifflent désormais au moindre contact. L'étiquette colle.", fx: { rep: -3, dis: -6, mor: -3 } },
+        { weight: 25, text: "Un rouge sévère, conséquence directe de la réputation. Le personnage se paie.", fx: { ban: 2, rep: -4, dis: -4 } },
+      ] },
+      { label: "Travailler la finesse pour tuer l'étiquette", outcomes: [
+        { weight: 60, text: "Anticipation, placement, propreté : votre jeu gagne dix ans de maturité.", fx: { t: 4, m: 3, dis: 4 } },
+        { weight: 40, text: "À trop retenir vos duels, vous perdez ce qui faisait votre force.", fx: { form: -3, m: -2 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ FIN DE CARRIÈRE & HÉRITAGE (batch v8) ══════════════
+  {
+    id: "ev_young_idol", cat: "Vestiaire", icon: "🧒", w: 9,
+    cond: { aMin: 31, aMax: 36, minRep: 55 },
+    text: "Un gamin du centre de formation débarque chez les pros… avec votre nom floqué sur son maillot d'entraînement. « C'est à cause de vous que je joue. »",
+    options: [
+      { label: "Le prendre sous votre aile", outcomes: [
+        { weight: 45, text: "Vous restez après chaque séance pour lui. Le voir progresser vaut tous les honneurs.", fx: { m: 4, team: 6, mor: 6 } },
+        { weight: 25, text: "Le vestiaire voit en vous un passeur de témoin. Un rôle taillé pour vous.", fx: { team: 5, mor: 5, trait: "leader" } },
+        { weight: 30, text: "Le gamin progresse vite… et vise VOTRE place. L'élève ne s'excusera pas.", fx: { mor: -3, form: -2, m: 2 } },
+      ] },
+      { label: "Garder vos distances", outcomes: [
+        { weight: 60, text: "Chacun sa route. Le respect n'a pas besoin de mots.", fx: { m: 2, form: 2 } },
+        { weight: 40, text: "Le gamin encaisse en silence. La presse vous trouve « distant ».", fx: { mor: -3, team: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_last_derby", cat: "Supporters", icon: "🏟️", w: 9,
+    cond: { aMin: 33, aMax: 36, minClubSeasons: 3 },
+    text: "On murmure que c'est peut-être votre dernier derby. Le virage prépare quelque chose en secret ; le club vous demande un mot pour le programme du match.",
+    options: [
+      { label: "Écrire une lettre aux supporters", outcomes: [
+        { weight: 65, text: "Votre lettre est lue à voix haute dans tout le stade avant le coup d'envoi. Frissons éternels.", fx: { rep: 4, mor: 7, team: 3 } },
+        { weight: 35, text: "Les mots touchent juste, même si le résultat gâche un peu la fête.", fx: { mor: 4, rep: 2 } },
+      ] },
+      { label: "Laisser le terrain parler", outcomes: [
+        { weight: 55, text: "Un derby plein, disputé comme à 20 ans. La plus belle des lettres.", fx: { form: 4, m: 3, mor: 4 } },
+        { weight: 45, text: "Un derby anonyme. Le rendez-vous manqué laisse un goût amer.", fx: { mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_penalty_gift", cat: "Terrain", icon: "🎁", w: 8,
+    cond: { aMin: 32, aMax: 36, pos: ["att", "mil"], minRep: 50 },
+    text: "Penalty à la 88e d'un match plié. Vous êtes à UN but d'un record personnel… et le gamin de 18 ans que vous couvez n'a jamais marqué en pro. Il n'ose pas vous regarder.",
+    options: [
+      { label: "Lui poser le ballon sur le point", hint: "Héritage", outcomes: [
+        { weight: 70, text: "Il marque, fond en larmes, et court vers VOUS. Cette image dira qui vous étiez mieux que tous les records.", fx: { c: 5, team: 8, mor: 8, rep: 3 } },
+        { weight: 30, text: "Il le rate… et vous le consolez devant le monde entier. Le geste reste, le record attendra.", fx: { team: 5, mor: 2, c: 3 } },
+      ] },
+      { label: "Le record d'abord, la pédagogie ensuite", outcomes: [
+        { weight: 60, text: "But, record égalé. Les chiffres ne demandent pas pardon.", fx: { rep: 3, mor: 4, form: 2 } },
+        { weight: 40, text: "But… mais la célébration sonne creux. Le gamin applaudit poliment.", fx: { rep: 2, team: -3, mor: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_academy_invest", cat: "Finance", icon: "🏗️", w: 8,
+    cond: { aMin: 31, aMax: 36, minMoney: 20 },
+    text: "Le maire de votre ville d'origine vous reçoit : le terrain de votre enfance part en ruine. Une académie à votre nom pourrait tout changer — à vos frais.",
+    options: [
+      { label: "Financer l'académie", hint: "Héritage", outcomes: [
+        { weight: 70, text: "Trois ans plus tard, quatre cents gamins y jouent. Votre nom sur le fronton vaut tous les trophées.", fx: { money: -4, rep: 6, mor: 8, c: 3, flag: "academy_founder" } },
+        { weight: 30, text: "Le chantier déborde du budget… mais tient debout. Comme vous.", fx: { money: -5, rep: 3, mor: 4, flag: "academy_founder" } },
+      ] },
+      { label: "Un chèque discret, sans le nom", outcomes: [
+        { weight: 60, text: "Le terrain renaît. Personne ne saura jamais, et c'est très bien ainsi.", fx: { money: -1.5, mor: 5, m: 2 } },
+        { weight: 40, text: "La rumeur finit par sortir : la discrétion a bon dos, la classe est réelle.", fx: { money: -1.5, mor: 3, rep: 2 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ FEUILLETON & SOMMET (batch v8) ══════════════
+  {
+    id: "ev_journalist_pact", cat: "Médias", icon: "🖋️", w: 9,
+    cond: { aMin: 17, aMax: 19 },
+    text: "Un jeune pigiste local vous suit depuis vos débuts. Après l'entraînement, il ose : « Le jour où tu soulèves un vrai trophée, c'est moi qui écris ta biographie. Promis ? »",
+    options: [
+      { label: "Promettre, poignée de main", outcomes: [
+        { weight: 100, text: "« Alors rendez-vous là-haut. » Une promesse de gamins — de celles qu'on n'oublie pas.", fx: { mor: 3, c: 2, flag: "biography_pact", sched: { id: "ev_journalist_return", inYears: 12 } } },
+      ] },
+      { label: "Sourire sans promettre", outcomes: [
+        { weight: 100, text: "On verra. Les journalistes promettent beaucoup ; les carrières décident.", fx: { m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_journalist_return", cat: "Médias", icon: "📖", w: 1, scheduledOnly: true,
+    text: "Le pigiste d'autrefois dirige aujourd'hui la rédaction d'un grand quotidien sportif. Il pose son dictaphone sur la table : « Je n'ai pas oublié la promesse. C'est l'heure ? »",
+    options: [
+      { label: "Tout raconter, sans filtre", outcomes: [
+        { weight: 55, text: "« De la boue au sommet » : la biographie émeut bien au-delà du football.", fx: { rep: 6, c: 4, money: 0.8, mor: 5 } },
+        { weight: 45, text: "Certains chapitres froissent d'anciens coéquipiers. La vérité a un prix.", fx: { rep: 3, mor: -4, team: -3 } },
+      ] },
+      { label: "Pas encore : la fin s'écrit toujours", outcomes: [
+        { weight: 100, text: "Il sourit : « Alors je garde la meilleure place en librairie. » Rendez-vous à la retraite.", fx: { m: 3, mor: 3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_after_ballon", cat: "Médias", icon: "👑", w: 12,
+    cond: { aMin: 22, aMax: 33, minBallon: 1 },
+    text: "La saison s'ouvre et le monde entier n'attend qu'une chose : voir le Ballon d'Or trébucher. Chaque contrôle raté fait désormais la une.",
+    options: [
+      { label: "Jouer libéré : la couronne n'est qu'un objet", outcomes: [
+        { weight: 55, text: "Encore plus injouable qu'avant. Les grands ne redescendent pas : ils planent.", fx: { m: 5, form: 5, mor: 4 } },
+        { weight: 45, text: "L'obsession de confirmer vous crispe. Une saison correcte — donc jugée décevante.", fx: { form: -3, mor: -4 } },
+      ] },
+      { label: "Tout sacrifier pour le doublé", hint: "Obsession", outcomes: [
+        { weight: 40, text: "Une machine. Froide, méthodique, affamée. Le vestiaire n'ose plus vous parler les jours de match.", fx: { t: 3, form: 4, dis: 5, mor: -2 } },
+        { weight: 60, text: "À force de courir après vous-même, le plaisir s'éteint doucement.", fx: { form: -5, mor: -7, m: -2 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ DÉBUTS PROS 16-18 (batch v8.2 : le pool jeunesse était le plus mince) ══════════════
+  {
+    id: "ev_first_pro_contract", cat: "Mercato", icon: "🖊️", w: 13,
+    cond: { aMin: 16, aMax: 17 },
+    text: "Votre premier contrat professionnel est posé sur la table. Trois pages qui changent une vie. Votre entourage retient son souffle, le directeur sportif fait déjà les gros yeux.",
+    options: [
+      { label: "Signer avec le sourire, sans négocier", outcomes: [
+        { weight: 60, text: "L'encre sèche, la photo est prise. Le club apprécie la simplicité et vous met dans les meilleures conditions.", fx: { dis: 4, coach: 6, mor: 5 } },
+        { weight: 40, text: "Vous réaliserez plus tard que tout se négocie, même à 16 ans. Leçon retenue.", fx: { m: 3, mor: 3 } },
+      ] },
+      { label: "Faire relire chaque ligne", hint: "Prudent", outcomes: [
+        { weight: 55, text: "Deux clauses retoquées, un salaire ajusté. Le club respecte ceux qui se respectent.", fx: { m: 4, dis: 2, salaryMult: 1.2 } },
+        { weight: 45, text: "Trois semaines de bras de fer pour des miettes : le directeur sportif s'en souviendra.", fx: { coach: -5, m: 3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_growth_pains", cat: "Terrain", icon: "📏", w: 11,
+    cond: { aMin: 16, aMax: 17 },
+    text: "Huit centimètres en un an : votre corps change plus vite que votre jeu. Les appuis se cherchent, et le staff médical fronce les sourcils.",
+    options: [
+      { label: "Suivre le protocole de renforcement à la lettre", outcomes: [
+        { weight: 65, text: "Six mois austères… et un corps tout neuf, plus solide que jamais.", fx: { p: 5, dis: 3 } },
+        { weight: 35, text: "Le protocole s'éternise et la frustration grandit sur le banc.", fx: { p: 2, mor: -4, form: -3 } },
+      ] },
+      { label: "Continuer à jouer, le corps suivra", outcomes: [
+        { weight: 50, text: "Le talent compense, le corps s'adapte en jouant. Vous grandissez dans tous les sens du terme.", fx: { t: 2, p: 2 } },
+        { weight: 50, text: "Une pubalgie vous cueille au pire moment de la saison.", fx: { inj: 8, mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_locker_hazing", cat: "Vestiaire", icon: "🎤", w: 11,
+    cond: { aMin: 16, aMax: 17 },
+    text: "Rite d'initiation : debout sur une chaise devant tout le vestiaire pro, vous devez chanter. Les cadres tapent déjà le rythme sur les tables.",
+    options: [
+      { label: "Chanter à pleins poumons, faux mais fier", outcomes: [
+        { weight: 70, text: "Massacre musical, triomphe social : le vestiaire vous adopte sur-le-champ.", fx: { c: 4, team: 6, mor: 4 } },
+        { weight: 30, text: "Tellement faux que c'en devient culte. Un surnom est né — pas le plus flatteur.", fx: { c: 3, team: 4, rep: 1 } },
+      ] },
+      { label: "Refuser, paralysé", outcomes: [
+        { weight: 55, text: "Un cadre vous sauve la mise en chantant à votre place. Vous lui devez une fière chandelle.", fx: { team: 2, mor: -2 } },
+        { weight: 45, text: "Le vestiaire n'insiste pas… et vous oublie un peu. L'intégration prendra des mois.", fx: { team: -5, mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_first_salary", cat: "Finance", icon: "💶", w: 11,
+    cond: { aMin: 17, aMax: 18 },
+    text: "Premier vrai salaire. Une somme que personne n'a jamais gagnée dans la famille. Le téléphone chauffe : chacun a une idée pour vous.",
+    options: [
+      { label: "Envoyer l'essentiel à la famille", outcomes: [
+        { weight: 70, text: "Le loyer réglé, une dette effacée. La fierté dans la voix de votre mère vaut tous les trophées.", fx: { mor: 8, m: 4, dis: 2 } },
+        { weight: 30, text: "La famille en refuse la moitié : « Garde, construis-toi. » L'amour circule dans les deux sens.", fx: { mor: 6, m: 3 } },
+      ] },
+      { label: "S'offrir LE bolide vu en vitrine", hint: "Jeune", outcomes: [
+        { weight: 45, text: "Photo, jantes, réseaux. Le quartier est fier, le coach beaucoup moins.", fx: { c: 4, rep: 2, dis: -4, money: -0.06, coach: -3 } },
+        { weight: 55, text: "Le bolide dort au garage : vous n'avez même pas le permis. Tout le vestiaire est au courant.", fx: { c: 2, mor: -2, money: -0.06 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ VÉTÉRANS 32-36 (batch v8.2 : le pool de fin de carrière était le plus mince) ══════════════
+  {
+    id: "ev_old_guard", cat: "Vestiaire", icon: "🧓", w: 11,
+    cond: { aMin: 33, aMax: 36 },
+    text: "À l'entraînement, les gamins vous appellent « l'Ancien ». Gentiment. Enfin, presque.",
+    options: [
+      { label: "Leur infliger une séance à l'ancienne", hint: "Fierté", outcomes: [
+        { weight: 60, text: "Une séance de patron, à l'ancienne : le silence est total. Le respect aussi.", fx: { form: 4, c: 3, team: 3 } },
+        { weight: 40, text: "Les jambes de 20 ans gagnent la séance. Vous riez jaune, ils rient fort.", fx: { mor: -3, team: 2 } },
+      ] },
+      { label: "En sourire : c'est leur tour d'exister", outcomes: [
+        { weight: 70, text: "Votre sérénité les impressionne plus que n'importe quelle démonstration.", fx: { m: 4, team: 4, mor: 3 } },
+        { weight: 30, text: "« L'Ancien » reste collé. Vous vieillissez officiellement dans les vannes du vestiaire.", fx: { mor: -2, c: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_farewell_rumor", cat: "Médias", icon: "📻", w: 10,
+    cond: { aMin: 34, aMax: 36, minRep: 60 },
+    text: "« IL VA ARRÊTER » : une radio l'affirme au matin, sans vous avoir appelé. Votre téléphone explose, le club panique, le vestiaire vous observe.",
+    options: [
+      { label: "Démentir dans l'heure, sèchement", outcomes: [
+        { weight: 60, text: "Le démenti claque. Mais la question est posée — et elle ne repartira plus.", fx: { rep: 2, m: 3, mor: -2 } },
+        { weight: 40, text: "Le démenti nourrit le feuilleton : chaque match devient un adieu potentiel.", fx: { mor: -4, form: -2 } },
+      ] },
+      { label: "Laisser planer le doute", hint: "Joueur", outcomes: [
+        { weight: 55, text: "Le mystère fait de chaque déplacement un événement : les stades adverses se lèvent pour vous.", fx: { rep: 4, c: 3, mor: 3 } },
+        { weight: 45, text: "Le flou fatigue tout le monde, à commencer par votre coach.", fx: { coach: -4, mor: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_body_ritual", cat: "Terrain", icon: "🧊", w: 11,
+    cond: { aMin: 32, aMax: 36 },
+    text: "Désormais, jouer se mérite : deux heures de soins AVANT chaque entraînement. Cryothérapie, aiguilles, routines interminables — le prix du très haut niveau après 30 ans.",
+    options: [
+      { label: "En faire une science exacte", outcomes: [
+        { weight: 65, text: "Votre routine devient légendaire : les jeunes la copient sans en comprendre la moitié.", fx: { p: 3, form: 4, dis: 5 } },
+        { weight: 35, text: "Plus de soins que de football dans vos journées : la lassitude guette.", fx: { form: 2, mor: -3 } },
+      ] },
+      { label: "Écouter le corps au feeling", outcomes: [
+        { weight: 50, text: "L'instinct d'un vieux pro vaut tous les protocoles.", fx: { form: 2, mor: 2 } },
+        { weight: 50, text: "Le feeling a ses limites : une alerte musculaire vous le rappelle durement.", fx: { inj: 4, mor: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_captain_pass", cat: "Vestiaire", icon: "🎗️", w: 10,
+    cond: { aMin: 33, aMax: 36, trait: "leader" },
+    text: "Vous sentez la fin approcher. Le brassard que vous portez devra vivre après vous — et deux jeunes cadres se dessinent déjà dans l'ombre.",
+    options: [
+      { label: "Préparer votre successeur en secret", outcomes: [
+        { weight: 70, text: "Des mois de conseils discrets. Le jour venu, la passation sera naturelle : votre plus belle œuvre invisible.", fx: { m: 5, team: 6, mor: 4 } },
+        { weight: 30, text: "Votre poulain est transféré à l'été. Tout est à refaire, mais la méthode reste.", fx: { mor: -3, m: 2 } },
+      ] },
+      { label: "Le brassard se mérite, il ne se donne pas", outcomes: [
+        { weight: 55, text: "La concurrence tire les deux prétendants vers le haut. Le vestiaire y gagne.", fx: { m: 3, dis: 3, team: 2 } },
+        { weight: 45, text: "La rivalité des deux jeunes fissure le groupe. Le patron devra siffler la fin.", fx: { team: -3, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_gk_late_peak", cat: "Terrain", icon: "🍷", w: 11,
+    cond: { aMin: 32, aMax: 36, pos: ["gk"] },
+    text: "On dit que les gardiens mûrissent comme le bon vin. À votre âge, les jambes discutent un peu — mais la lecture du jeu n'a jamais été aussi limpide.",
+    options: [
+      { label: "Réinventer votre poste : placement, anticipation, commandement", outcomes: [
+        { weight: 65, text: "Vous arrêtez désormais les attaques AVANT la frappe. Une masterclass permanente.", fx: { m: 5, t: 3, form: 3 } },
+        { weight: 35, text: "La science ne suffit pas toujours : un face-à-face perdu ravive les doutes.", fx: { m: 3, mor: -3 } },
+      ] },
+      { label: "S'appuyer sur les réflexes, encore et toujours", outcomes: [
+        { weight: 45, text: "Les mains répondent toujours. Le chat n'a pas vieilli, il a juste appris la patience.", fx: { form: 4, rep: 2 } },
+        { weight: 55, text: "Les réflexes d'hier ne reviennent pas sur commande. Il va falloir ruser.", fx: { form: -3, m: 2, mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_next_gen_advice", cat: "Vie perso", icon: "📞", w: 9,
+    cond: { aMin: 32, aMax: 36, minRep: 50 },
+    text: "Un gamin de 15 ans de votre ancien quartier cartonne en détection. Sa mère vous appelle, dépassée : agents, promesses, grands clubs — tout ce que vous avez connu.",
+    options: [
+      { label: "Prendre le dossier en main personnellement", outcomes: [
+        { weight: 60, text: "Un bon centre, un contrat propre, zéro requin. Vous venez peut-être de sauver une carrière.", fx: { m: 4, mor: 6, rep: 3 } },
+        { weight: 40, text: "Le gamin signe ailleurs, mal conseillé malgré vous. Tout le monde ne peut pas être sauvé.", fx: { mor: -3, m: 3 } },
+      ] },
+      { label: "Donner trois conseils et une mise en garde", outcomes: [
+        { weight: 65, text: "Trois phrases qui valent de l'or. La famille les encadrera au-dessus du canapé.", fx: { m: 3, mor: 4 } },
+        { weight: 35, text: "Les conseils se perdent dans le tourbillon. Vous auriez peut-être dû faire plus.", fx: { mor: -2, m: 2 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ MODE HISTOIRE — LE MAESTRO (scriptés, jamais aléatoires) ══════════════
+  {
+    id: "ev_story_maestro_host", cat: "Histoire", icon: "🎩", w: 1, scheduledOnly: true,
+    text: "Un vieux recruteur vous a repéré sur un tournoi de jeunes et vous a amené ici, sur la Côte, à une heure et demie de Marseille. Le club vous place chez une famille d'accueil : chambre sous les toits, grandes tablées, terrain à dix minutes à vélo. Tout commence.",
+    options: [
+      { label: "Leur promettre une voiture le jour où vous signerez pro", hint: "Parole de gamin", outcomes: [
+        { weight: 100, text: "Ils éclatent de rire et vous resservent des pâtes. Cette promesse-là, vous la tiendrez — et ils le savent déjà.", fx: { m: 3, mor: 6, flag: "maestro_host" } },
+      ] },
+      { label: "Travailler deux fois plus que les autres, en silence", outcomes: [
+        { weight: 100, text: "Premier arrivé, dernier parti. Dans les couloirs du centre, on murmure qu'un drôle de gaucher est arrivé de Marseille.", fx: { t: 4, dis: 4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_story_maestro_clio", cat: "Histoire", icon: "🚗", w: 1, scheduledOnly: true,
+    text: "Votre président l'a lâché devant la presse : « Le jour où ce petit marque son premier but chez les pros, je lui offre une voiture. » Ce soir, le stade est plein — et un ballon traîne dans la surface, à vos pieds.",
+    options: [
+      { label: "Frapper sans réfléchir", outcomes: [
+        { weight: 65, text: "BUT ! Le premier. Le président tiendra parole : une petite voiture rouge vous attend le lendemain devant le centre. Le vestiaire est plié en deux.", fx: { rep: 4, mor: 8, c: 3, money: 0.02, flag: "maestro_clio" } },
+        { weight: 35, text: "Le gardien s'interpose d'un réflexe de chat. La voiture attendra — mais elle viendra, tout le monde le sent.", fx: { mor: 2, m: 3 } },
+      ] },
+      { label: "Servir le coéquipier mieux placé", hint: "Collectif", outcomes: [
+        { weight: 100, text: "Passe décisive, victoire. Le président sourit : « La voiture, c'était pour un but, hein. » Le geste juste n'attend pas de récompense.", fx: { m: 3, team: 4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_story_maestro_girondin", cat: "Histoire", icon: "🌊", w: 1, scheduledOnly: true,
+    text: "Le grand club du Sud-Ouest vous veut pour bâtir son projet autour de deux autres gamins dorés de votre génération. L'étage du dessus : les soirées européennes, les Bleus en ligne de mire.",
+    options: [
+      { label: "Signer dans le Sud-Ouest", outcomes: [
+        { weight: 100, text: "Vous grandissez au milieu d'une génération dorée, et le pays commence à apprendre votre nom.", fx: { rep: 4, m: 3, transfer: { clubId: "fr_bordeaux", direct: true } } },
+      ] },
+      { label: "Rester encore un peu sur la Côte", outcomes: [
+        { weight: 60, text: "Une saison de plus à la maison, en patron. Les grands clubs ne vous lâcheront pas des yeux.", fx: { mor: 4, rep: 2, m: 2 } },
+        { weight: 40, text: "Le doute s'invite certains soirs : et si le train ne repassait pas ?", fx: { mor: -4, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_story_maestro_bleus", cat: "Histoire", icon: "🐓", w: 1, scheduledOnly: true,
+    text: "Première convocation chez les A. Le sélectionneur vous lance à la 63e minute d'un match mal embarqué (0-2), dans un stade qui siffle. Le ballon arrive — et avec lui, l'occasion d'une vie.",
+    options: [
+      { label: "Jouer comme sur la place du quartier", hint: "Instinct", outcomes: [
+        { weight: 70, text: "DOUBLÉ ! Deux éclairs en un quart d'heure, 2-2 au coup de sifflet — et un pays entier qui répète votre nom. Une légende est née à la 63e minute.", fx: { natCall: true, rep: 8, c: 4, mor: 6, flag: "maestro_bleus" } },
+        { weight: 30, text: "Des touches de balle pleines de promesses. Le grand soir attendra, mais la porte des Bleus est ouverte.", fx: { natCall: true, rep: 3, m: 3 } },
+      ] },
+      { label: "Assurer, jouer simple", outcomes: [
+        { weight: 100, text: "Sobre et propre. Le sélectionneur note le calme du gamin. Les soirs de gala viendront.", fx: { natCall: true, m: 4, rep: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_story_maestro_roulette", cat: "Histoire", icon: "🌀", w: 1, scheduledOnly: true,
+    text: "À l'entraînement, sous pression, votre corps invente un geste : un double contact pivoté qui efface deux adversaires d'un seul mouvement. Le groupe s'arrête. « C'était QUOI, ça ? »",
+    options: [
+      { label: "En faire votre signature", outcomes: [
+        { weight: 60, text: "La roulette devient VOTRE geste. Les tribunes la réclament, les défenseurs la redoutent.", fx: { t: 4, c: 4, rep: 5, trait: "showman" } },
+        { weight: 40, text: "À trop la tenter, elle se lit. Un geste de gala, pas encore une arme.", fx: { t: 3, c: 2, form: -2 } },
+      ] },
+      { label: "La garder pour les grands soirs", hint: "Patience", outcomes: [
+        { weight: 100, text: "Un geste rare reste un geste craint. Vous la sortirez quand tout se jouera.", fx: { t: 3, m: 4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_story_maestro_italy", cat: "Histoire", icon: "🇮🇹", w: 1, scheduledOnly: true,
+    text: "Le téléphone sonne un soir d'été : la Vieille Dame du Piémont vous veut, VOUS, pour redevenir la reine d'Europe. Le genre d'appel qui ne sonne qu'une fois.",
+    options: [
+      { label: "Répondre à l'appel de l'Italie", outcomes: [
+        { weight: 100, text: "Valises bouclées. Là-bas, le football est une religion — et on vous attend en messie.", fx: { rep: 4, m: 3, transfer: { clubId: "it_juventurin", direct: true } } },
+      ] },
+      { label: "Rester : votre histoire s'écrit ici", outcomes: [
+        { weight: 60, text: "Le pays entier salue la fidélité. La Vieille Dame, elle, ne rappellera pas.", fx: { mor: 5, rep: 3, m: 2 } },
+        { weight: 40, text: "Le doute s'installe : a-t-on le droit de dire non à ça ?", fx: { mor: -5, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_story_maestro_wc_home", cat: "Histoire", icon: "🏟️", w: 1, scheduledOnly: true,
+    text: "Le Mondial se joue À LA MAISON cet été. Le pays doute de sa génération dorée, les éditorialistes réclament des têtes — et chaque regard converge vers votre numéro 10.",
+    options: [
+      { label: "Prendre la parole au nom du groupe", outcomes: [
+        { weight: 60, text: "« Jugez-nous en juillet. » La phrase fait la une — le pays retient son souffle, mais il y croit.", fx: { c: 5, rep: 4, mor: 4, flag: "wc_fresh" } },
+        { weight: 40, text: "La phrase devient un ultimatum dans la presse. La pression monte encore d'un cran.", fx: { rep: 2, mor: -4, flag: "wc_fresh" } },
+      ] },
+      { label: "Se murer dans le travail", outcomes: [
+        { weight: 100, text: "Pas un mot, des séances doublées. Les coéquipiers suivent votre silence comme un plan de bataille.", fx: { m: 5, form: 4, flag: "wc_fresh" } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_story_maestro_record", cat: "Histoire", icon: "💎", w: 1, scheduledOnly: true,
+    text: "Dîner de gala. Le président du Royal club de la capitale espagnole fait glisser vers vous une serviette pliée : « Voulez-vous jouer pour nous ? » y est griffonné. Un stylo attend à côté de votre verre — et le transfert le plus cher de l'HISTOIRE avec lui.",
+    options: [
+      { label: "Écrire OUI sur la serviette", hint: "Historique", outcomes: [
+        { weight: 100, text: "Le record du monde s'est signé sur une serviette de table. Les billets s'arrachent, votre maillot s'écoule par centaines de milliers : bienvenue chez les galactiques.", fx: { rep: 6, c: 3, mor: 4, flag: "maestro_napkin", transfer: { clubId: "es_madrid", direct: true } } },
+      ] },
+      { label: "Reposer le stylo", outcomes: [
+        { weight: 60, text: "Rester, c'est aussi une déclaration. Le vestiaire vous en aime davantage.", fx: { mor: 4, team: 5, m: 3 } },
+        { weight: 40, text: "Le record ira à un autre. Certains soirs, le doute revient frapper à la porte.", fx: { mor: -4, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_story_maestro_volley", cat: "Histoire", icon: "☄️", w: 1, scheduledOnly: true,
+    text: "Finale de la Coupe des Champions. Le centre retombe de la lune, à la limite de la surface, sur votre pied FAIBLE. Une fraction de seconde pour choisir.",
+    options: [
+      { label: "La volée, pied gauche, sans réfléchir", hint: "Légendaire", outcomes: [
+        { weight: 50, text: "LA VOLÉE DU SIÈCLE. Lucarne. Le geste passera en boucle pendant cent ans — et la coupe est à vous.", fx: { rep: 10, mor: 8, c: 4, trophy: "continental", trait: "showman", flag: "maestro_volley" } },
+        { weight: 50, text: "Le ballon s'envole dans le virage… et la finale glisse entre vos doigts. Les plus grands gestes exigent leur part d'échec.", fx: { mor: -6, rep: -2 } },
+      ] },
+      { label: "Contrôler et remiser proprement", hint: "Raison", outcomes: [
+        { weight: 55, text: "Le jeu repart, l'équipe arrache la victoire au bout de la nuit. Sans éclair, mais avec la coupe.", fx: { m: 4, mor: 5, trophy: "continental" } },
+        { weight: 45, text: "L'occasion s'éteint doucement, la finale aussi. On repensera longtemps à ce ballon venu de la lune.", fx: { mor: -5, m: 2 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ CRÉPUSCULE & LONGÉVITÉ (jusqu'à 42 ans) ══════════════
+  // Décision imposée par la pression de retraite (engine.advanceYear pose le
+  // drapeau retire_pending, engine.pickEvent force cet événement). scheduledOnly :
+  // jamais tiré au hasard ; once:false : rejouable chaque saison de crépuscule.
+  {
+    id: "ev_retire_decision", cat: "Retraite", icon: "🎬", w: 1, once: false, scheduledOnly: true,
+    text: "Le corps parle plus fort chaque matin. Le staff, les proches, les médias — tout le monde attend LA réponse : une saison de plus, ou tirer sa révérence maintenant ?",
+    options: [
+      { label: "Une saison de plus — tant qu'il reste du jus", hint: "Repousser l'échéance", outcomes: [
+        { weight: 55, text: "Vous rempilez, porté par l'envie. Le corps grince, mais vous êtes encore là.", fx: { mor: 5, form: 3, clearFlag: "retire_pending" } },
+        { weight: 45, text: "Encore un an arraché à l'usure. Désormais, chaque entraînement se mérite.", fx: { form: -3, mor: 3, clearFlag: "retire_pending" } },
+      ] },
+      { label: "Raccrocher les crampons, la tête haute", outcomes: [
+        { weight: 60, text: "Vous choisissez de partir debout. L'annonce, sereine, force le respect de tout un sport.", fx: { retire: true, mor: 8, rep: 3, clearFlag: "retire_pending" } },
+        { weight: 40, text: "Une dernière saison en guise d'adieux, puis le rideau. Chaque stade se lèvera à votre passage.", fx: { retire: true, rep: 5, mor: 6, clearFlag: "retire_pending" } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_ageless", cat: "Hommage", icon: "🕰️", w: 11,
+    cond: { aMin: 39, minRep: 45 },
+    text: "À votre âge, ils sont une poignée dans toute l'histoire à tenir ce niveau. On vous surnomme déjà « l'intemporel ».",
+    options: [
+      { label: "Cultiver le mythe de l'éternel", outcomes: [
+        { weight: 55, text: "Chaque match devient un événement : le public vient voir le monument jouer encore.", fx: { rep: 6, mor: 6 } },
+        { weight: 45, text: "La pression de l'exemplarité pèse : plus le droit à la moindre erreur.", fx: { rep: 3, form: -3 } },
+      ] },
+      { label: "Rester humble, un match après l'autre", outcomes: [
+        { weight: 100, text: "Vous balayez les superlatifs : seul le prochain match compte. Le vestiaire vous en vénère davantage.", fx: { team: 5, mor: 4, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_young_pretender", cat: "Vestiaire", icon: "🐣", w: 12,
+    cond: { aMin: 35 },
+    text: "La pépite du centre, deux fois plus jeune, s'entraîne comme un damné pour VOTRE place. Tout le vestiaire observe votre réaction.",
+    options: [
+      { label: "Le prendre sous votre aile", hint: "Transmettre", outcomes: [
+        { weight: 60, text: "Vous lui apprenez tout. Il vous pousse, vous le grandissez : le staff salue le mentor.", fx: { m: 4, team: 6, coach: 4, mor: 3 } },
+        { weight: 40, text: "Il progresse vite — trop vite. Vous avez peut-être ouvert la porte de votre propre remplacement.", fx: { m: 3, team: 4, form: -2 } },
+      ] },
+      { label: "Lui rappeler qui est encore le patron", hint: "Orgueil", outcomes: [
+        { weight: 45, text: "Vous haussez le ton sur le terrain : le vieux lion rugit encore, et tout le monde s'écrase.", fx: { form: 5, rep: 3, mor: 4 } },
+        { weight: 55, text: "L'énergie dépensée à défendre votre statut vous épuise. La jeunesse, elle, ne fatigue jamais.", fx: { form: -6, mor: -4, team: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_body_final_warning", cat: "Terrain", icon: "🩻", w: 12,
+    cond: { aMin: 37 },
+    text: "Réveil difficile : le genou a doublé de volume. Le médecin est direct — « À votre âge, chaque forcing peut être celui de trop. »",
+    options: [
+      { label: "Lever le pied, gérer le corps", outcomes: [
+        { weight: 100, text: "Entraînements allégés, matchs choisis : vous durez en vous ménageant.", fx: { form: 4, p: -1, mor: 2 } },
+      ] },
+      { label: "Serrer les dents, jouer quand même", hint: "Risqué", outcomes: [
+        { weight: 45, text: "L'orgueil paie : vous tenez, vaille que vaille.", fx: { form: 3, mor: 3 } },
+        { weight: 55, text: "Le corps rend l'addition : rechute, et une longue absence.", fx: { inj: 14, p: -4, mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_twilight_grind",
+    cat: "Terrain",
+    icon: "🏋️",
+    w: 13,
+    once: false,
+    cond: { aMin: 35 },
+    text: "Le corps réclame deux fois plus de soins pour deux fois moins de matchs. La routine du vétéran : glace, kiné, salle, recommencer.",
+    options: [
+      {
+        label: "Tout donner pour tenir le rythme",
+        outcomes: [
+          {
+            weight: 55,
+            text: "Discipline de moine : vous répondez encore présent le week-end.",
+            fx: { form: 6, dis: 4, mor: -2 }
+          },
+          {
+            weight: 45,
+            text: "Le corps encaisse mal la surcharge. Une alerte musculaire de plus.",
+            fx: { form: -3, inj: 3, p: -1 }
+          }
+        ]
+      },
+      {
+        label: "Gérer sa charge intelligemment",
+        outcomes: [
+          {
+            weight: 100,
+            text: "Moins de matchs, mais chacun à fond. Le staff salue la lucidité.",
+            fx: { form: 3, coach: 4, mor: 3 }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "ev_twilight_mentor",
+    cat: "Vestiaire",
+    icon: "🧑‍🏫",
+    w: 13,
+    once: false,
+    cond: { aMin: 34 },
+    text: "Un jeune du centre de formation ne vous lâche plus d'une semelle : il veut tout apprendre de vous.",
+    options: [
+      {
+        label: "Le prendre sous votre aile",
+        outcomes: [
+          {
+            weight: 70,
+            text: "Vous transmettez ce que le foot vous a appris. Le vestiaire vous vénère.",
+            fx: { team: 8, rep: 3, m: 2 }
+          },
+          {
+            weight: 30,
+            text: "Le môme explose la saison suivante — et vous en tirez une fierté immense.",
+            fx: { team: 6, mor: 6, flag: "mentor_gift" }
+          }
+        ]
+      },
+      {
+        label: "Rester concentré sur soi",
+        outcomes: [
+          { weight: 100, text: "Chacun sa route. Vous avez encore des choses à prouver, vous.", fx: { form: 2 } }
+        ]
+      }
+    ]
+  },
+  {
+    id: "ev_twilight_bench",
+    cat: "Vestiaire",
+    icon: "🪑",
+    w: 12,
+    once: false,
+    cond: { aMin: 35, minOvr: 60 },
+    text: "Le coach vous convoque : la pépite du club pousse fort à votre poste. Il évoque une rotation… à votre désavantage.",
+    options: [
+      {
+        label: "Accepter un rôle de guide",
+        hint: "Sagesse",
+        outcomes: [
+          {
+            weight: 100,
+            text: "Titulaire ou remplaçant, vous restez l'âme du groupe. Le respect, intact.",
+            fx: { team: 7, mor: -3, rep: 2 }
+          }
+        ]
+      },
+      {
+        label: "Refuser : le terrain se mérite",
+        hint: "Orgueil",
+        outcomes: [
+          {
+            weight: 50,
+            text: "Vous répondez par une prestation référence. Le jeune attendra son tour.",
+            fx: { form: 5, rep: 4, mor: 5 }
+          },
+          {
+            weight: 50,
+            text: "Le bras de fer tourne court : le banc, et un ego écorné.",
+            fx: { form: -4, mor: -6, coach: -5 }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "ev_twilight_media",
+    cat: "Médias",
+    icon: "🎙️",
+    w: 12,
+    once: false,
+    cond: { aMin: 35, minRep: 45 },
+    text: "Sur les plateaux, on ne parle que de ça : « Il est fini, non ? » Le débat sur votre déclin fait de l'audience.",
+    options: [
+      {
+        label: "Répondre sur le terrain",
+        outcomes: [
+          {
+            weight: 55,
+            text: "Une prestation qui cloue le bec à tout le monde. Les vétérans, ça pique encore.",
+            fx: { form: 4, rep: 5, mor: 5 }
+          },
+          { weight: 45, text: "L'envie est là, les jambes moins. Le débat enfle.", fx: { rep: -3, mor: -4 } }
+        ]
+      },
+      {
+        label: "Laisser dire, serein",
+        hint: "Zen",
+        outcomes: [
+          { weight: 100, text: "Vous avez trop vécu pour vous laisser atteindre par le bruit.", fx: { mor: 4, m: 2 } }
+        ]
+      }
+    ]
+  },
+  {
+    id: "ev_twilight_record",
+    cat: "Hommage",
+    icon: "📖",
+    w: 11,
+    once: false,
+    cond: { aMin: 36, minRep: 50 },
+    text: "La presse ressort les archives : vous approchez d'un record de longévité au plus haut niveau. Rares sont ceux qui ont tenu si longtemps.",
+    options: [
+      {
+        label: "Savourer ce qu'on accomplit",
+        outcomes: [
+          {
+            weight: 100,
+            text: "Peu de joueurs auront duré comme vous. Une ligne de plus dans la légende.",
+            fx: { rep: 4, mor: 6, c: 2 }
+          }
+        ]
+      },
+      {
+        label: "N'y penser qu'à la retraite",
+        outcomes: [
+          { weight: 100, text: "Les records attendront. Il reste des matchs à jouer.", fx: { form: 3, m: 1 } }
+        ]
+      }
+    ]
+  },
+  {
+    id: "ev_twilight_lastfuel",
+    cat: "Terrain",
+    icon: "🔥",
+    w: 12,
+    once: false,
+    cond: { aMin: 36, maxForm: 60 },
+    text: "Un dernier grand rendez-vous approche et le réservoir est presque vide. Faut-il vider ce qu'il reste, quitte à le payer ?",
+    options: [
+      {
+        label: "Tout laisser sur la pelouse",
+        outcomes: [
+          {
+            weight: 50,
+            text: "Un baroud d'honneur qui restera dans les mémoires. Épuisé, mais grandiose.",
+            fx: { form: -6, rep: 6, mor: 8 }
+          },
+          {
+            weight: 50,
+            text: "Le corps dit stop en plein effort. La passion ne suffit plus.",
+            fx: { inj: 6, p: -2, mor: -3 }
+          }
+        ]
+      },
+      {
+        label: "Doser, encore et toujours",
+        outcomes: [
+          {
+            weight: 100,
+            text: "L'expérience parle : on ne grille pas ses dernières cartouches pour rien.",
+            fx: { form: 4, m: 2 }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "ev_afcon",
+    cat: "Sélection",
+    icon: "🌍",
+    w: 13,
+    cond: { homeContinent: "af", nat: true, aMin: 20 },
+    text: "La Coupe d'Afrique des Nations enflamme tout un continent, et votre sélection y croit. En demi-finale, le match bascule sur vos épaules.",
+    options: [
+      {
+        label: "Prendre le match à votre compte",
+        hint: "Leader",
+        outcomes: [
+          {
+            weight: 45,
+            text: "Vous portez la nation en finale, puis au sacre. Héros de tout un peuple.",
+            fx: { rep: 10, mor: 12, c: 5, flag: "afcon_win" }
+          },
+          {
+            weight: 55,
+            text: "Une CAN pleine, éliminés aux tirs au but. La fierté malgré les larmes.",
+            fx: { rep: 5, mor: 3 }
+          }
+        ]
+      },
+      {
+        label: "Faire jouer le collectif",
+        outcomes: [
+          {
+            weight: 50,
+            text: "L'équipe répond présent : titre continental arraché tous ensemble.",
+            fx: { rep: 7, mor: 8, team: 6, flag: "afcon_win" }
+          },
+          {
+            weight: 50,
+            text: "Un parcours honorable, stoppé net en demie. Ce sera pour la prochaine.",
+            fx: { rep: 3, mor: 2 }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "ev_euro_giant",
+    cat: "Mercato",
+    icon: "✉️",
+    w: 11,
+    cond: { abroad: false, levels: ["d1", "d2"], minRep: 50, minOvr: 74, aMax: 30 },
+    text: "Un cador européen glisse une offre sur la table de votre club. Le grand saut, les projecteurs, la Ligue des Champions — mais tout quitter.",
+    options: [
+      {
+        label: "Foncer vers la lumière",
+        hint: "Ambition",
+        outcomes: [
+          {
+            weight: 100,
+            text: "Le grand club ne se refuse pas. Cap sur l'Europe qui compte.",
+            fx: { rep: 4, mor: 6, transfer: { d: 1, cross: true } }
+          }
+        ]
+      },
+      {
+        label: "Encore une saison à la maison",
+        outcomes: [
+          {
+            weight: 60,
+            text: "Vous choisissez la fidélité et le temps de jeu. Les offres reviendront.",
+            fx: { mor: 4, rep: -2, form: 3 }
+          },
+          {
+            weight: 40,
+            text: "Le train ne repasse pas toujours : l'intérêt retombe aussi vite qu'il est venu.",
+            fx: { mor: -3, rep: -3 }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "ev_nation_pride",
+    cat: "Sélection",
+    icon: "🎽",
+    w: 9,
+    cond: { homeContinent: "af", nat: true, aMin: 22, minRep: 45 },
+    text: "Dans votre pays, on ne parle que de vous : premier à percer aussi haut, vous êtes devenu un symbole pour toute une jeunesse.",
+    options: [
+      {
+        label: "Assumer le rôle de modèle",
+        outcomes: [
+          {
+            weight: 100,
+            text: "Écoles, académies, gamins qui rêvent : vous portez bien plus qu'un maillot.",
+            fx: { rep: 5, mor: 8, c: 4 }
+          }
+        ]
+      },
+      {
+        label: "Rester concentré sur le jeu",
+        outcomes: [
+          {
+            weight: 100,
+            text: "Les symboles, ce sont les autres qui les font. Vous, vous jouez.",
+            fx: { form: 3, m: 2 }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "ev_language_barrier",
+    cat: "Vie perso",
+    icon: "🗣️",
+    w: 9,
+    cond: { abroad: true, aMax: 32 },
+    text: "Nouveau pays, nouvelle langue, un vestiaire où vous ne comprenez pas un mot. L'intégration se joue maintenant.",
+    options: [
+      {
+        label: "Apprendre la langue à fond",
+        outcomes: [
+          {
+            weight: 100,
+            text: "Trois mois plus tard, vous plaisantez avec tout le monde. Le groupe vous adopte pour de bon.",
+            fx: { team: 7, mor: 5, m: 2 }
+          }
+        ]
+      },
+      {
+        label: "Laisser le terrain parler",
+        outcomes: [
+          {
+            weight: 55,
+            text: "Les buts n'ont pas besoin de traduction : le respect vient quand même.",
+            fx: { rep: 3, team: 2 }
+          },
+          {
+            weight: 45,
+            text: "L'isolement pèse lourd : difficile de se sentir chez soi, loin des siens.",
+            fx: { mor: -5, form: -2 }
+          }
+        ]
+      }
+    ]
+  },
+];
+
+/* ============================================================
+   MICRO-ÉVÉNEMENTS — brèves de saison sans choix, affichées
+   dans le récap. Poids relatifs, fx légers.
+   ============================================================ */
+const MICRO_EVENTS = [
+  { id: "mi_good_form", aMin: 16, aMax: 35, w: 10, text: "Une série d'entraînements de haute volée impressionne le staff.", fx: { t: 2, form: 3 } },
+  { id: "mi_bad_form", aMin: 16, aMax: 35, w: 10, text: "Un passage à vide inquiète un peu le staff technique.", fx: { form: -4, mor: -2 } },
+  { id: "mi_minor_injury", aMin: 16, aMax: 35, w: 9, text: "Une gêne musculaire vous prive de quelques matchs.", fx: { inj: 3 } },
+  { id: "mi_team_bond", aMin: 16, aMax: 35, w: 7, text: "Une soirée d'équipe mémorable ressoude le vestiaire.", fx: { mor: 4 } },
+  { id: "mi_team_tension", aMin: 18, aMax: 35, w: 7, text: "Une embrouille de vestiaire plombe l'ambiance quelques semaines.", fx: { mor: -4 } },
+  { id: "mi_viral_skill", aMin: 17, aMax: 34, w: 6, text: "Un de vos gestes fait le tour des réseaux sociaux.", fx: { rep: 3 } },
+  { id: "mi_press_hitpiece", aMin: 18, aMax: 35, w: 6, text: "Un tabloïd vous consacre un portrait au vitriol.", fx: { rep: -3, mor: -2 } },
+  { id: "mi_new_coach", aMin: 18, aMax: 34, w: 6, text: "Un nouvel entraîneur débarque et rebat toutes les cartes.", fx: { form: -2, m: 1 } },
+  { id: "mi_small_sponsor", aMin: 19, aMax: 34, w: 6, text: "Une marque locale signe un petit contrat d'image avec vous.", fx: { money: 0.3, rep: 1 } },
+  { id: "mi_family_visit", aMin: 16, aMax: 35, w: 7, text: "Un séjour prolongé de vos proches vous fait un bien fou.", fx: { mor: 5 } },
+  { id: "mi_homesick", aMin: 17, aMax: 30, w: 5, text: "Une bouffée de nostalgie du pays vous serre le cœur.", fx: { mor: -3 } },
+  { id: "mi_tactic_talk", aMin: 20, aMax: 35, w: 5, text: "De longues discussions tactiques avec un vétéran aiguisent votre lecture du jeu.", fx: { m: 2, t: 1 } },
+  { id: "mi_fatigue", aMin: 25, aMax: 36, w: 7, text: "L'accumulation des matchs pèse sur l'organisme.", fx: { form: -4, p: -1 } },
+  { id: "mi_local_award", aMin: 20, aMax: 35, w: 5, text: "Une distinction locale récompense votre saison.", fx: { rep: 3, mor: 2 } },
+  { id: "mi_bad_tackle", aMin: 16, aMax: 34, w: 2, text: "Un tacle assassin vous envoie de longues semaines à l'infirmerie.", fx: { inj: 12, p: -4, mor: -4, flag: "big_injury" } },
+  { id: "mi_derby_win", aMin: 18, aMax: 35, w: 5, text: "Un derby remporté avec la manière : le public est conquis.", fx: { rep: 3, mor: 3 } },
+  { id: "mi_transfer_rumor", aMin: 20, aMax: 33, w: 6, text: "Une folle rumeur de transfert agite les réseaux sans lendemain.", fx: { rep: 2, mor: -1 } },
+  { id: "mi_language", aMin: 18, aMax: 30, w: 4, text: "Vos progrès dans la langue locale font fondre les supporters.", fx: { c: 2, mor: 2 } },
+  { id: "mi_nutritionist", aMin: 20, aMax: 34, w: 5, text: "Un nouveau protocole nutritionnel dope votre condition.", fx: { p: 3, form: 2 } },
+  { id: "mi_confidence_dip", aMin: 18, aMax: 35, w: 6, text: "Une période de doute vous fait jouer petit bras.", fx: { form: -3, m: -1 } },
+  { id: "mi_wonder_goal", aMin: 17, aMax: 35, w: 5, pos: ["att", "mil", "def"], text: "Un but venu d'ailleurs entre directement au panthéon du club.", fx: { rep: 4, mor: 3 } },
+  { id: "mi_wonder_save", aMin: 17, aMax: 35, w: 5, pos: ["gk"], text: "Une triple parade irréelle entre directement au panthéon du club.", fx: { rep: 4, mor: 3 } },
+  { id: "mi_captain_praise", aMin: 18, aMax: 34, w: 5, text: "Le capitaine vous cite en exemple devant tout le groupe.", fx: { mor: 4, c: 1 } },
+  { id: "mi_charity_visit", aMin: 18, aMax: 36, w: 4, text: "Votre visite surprise à l'hôpital pour enfants émeut tout le pays.", fx: { rep: 3, mor: 3 } },
+  { id: "mi_car_trouble", aMin: 19, aMax: 32, w: 3, text: "Votre bolide flambant neuf finit dans le décor (sans gravité). La presse s'en donne à cœur joie.", fx: { money: -0.4, rep: -1 } },
+  { id: "mi_video_analysis", aMin: 21, aMax: 35, w: 4, text: "Des heures d'analyse vidéo corrigent un défaut récurrent de votre jeu.", fx: { t: 2 } },
+  { id: "mi_fan_tattoo", aMin: 22, aMax: 36, w: 3, text: "Un supporter se fait tatouer votre visage. C'est flatteur. Et un peu effrayant.", fx: { rep: 2, mor: 1 } },
+  { id: "mi_old_friend", aMin: 20, aMax: 36, w: 4, text: "Des retrouvailles avec un ami d'enfance vous remettent les pieds sur terre.", fx: { mor: 4, m: 1 } },
+  { id: "mi_sleep_coach", aMin: 24, aMax: 36, w: 4, text: "Un coach du sommeil transforme vos nuits, et vos matchs.", fx: { form: 4 } },
+  { id: "mi_missed_pen", aMin: 18, aMax: 35, w: 5, text: "Un penalty décisif manqué vous trotte dans la tête des semaines.", fx: { m: -2, mor: -3 } },
+  { id: "mi_assist_record", aMin: 20, aMax: 34, w: 4, pos: ["att", "mil", "def"], text: "Votre vision du jeu affole les statisticiens cette saison.", fx: { rep: 2, t: 1 } },
+  { id: "mi_coach_dinner", aMin: 19, aMax: 35, w: 5, text: "Un long dîner en tête-à-tête avec le coach clarifie votre rôle dans le projet.", fx: { coach: 6, m: 1 } },
+  { id: "mi_late_training", aMin: 17, aMax: 34, w: 5, text: "Trois retards à l'entraînement en un mois : amende symbolique et regards appuyés.", fx: { dis: -4, coach: -4 } },
+  { id: "mi_team_dinner", aMin: 18, aMax: 36, w: 5, text: "Vous organisez un dîner d'équipe surprise : le vestiaire n'en revient pas.", fx: { team: 6, mor: 2 } },
+  { id: "mi_rondo_king", aMin: 17, aMax: 33, w: 4, text: "Invaincu au toro depuis des semaines : le vestiaire vous surnomme « l'Anguille ».", fx: { team: 3, c: 2 } },
+  { id: "mi_curfew_break", aMin: 18, aMax: 28, w: 4, text: "Une sortie nocturne repérée par un supporter finit en story Instagram.", fx: { dis: -5, rep: -2 } },
+];
+
+/* ============================================================
+   NEWS DU RIVAL & BRÈVES DU MONDE — lignes d'ambiance du récap.
+   {rival} = nom du rival. Good = saison réussie du rival.
+   ============================================================ */
+const RIVAL_NEWS_GOOD = [
+  "📰 {rival} enchaîne les récitals : la presse en fait son favori pour les trophées.",
+  "📰 {rival} rend une copie monumentale en match couperet. La comparaison avec vous fait rage.",
+  "📰 Transfert retentissant : {rival} rejoint un cador et prend une dimension nouvelle.",
+  "📰 {rival} soulève un trophée majeur et nargue ses détracteurs.",
+  "📰 Les statistiques de {rival} affolent l'Europe entière cette saison.",
+];
+// Duel médiatique direct avec le rival (choisi selon qui domine la carrière)
+const RIVAL_NEWS_AHEAD = [
+  "📊 Le débat est relancé : la presse vous place devant {rival} dans la hiérarchie de votre génération.",
+  "📊 Sondage du magazine OneFootball : 61% des fans vous préfèrent à {rival}.",
+  "📊 {rival} l'admet à demi-mot en interview : « Il a une longueur d'avance sur moi, pour l'instant. »",
+];
+const RIVAL_NEWS_BEHIND = [
+  "📊 Le verdict des observateurs est cruel : {rival} a pris une longueur d'avance dans votre duel de génération.",
+  "📊 Une du magazine Onze d'Or : « {rival}, le patron de sa génération ». Votre nom n'apparaît qu'en page 12.",
+  "📊 « Et lui, il en est où ? » : le documentaire consacré à {rival} vous réduit à un second rôle.",
+];
+const RIVAL_NEWS_BAD = [
+  "📰 Saison compliquée pour {rival}, relégué sur le banc de son club.",
+  "📰 {rival} traverse une polémique après des propos maladroits en interview.",
+  "📰 Blessure au genou pour {rival} : plusieurs mois d'absence.",
+  "📰 Le transfert de {rival} vire au fiasco : déjà des rumeurs de départ.",
+  "📰 {rival} traverse un passage à vide depuis trois mois. Les critiques pleuvent.",
+];
+const WORLD_NEWS = [
+  "🗞️ Un club anglais bat le record du transfert le plus cher pour un remplaçant.",
+  "🗞️ La fédération teste l'arbitrage 100% automatisé : les polémiques doublent.",
+  "🗞️ Un gardien marque de la tête à la 97e : but de l'année assuré.",
+  "🗞️ Scandale des pelouses hybrides : trois stades sanctionnés.",
+  "🗞️ Un international annonce sa reconversion... dans l'élevage d'alpagas.",
+  "🗞️ Le Ballon d'Or ajoute une cérémonie des « pires simulations ». Succès immédiat.",
+  "🗞️ Un club islandais se qualifie en Coupe des Champions : conte de fées nordique.",
+  "🗞️ Une IA prédit les résultats du championnat : 12% de réussite. Les experts respirent.",
+];
+
+/* ============================================================
+   COUPE DU MONDE — paliers du tournoi, du pire au meilleur.
+   baseW : poids de base (modulé par la force de la nation et
+   le niveau du joueur dans engine.js).
+   ============================================================ */
+const WC_STAGES = [
+  { id: "groups", label: "Élimination en poules", baseW: 30, text: "La désillusion : votre nation sort dès les poules, dans un silence de cathédrale." },
+  { id: "r16", label: "Huitième de finale", baseW: 25, text: "L'aventure s'arrête en huitièmes, au terme d'un match à suspense." },
+  { id: "quarter", label: "Quart de finale", baseW: 18, text: "Un quart de finale héroïque, perdu au bout de la nuit. La fierté domine." },
+  { id: "semi", label: "Demi-finale", baseW: 12, text: "Si proche du rêve : la demi-finale se referme cruellement." },
+  { id: "final", label: "Finaliste", baseW: 8, text: "Finale perdue. La deuxième plus belle équipe du monde, et le plus grand des vides." },
+  { id: "champion", label: "CHAMPION DU MONDE", baseW: 7, text: "AU BOUT DE LA NUIT ! Votre nation est sur le toit du monde, et vous au cœur de la légende !" },
+];
+
+/* ============================================================
+   CONFIG D'ÉQUILIBRAGE — tous les curseurs du moteur.
+   Chaque niveau de club a un impact réel et cohérent :
+   budget (salaryBase/feeMult), infrastructures (growthInfra),
+   visibilité médiatique (mediaVisibility → gains de réputation),
+   concurrence au poste (expectedLevel), accès aux trophées.
+   ============================================================ */
+const BALANCE = {
+  startYear: 2026,
+  ageMin: 16,
+  ageMax: 42, // rideau absolu : nul ne joue au-delà (était 36)
+  // --- Longévité & crépuscule (cf. engine.advanceYear / longevityScore) ---
+  // Sous retireFloor : aucune pression de retraite, la carrière suit son cours.
+  // Au-delà, une pression croissante peut déclencher la décision « une saison de
+  // plus ? » ; le pivot recule avec la longévité (gardien, Increvable, discipline).
+  retireFloor: 33,
+  retireBaseAge: 34, // âge-pivot de la pression, avant modulation par la longévité
+  // OVR attendu d'un titulaire (plus c'est haut, plus la concurrence est rude)
+  expectedLevel: { regional: 46, d2: 55, d1: 67, elite: 80 },
+  matchesByLevel: { regional: [30, 38], d2: [36, 44], d1: [40, 48], elite: [44, 54] },
+  // Titre de division (ne compte comme trophée national qu'en d1/élite)
+  titleChance: { regional: 0.12, d2: 0.08, d1: 0.06, elite: 0.3 },
+  cupChance: { regional: 0.004, d2: 0.02, d1: 0.08, elite: 0.18 },
+  // Chance d'ATTEINDRE la finale continentale (la gagner se joue en moment
+  // décisif). Hors d'Europe, la D1 EST le sommet (pas de clubs "élite") : elle
+  // conteste donc sa Coupe des Champions comme l'élite européenne conteste la sienne.
+  continentalReach: {
+    eu: { elite: 0.17, d1: 0.03, d2: 0, regional: 0 },
+    other: { elite: 0.17, d1: 0.15, d2: 0.03, regional: 0 },
+  },
+  // Salaire annuel de base en M€ (modulé par OVR, réputation, pays)
+  salaryBase: { regional: 0.03, d2: 0.09, d1: 0.9, elite: 5.0 },
+  // Indemnités que le niveau peut aligner
+  feeMult: { regional: 0.12, d2: 0.3, d1: 0.7, elite: 1.2 },
+  // Qualité des infrastructures → vitesse de progression
+  growthInfra: { regional: 0.85, d2: 0.95, d1: 1.1, elite: 1.25 },
+  // Exposition médiatique → amplification des gains de réputation
+  mediaVisibility: { regional: 0.55, d2: 0.75, d1: 1.0, elite: 1.3 },
+  // Poids de base du niveau de centre de formation au départ
+  academyWeights: { regional: 34, d2: 30, d1: 24, elite: 12 },
+  academySurpriseChance: 0.05, // un grand centre mise sur un profil modeste
+  microChance: 0.6, // proba d'au moins une brève de saison
+  windowRandomChance: 0.12, // mercato spontané sans raison particulière
+  noOfferChance: 0.15, // proba qu'une fenêtre annoncée n'apporte aucune offre
+  coachChangeChance: 0.16, // proba de changement d'entraîneur par intersaison
+  wcBaseChampion: 0.42, // multiplicateur du palier "finale atteinte" (x natWeight)
+  contBaseChampion: 0.6, // sacre continental : plus accessible que le Mondial (moins d'équipes)
+  earlyEndChance: 0.008, // fin de carrière brutale (16-18 ans), par saison
+  // --- Ballon d'Or (modèle à points de saison, cf. engine.rollBallon) ---
+  // Volontairement RARE : un sacre doit rester un événement, même pour un
+  // très grand joueur (cible ~1 carrière sur 5 qui atteint le sommet).
+  ballonMinOvr: 85,
+  ballonMinRep: 73,
+  ballonCap: 0.36, // plafond de proba sur une saison stratosphérique
+  ballonPtsFloor: 3.0, // points de saison en deçà desquels le sacre est hors de portée
+  ballonSlope: 0.042, // pente : proba par point de saison au-dessus du plancher
+  ballonMomentum: 1.2, // multiplicateur après un 1er ou 2e Ballon d'Or (statut)
+  ballonDynasty: 0.2, // multiplicateur à partir du 4e (raréfaction extrême)
+  // --- Vie des clubs : montées, descentes, changements de dimension ---
+  relegationChance: { d1: 0.045, d2: 0.07 }, // par saison, modulé par vos perfs
+  // Les géants historiques (élite de base) ne coulent presque jamais en D2
+  eliteRelegShield: 0.25,
+  playoffChance: { regional: 0.17, d2: 0.12 }, // barrage de montée si saison solide
+  clubRiseSeasons: 2, // saisons consécutives dans le haut du classement pour
+  clubFadeSeasons: 2, // changer de dimension (d1→élite) ou décliner (élite→d1)
+  // --- Moments décisifs de saison ---
+  derbyMomentChance: 0.06, // par saison
+  oldClubMomentChance: 0.4, // la saison qui suit un transfert
+  cupFinalReachMult: 1.7, // proba d'atteindre la finale = cupChance × ce facteur
+  // --- Meilleurs buteurs : titre domestique & Soulier d'Or européen ---
+  topScorerGoals: { regional: 20, d2: 22, d1: 24, elite: 26 }, // seuil de buts par niveau
+  topScorerChance: 0.4, // proba de coiffer la concurrence une fois le seuil atteint
+  goldenShoeCoef: { elite: 2, d1: 1.5 }, // coefficients européens (D2/rég. inéligibles)
+  goldenShoePts: 56, // buts × coefficient requis pour prétendre au Soulier d'Or
+  goldenShoeChance: 0.4,
+  // --- Talent générationnel (pépite qui explose dès l'adolescence) ---
+  // Tirage caché à la création : chance de base + bonus selon les choix
+  // (origine, hygiène, entourage), plafonnée. Le meilleur profil approche 5 %.
+  prodigyBase: 0.012,
+  prodigyOrigin: { futsal: 0.016, quartier: 0.011, sportif: 0.009, formation: 0.006, tardif: 0 },
+  prodigyLifestyle: { pro: 0.011, balance: 0.003, street: -0.004 },
+  prodigyEntourage: { shark: 0.011, family: 0.007, crew: -0.002 },
+  prodigyChanceCap: 0.05, // plafond de probabilité (meilleur profil possible)
+  prodigyPotMin: 90, // potentiel caché d'un prodige (débloque enfin la 5ᵉ étoile)
+  prodigyPotMax: 97,
+};
+
+/* ============================================================
+   PERCENTILES DE SCORE — seuils des centiles 1→99 du score de
+   carrière (computeCareerScore) sur 50 000 carrières simulées.
+   Affiché sur la fiche finale : « meilleure que X % des destins ».
+   À régénérer avec `node simulate.js 50000 table` si BALANCE ou
+   les événements changent sensiblement.
+   ============================================================ */
+const SCORE_PERCENTILES = [
+  63, 70, 89, 94, 97, 99, 101, 103, 104, 106, 107, 108, 110, 111, 112, 114, 115, 116, 117, 119,
+  120, 121, 123, 124, 125, 126, 128, 129, 130, 132, 133, 134, 135, 137, 138, 139, 141, 142, 143, 144,
+  145, 146, 148, 149, 150, 151, 152, 153, 155, 156, 157, 158, 159, 160, 161, 162, 164, 165, 166, 167,
+  168, 169, 171, 172, 173, 174, 175, 176, 177, 179, 180, 181, 182, 183, 185, 186, 187, 189, 190, 192,
+  193, 195, 197, 198, 200, 202, 204, 206, 209, 211, 214, 217, 220, 224, 229, 234, 242, 252, 269
+];
+
+/* ============================================================
+   UNES DE PRESSE — titre généré dans le récap selon la saison.
+   {name} = joueur, {club} = club. Choisi par engine.headlineFor.
+   ============================================================ */
+const HEADLINES = {
+  wonder: [
+    "« {name}, saison stratosphérique : jusqu'où ira-t-il ? »",
+    "« La planète foot s'incline : {name} a écœuré tout le monde »",
+    "« {name} : le niveau au-dessus, tout simplement »",
+  ],
+  trophy: [
+    "« {club} sur le toit, {name} au sommet »",
+    "« Une armoire à trophées qui déborde : {name} encore titré »",
+  ],
+  solid: [
+    "« {name}, la valeur sûre de {club} »",
+    "« Régularité, sérieux, efficacité : la saison pleine de {name} »",
+  ],
+  flop: [
+    "« Que se passe-t-il avec {name} ? Une saison à oublier »",
+    "« {name}, l'année blanche : le déclassement guette »",
+  ],
+  benched: [
+    "« {name}, l'homme invisible de {club} »",
+    "« Banc, tribunes, doutes : l'hiver sans fin de {name} »",
+  ],
+  injury: [
+    "« L'infirmerie, seule adversaire que {name} n'a pas su dribbler »",
+    "« Saison en pointillés pour {name} : le corps a dit stop »",
+  ],
+};
+
+// --- Chemin non emprunté ----------------------------------------------------
+const UNTAKEN_PATH_TEMPLATES = [
+  "À {age} ans, un autre chemin s'offrait à vous. Nul ne saura jamais où il vous aurait mené.",
+  "Vous repensez parfois à ce choix fait à {age} ans. Une autre version de votre carrière existe peut-être, quelque part.",
+  "Il y a cette décision prise à {age} ans… et si vous aviez emprunté l'autre voie ? Le mystère restera entier.",
+  "À {age} ans, votre destin s'est joué sur un fil. L'option que vous n'avez pas choisie reste à jamais une inconnue.",
+  "Ce jour-là, à {age} ans, une bifurcation s'est présentée. Vous ne saurez jamais ce qu'elle vous aurait réservé.",
+];
+
+/* ============================================================
+   BADGES — méta-progression entre les parties (localStorage).
+   hint : indice montré tant que le badge est verrouillé.
+   desc : condition exacte, révélée après déblocage (avec le
+   contexte d'obtention mémorisé par game.js).
+   secret : ni nom ni indice avant déblocage — pur mystère.
+   cat : catégorie d'affichage (cf. BADGE_CATS). Débloquer tous
+   les autres badges révèle le Graal (badge "platine").
+   ============================================================ */
+/* ============================================================
+   QUÊTES — rétention & défis. Trois niveaux d'engagement :
+   • DAILY_QUESTS   : pool réparti en 3 paliers de difficulté
+     (tier 1 facile → 3 difficile). Chaque jour, le jeu tire 1 quête
+     par palier — 3 quêtes du jour, mixant accessible et ambitieux.
+   • WEEKLY_CHALLENGES : 1 défi par semaine, plus exigeant.
+   • LEGEND_QUESTS  : défis légendaires thématiques et spectaculaires,
+     1 par semaine en rotation (« champion du monde avec l'Italie »,
+     « Coupe des Champions avec un club parti du régional »…).
+   Sélection déterministe à partir de la date (identique pour tous).
+   Conditions évaluées par game.js (questFulfilled) en fin de carrière.
+   pts : récompense affichée, cumulée dans le score de quêtes.
+   ============================================================ */
+const DAILY_QUESTS = [
+  // --- Palier 1 · Facile (10 pts) ------------------------------------------
+  { id: "q_defensive", tier: 1, pts: 10, icon: "🧤", name: "Côté obscur", desc: "Terminer une carrière de défenseur ou de gardien." },
+  { id: "q_exotic", tier: 1, pts: 10, icon: "🏜️", name: "L'or du désert", desc: "Signer dans un championnat exotique." },
+  { id: "q_low_title", tier: 1, pts: 10, icon: "🌾", name: "Gloire de l'ombre", desc: "Être champion de D2 ou de division régionale." },
+  { id: "q_fr_career", tier: 1, pts: 10, icon: "🇫🇷", name: "Cocorico", desc: "Terminer une carrière complète avec un joueur français." },
+  { id: "q_cup", tier: 1, pts: 10, icon: "🏵️", name: "Coupe de feu", desc: "Remporter une coupe nationale." },
+  { id: "q_ballon_top30", tier: 1, pts: 10, icon: "⭐", name: "Dans la lumière", desc: "Être classé au Ballon d'Or (top 30) au moins une fois." },
+  // --- Palier 2 · Moyen (25 pts) -------------------------------------------
+  { id: "q_leader", tier: 2, pts: 25, icon: "🗣️", name: "Porte-voix", desc: "Décrocher le trait Leader né." },
+  { id: "q_one_club", tier: 2, pts: 25, icon: "❤️", name: "Fidèle", desc: "Une carrière complète sans transfert définitif." },
+  { id: "q_3countries", tier: 2, pts: 25, icon: "🌍", name: "Passeport chargé", desc: "Jouer dans 3 pays différents." },
+  { id: "q_young_int", tier: 2, pts: 25, icon: "🐤", name: "Pépite", desc: "Être international A avant 21 ans." },
+  { id: "q_moments3", tier: 2, pts: 25, icon: "🎬", name: "Grand soir", desc: "Réussir 3 moments décisifs dans une même carrière." },
+  { id: "q_no_elite", tier: 2, pts: 25, icon: "⚒️", name: "Sans les géants", desc: "Carrière complète sans jamais jouer dans un club de l'élite." },
+  { id: "q_fortune", tier: 2, pts: 25, icon: "💰", name: "Jackpot", desc: "Amasser 40 M€ de fortune personnelle." },
+  { id: "q_cl", tier: 2, pts: 25, icon: "🥇", name: "Nuit européenne", desc: "Remporter une coupe continentale." },
+  { id: "q_continental_nt", tier: 2, pts: 25, icon: "🌍", name: "Roi du continent", desc: "Remporter un championnat continental de sélection (Euro, Copa América ou CAN)." },
+  { id: "q_double", tier: 2, pts: 25, icon: "🎭", name: "Le doublé", desc: "Gagner le championnat ET la coupe nationale la même saison." },
+  { id: "q_derby3", tier: 2, pts: 25, icon: "🔥", name: "Roi du derby", desc: "Faire basculer 3 derbies dans une même carrière." },
+  { id: "q_top_scorer", tier: 2, pts: 25, icon: "⚽", name: "Gâchette", desc: "Finir meilleur buteur de votre championnat." },
+  // --- Palier 3 · Difficile (50 pts) ---------------------------------------
+  { id: "q_rating90", tier: 3, pts: 50, icon: "💯", name: "Machine", desc: "Finir avec une note de carrière de 90 ou plus." },
+  { id: "q_wc", tier: 3, pts: 50, icon: "🏆", name: "Sur le toit du monde", desc: "Remporter la Coupe du Monde avec votre nation." },
+  { id: "q_globe", tier: 3, pts: 50, icon: "✈️", name: "Le globe-trotter", desc: "Jouer sur 3 continents dans une même carrière." },
+  { id: "q_100caps", tier: 3, pts: 50, icon: "🎽", name: "Centurion", desc: "Atteindre 100 sélections nationales." },
+  { id: "q_wc_it", tier: 3, pts: 50, icon: "🇮🇹", name: "La Squadra", desc: "Devenir champion du monde avec l'Italie." },
+  { id: "q_samba", tier: 3, pts: 50, icon: "🇧🇷", name: "Samba d'or", desc: "Remporter le Ballon d'Or avec un joueur brésilien." },
+  { id: "q_goleador", tier: 3, pts: 50, icon: "⚽", name: "Goleador", desc: "Marquer 300 buts en carrière." },
+  { id: "q_awards5", tier: 3, pts: 50, icon: "🏅", name: "Collectionneur", desc: "Cumuler 5 distinctions individuelles dans une même carrière." },
+  { id: "q_golden_shoe", tier: 3, pts: 50, icon: "👟", name: "Soulier d'Or", desc: "Remporter le Soulier d'Or européen (buts × coefficient du championnat)." },
+];
+
+const WEEKLY_CHALLENGES = [
+  { id: "w_prodige", pts: 60, icon: "🚀", name: "La carrière du prodige", desc: "Atteindre 85 de général avant 23 ans." },
+  { id: "w_patron", pts: 60, icon: "👑", name: "Le patron du vestiaire", desc: "Décrocher le trait Leader né ET un titre de champion." },
+  { id: "w_remontada", pts: 60, icon: "🏔️", name: "La remontada", desc: "Partir d'un club régional et gagner un titre de première division." },
+  { id: "w_last_contract", pts: 60, icon: "🌇", name: "Le dernier contrat", desc: "Jouer dans un championnat exotique après 33 ans." },
+  { id: "w_double_ballon", pts: 60, icon: "🌟", name: "La dynastie", desc: "Remporter 2 Ballons d'Or dans une même carrière." },
+  { id: "w_five_clubs", pts: 60, icon: "🧳", name: "L'aventurier", desc: "Porter les couleurs d'au moins 5 clubs différents." },
+  { id: "w_goals400", pts: 60, icon: "💣", name: "L'artificier", desc: "Marquer 400 buts en carrière." },
+];
+
+// Défis légendaires : le sel du jeu. Un par semaine, en rotation.
+const LEGEND_QUESTS = [
+  { id: "l_epopee_cl", pts: 120, icon: "🏔️", name: "L'Épopée d'Europe", desc: "Remporter la Coupe des Champions avec un club que vous avez connu au niveau régional." },
+  { id: "l_squadra", pts: 120, icon: "🇮🇹", name: "Il Campione del Mondo", desc: "Devenir champion du monde avec l'Italie." },
+  { id: "l_from_dust", pts: 120, icon: "🌱", name: "Parti de rien", desc: "Débuter au niveau régional et soulever un trophée continental dans la même carrière." },
+  { id: "l_samba_rey", pts: 120, icon: "👑", name: "O Rei", desc: "Avec un Brésilien : remporter le Ballon d'Or ET la Coupe du Monde." },
+  { id: "l_kaiser", pts: 120, icon: "🦅", name: "Der Kaiser", desc: "Avec un Allemand : 100 sélections et un Ballon d'Or." },
+  { id: "l_grand_chelem", pts: 120, icon: "🏰", name: "Le Grand Chelem", desc: "Être champion de première division dans les 5 grands pays d'Europe." },
+  { id: "l_nomad", pts: 120, icon: "🧭", name: "Sans frontières", desc: "Jouer dans 4 pays différents dans une même carrière." },
+  { id: "l_dynastie", pts: 120, icon: "🌟", name: "La Dynastie", desc: "Remporter 3 Ballons d'Or dans une même carrière." },
+];
+
+const BADGE_CATS = [
+  { id: "precocite", name: "Précocité", icon: "🐣" },
+  { id: "trophees", name: "Trophées & distinctions", icon: "🏆" },
+  { id: "championnats", name: "Championnats", icon: "🎖️" },
+  { id: "performances", name: "Performances", icon: "📊" },
+  { id: "selection", name: "Sélection nationale", icon: "🎽" },
+  { id: "parcours", name: "Parcours & fidélité", icon: "🧭" },
+  { id: "secret", name: "Secrets", icon: "❓" },
+  { id: "graal", name: "Le Graal", icon: "💎" },
+];
+
+const BADGES = [
+  // --- Précocité ---
+  { id: "wonderkid", cat: "precocite", icon: "🚀", name: "Prodige", hint: "Exploser avant l'heure…", desc: "Atteindre 85 de niveau général avant 22 ans." },
+  { id: "prodigy", cat: "precocite", icon: "✨", name: "Élu précoce", hint: "La gloire n'attend pas le nombre des années…", desc: "Remporter un Ballon d'Or avant 24 ans." },
+  { id: "early_cap", cat: "precocite", icon: "🐤", name: "Premier de cordée", hint: "Le maillot national avant même la majorité…", desc: "Être convoqué en sélection A avant 19 ans." },
+  // --- Trophées & distinctions ---
+  { id: "first_ballon_or", cat: "trophees", icon: "⭐", name: "Ballon d'Or", hint: "La plus haute distinction individuelle…", desc: "Remporter au moins un Ballon d'Or." },
+  { id: "ballon_3", cat: "trophees", icon: "🌟", name: "Dynastie", hint: "Régner, encore et encore…", desc: "Remporter 3 Ballons d'Or dans une même carrière." },
+  { id: "golden_boots", cat: "trophees", icon: "👟", name: "Serial buteur", hint: "Le meilleur devant le but, plusieurs fois…", desc: "Remporter 3 Souliers d'Or dans une même carrière." },
+  { id: "award_10", cat: "trophees", icon: "🏅", name: "Vitrine pleine", hint: "Les récompenses s'empilent…", desc: "Cumuler 10 distinctions individuelles dans une même carrière." },
+  { id: "wc_golden_badge", cat: "trophees", icon: "🌍", name: "Roi du Mondial", hint: "Le meilleur, sur la plus grande scène…", desc: "Être élu meilleur joueur d'une Coupe du Monde." },
+  { id: "triple", cat: "trophees", icon: "🎯", name: "Triplé mythique", secret: true, desc: "Gagner le championnat, la Coupe des Champions et la Coupe du Monde la même saison." },
+  // --- Championnats ---
+  { id: "champ_3pays", cat: "championnats", icon: "🗺️", name: "Conquérant", hint: "Un titre ici, un titre là-bas, un titre ailleurs…", desc: "Être champion (toutes divisions) dans 3 pays différents." },
+  { id: "champ_big5", cat: "championnats", icon: "🏰", name: "Grand Chelem", hint: "Les cinq royaumes d'Europe, un par un…", desc: "Remporter le championnat de première division dans les 5 grands pays européens." },
+  { id: "champ_d1d2", cat: "championnats", icon: "🪜", name: "Double étage", hint: "Champion en bas, champion en haut…", desc: "Gagner une D2 et une D1 dans le même pays." },
+  { id: "champ_2continents", cat: "championnats", icon: "✈️", name: "Champion des deux mondes", hint: "Un titre de chaque côté de l'océan…", desc: "Être champion sur deux continents différents." },
+  { id: "champ_epopee", cat: "championnats", icon: "🏔️", name: "L'Épopée", hint: "Du fin fond du football à son sommet, ensemble…", desc: "Gagner un titre de première division avec un club que vous aviez déjà mené au titre en division inférieure." },
+  { id: "champ_sans_elite", cat: "championnats", icon: "⚒️", name: "À la force du poignet", hint: "Tout gagner, sans jamais rejoindre les géants…", desc: "Gagner 2 championnats de première division sans jamais jouer dans un club de l'élite." },
+  // --- Performances ---
+  { id: "prolific_scorer", cat: "performances", icon: "⚽", name: "Buteur historique", hint: "Faire trembler les filets, encore et encore…", desc: "Marquer 450 buts en carrière." },
+  { id: "iron_man", cat: "performances", icon: "🦾", name: "Increvable", hint: "Une longévité hors du commun…", desc: "Disputer 800 matchs professionnels." },
+  { id: "ageless", cat: "performances", icon: "🕰️", name: "L'Éternel", hint: "Défier le temps, saison après saison…", desc: "Disputer une saison à 40 ans ou plus." },
+  { id: "wall", cat: "performances", icon: "🧱", name: "La Muraille", hint: "Une cage inviolable, saison après saison…", desc: "En tant que gardien, cumuler 150 clean sheets en carrière." },
+  { id: "moment_5", cat: "performances", icon: "🎬", name: "Monsieur les grands soirs", hint: "Quand tout brûle, certains respirent…", desc: "Réussir 5 moments décisifs dans une même carrière." },
+  { id: "derby_3", cat: "performances", icon: "🔥", name: "Roi du derby", hint: "La ville n'a qu'un seul patron…", desc: "Faire basculer 3 derbies dans une même carrière." },
+  // --- Sélection nationale ---
+  { id: "world_cup", cat: "selection", icon: "🏆", name: "Champion du monde", hint: "Le rêve ultime de tout gamin…", desc: "Remporter la Coupe du Monde avec votre nation." },
+  { id: "centurion", cat: "selection", icon: "🎽", name: "Centurion", hint: "Porter cent fois le maillot national…", desc: "Atteindre 100 sélections avec votre nation." },
+  // --- Parcours & fidélité ---
+  { id: "legend_tier", cat: "parcours", icon: "👑", name: "Légende vivante", hint: "Atteindre le sommet absolu…", desc: "Terminer une carrière avec le rang « Légende du football mondial »." },
+  { id: "one_club", cat: "parcours", icon: "❤️", name: "Une vie, un club", hint: "La fidélité absolue, du début à la fin…", desc: "Réussir une belle carrière sans jamais être transféré (les prêts sont tolérés)." },
+  { id: "three_countries", cat: "parcours", icon: "🌍", name: "Globe-trotter", hint: "Le football n'a pas de frontières…", desc: "Jouer dans au moins 3 pays différents." },
+  { id: "well_traveled", cat: "parcours", icon: "🧳", name: "Voyageur assidu", hint: "Beaucoup de vestiaires, beaucoup de maillots…", desc: "Porter les couleurs d'au moins 5 clubs." },
+  { id: "moneybags", cat: "parcours", icon: "💰", name: "Nabab", hint: "Une fortune à faire pâlir les émirs…", desc: "Amasser 100 M€ de fortune personnelle." },
+  { id: "rival_slayer", cat: "parcours", icon: "⚔️", name: "Némésis", hint: "Dominer son rival, encore et encore…", desc: "Surpasser votre rival 3 carrières de suite." },
+  { id: "showtime", cat: "parcours", icon: "🎭", name: "Idole des foules", hint: "Plus qu'un joueur : un spectacle…", desc: "Finir une carrière avec le trait Showman et 88+ de réputation." },
+  { id: "quest_streak7", cat: "parcours", icon: "🔥", name: "L'Habitué", hint: "Revenir, jour après jour…", desc: "Accomplir au moins une quête du jour 7 jours d'affilée." },
+  { id: "quest_20", cat: "parcours", icon: "🎯", name: "Chasseur de quêtes", hint: "Les défis sont une seconde nature…", desc: "Accomplir 20 quêtes ou défis au total." },
+  // --- Secrets ---
+  { id: "comeback", cat: "secret", icon: "🔄", name: "Renaissance", secret: true, desc: "Mener une carrière complète juste après une carrière brisée." },
+  { id: "survivor", cat: "secret", icon: "🩹", name: "Miraculé", secret: true, desc: "Terminer une carrière complète malgré une blessure très grave." },
+  { id: "panenka_or", cat: "secret", icon: "🥄", name: "La Cuillère", secret: true, desc: "Réussir une panenka dans une finale." },
+  { id: "double_agent", cat: "secret", icon: "😈", name: "Ennemi public", secret: true, desc: "Signer chez le club rival juré de vos supporters." },
+  // --- Le Graal ---
+  { id: "platine", cat: "graal", icon: "💎", name: "Palmarès Absolu", hint: "Tout. Absolument tout…", desc: "Débloquer tous les autres badges du jeu." },
+];
+
+/* ============================================================
+   AVANTAGES DE DÉPART (boutique de jetons) — méta-progression.
+   Les jetons se gagnent en accomplissant des quêtes ; on les
+   dépense ici pour DÉBLOQUER un avantage (achat définitif), puis
+   on ÉQUIPE jusqu'à 2 avantages actifs pour ses prochaines
+   carrières NORMALES. Le Défi du jour les ignore (équité).
+   cost : prix en jetons. fx : appliqué à la création (game.js
+   applyPerks) — pot = potentiel caché, t/p/m/c = stats, rep,
+   money (M€), trait = trait de départ (id d'un TRAITS).
+   ============================================================ */
+const PERKS = [
+  { id: "scout", icon: "📣", name: "Déjà repéré", cost: 200, desc: "Réputation de départ +15 : les recruteurs vous connaissent déjà.", fx: { rep: 15 } },
+  { id: "nest_egg", icon: "💰", name: "Cuillère d'argent", cost: 250, desc: "Vous débutez avec +2 M€ d'avance sur les autres.", fx: { money: 2 } },
+  { id: "gifted", icon: "🎓", name: "Don précoce", cost: 400, desc: "+4 en Technique dès vos premiers pas chez les pros.", fx: { t: 4 } },
+  { id: "prodige", icon: "🌟", name: "Pépite", cost: 600, desc: "+6 de potentiel caché : un plafond plus haut, souvent une étoile de plus.", fx: { pot: 6 } },
+  { id: "captain", icon: "🗣️", name: "Tempérament de chef", cost: 800, desc: "Vous démarrez avec le trait Leader né.", fx: { trait: "leader" } },
+];
+const PERK_SLOTS = 2; // nombre d'avantages équipables simultanément
+
+/* ============================================================
+   SÉRIE DE QUÊTES — paliers récompensés (long terme).
+   La série n'a PAS de plafond : chaque palier atteint verse des
+   jetons (une fois par série — retomber à zéro ré-arme les paliers,
+   pour donner envie de reconstruire). Un JOKER de gel est gagné
+   tous les 7 jours de série (2 max en réserve) : un jour manqué
+   est pardonné automatiquement, la série survit.
+   ============================================================ */
+const STREAK_MILESTONES = [
+  { days: 3, jetons: 10 },
+  { days: 7, jetons: 25 },
+  { days: 14, jetons: 50 },
+  { days: 30, jetons: 120 },
+  { days: 60, jetons: 250 },
+  { days: 100, jetons: 400 },
+  { days: 200, jetons: 800 },
+  { days: 365, jetons: 2000 },
+];
+
+/* ============================================================
+   MODE HISTOIRE — revivre des carrières de légende (masquées).
+   Une histoire = un profil imposé + une époque (startYear) + des
+   événements scriptés (beats → s.scheduled, événements marqués
+   scheduledOnly dans EVENTS : jamais tirés au hasard) + un score
+   de légende à battre (baseline, échelle computeCareerScore).
+   Les légendes sont « inspirées de » et JAMAIS nommées : la
+   reconnaissance fait partie du jeu (cf. reveal en fin de run).
+   cost : prix en jetons (0 = offerte). Le reste du run est LIBRE.
+   ============================================================ */
+const STORIES = [
+  {
+    id: "maestro",
+    alias: "Le Maestro",
+    icon: "🎩",
+    cost: 0, // première histoire offerte : on goûte avant d'acheter
+    era: "1988 → années 2000",
+    startYear: 1988,
+    teaser: "Un gamin des quartiers nord de Marseille, un toucher de balle venu d'ailleurs, un caractère volcanique. Parti d'un petit club de la Côte, il a tout gagné — avant la fin que le monde entier a vue. Réécrivez-la.",
+    profile: { nationality: "fr", position: "mil", origin: "quartier" },
+    potCap: 94,
+    trajectory: "normal",
+    baseline: 238,
+    startClubId: "fr_cannes", // le club de la Côte où tout a commencé
+    clubLevels: { fr_cannes: "d2", fr_bordeaux: "d1" }, // niveaux d'ÉPOQUE (fin 80s / 90s)
+    beats: [
+      { id: "ev_story_maestro_host", age: 16 },
+      { id: "ev_story_maestro_clio", age: 18 },
+      { id: "ev_story_maestro_roulette", age: 19 },
+      { id: "ev_story_maestro_girondin", age: 20 },
+      { id: "ev_story_maestro_bleus", age: 22 },
+      { id: "ev_story_maestro_italy", age: 24 },
+      { id: "ev_story_maestro_wc_home", age: 26 },
+      { id: "ev_story_maestro_record", age: 29 },
+      { id: "ev_story_maestro_volley", age: 30 },
+    ],
+    // Finale de la Coupe du Monde SCÉNARISÉE : le moteur garantit à la nation
+    // d'atteindre la finale l'année où le joueur a cet âge (2006), et ce moment
+    // décisif REMPLACE la finale générique (cf. engine.playWorldCup). C'est LE
+    // choix du carton rouge — enfin joué là où il doit l'être.
+    wcFinal: {
+      age: 34,
+      title: "FINALE DE LA COUPE DU MONDE",
+      text: "Prolongation de la finale, vos toutes dernières minutes de footballeur. Le défenseur qui vous colle depuis une heure insulte votre famille — une fois de trop. Un milliard de téléspectateurs retiennent leur souffle.",
+      options: [
+        { id: "calm", label: "Garder votre calme — réécrire l'Histoire", hint: "Légendaire", base: 0.72, repWin: 6, traitWin: "zen", flag: "maestro_calm",
+          winText: "Vous fixez l'horizon, respirez, et repartez jouer. Aux tirs au but, la délivrance : CHAMPION DU MONDE. L'Histoire retiendra le sacre — pas le geste que vous n'avez jamais commis.",
+          failText: "Vous restez maître de vous jusqu'au bout. Les tirs au but, pourtant, tournent mal : finaliste. Mais vous quittez la scène mondiale la tête haute, à jamais digne." },
+        { id: "headbutt", label: "Répondre, quoi qu'il en coûte", hint: "Le destin originel", base: 0.06, repFail: -6, flag: "maestro_redcard",
+          winText: "Le coup part — carton rouge. Et pourtant, dans un dernier miracle, vos coéquipiers vous sacrent aux tirs au but. Champions… mais l'image du geste vous poursuivra pour toujours.",
+          failText: "Le coup part — carton rouge direct. Vous quittez la pelouse sous les yeux du monde entier, et vos coéquipiers s'inclinent aux tirs au but. Le destin, encore, s'est répété." },
+      ],
+    },
+    reveal: "Cette histoire s'inspire librement d'un maître à jouer des années 90-2000 : la famille d'accueil de la Côte, la voiture rouge du premier but, le doublé de la 63e minute pour sa première en Bleu, la serviette du transfert du siècle, la volée en finale européenne… et le coup de sang de trop, en mondovision. Vous connaissez la fin originale. Vous venez d'écrire la vôtre.",
+    // Drapeaux posés par les beats : listés sur la fiche finale s'ils ont été vécus
+    moments: {
+      maestro_clio: "🚗 la voiture rouge du premier but",
+      maestro_bleus: "🐓 le doublé de la 63e minute",
+      maestro_napkin: "💎 la serviette du transfert du siècle",
+      maestro_volley: "☄️ la volée du siècle",
+      maestro_calm: "🧘 le calme de 2006, réécrit",
+    },
+  },
+];
+
+// --- Export Node (engine.js / simulate.js) ---------------------------------
+if (typeof module !== "undefined" && module.exports) {
+  const dataExports = {
+    BRAND, NATIONALITIES, NAME_POOLS, LIFESTYLES, ENTOURAGES, TRAJECTORIES,
+    ARCHETYPES, POSITIONS, ORIGINS, COUNTRIES, CONTINENTAL_CUPS, NATIONAL_CUPS, LEVELS,
+    LEVEL_ORDER, CLUBS, CLUBS_BY_LEVEL, COMPETITIONS, COACH_NAMES, TRAITS,
+    AWARDS, KEY_MOMENTS,
+    EVENTS, MICRO_EVENTS, RIVAL_NEWS_GOOD, RIVAL_NEWS_BAD, RIVAL_NEWS_AHEAD,
+    RIVAL_NEWS_BEHIND, WORLD_NEWS, WC_STAGES, BALANCE, HEADLINES,
+    UNTAKEN_PATH_TEMPLATES, DAILY_QUESTS, WEEKLY_CHALLENGES, LEGEND_QUESTS, BADGE_CATS, BADGES,
+    PERKS, PERK_SLOTS, STORIES, SCORE_PERCENTILES, STREAK_MILESTONES,
+  };
+  Object.assign(global, dataExports);
+  module.exports = dataExports;
+}

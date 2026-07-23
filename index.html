@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+<title>Open Eleven — Écrivez votre légende du football</title>
+<meta name="description" content="Open Eleven : un jeu de carrière de footballeur où chaque choix compte. Écrivez votre légende saison après saison — transferts, Ballon d'Or, Coupe du Monde. Gratuit, dans votre navigateur." />
+<meta name="theme-color" content="#087B4B" />
+
+<!-- Open Graph (Facebook, WhatsApp, LinkedIn, Discord…) -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Open Eleven" />
+<meta property="og:title" content="Open Eleven — Écrivez votre légende du football" />
+<meta property="og:description" content="Un jeu de carrière de footballeur où chaque choix compte. Écrivez votre légende : transferts, Ballon d'Or, Coupe du Monde. Jouez gratuitement." />
+<meta property="og:locale" content="fr_FR" />
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Open Eleven — Écrivez votre légende du football" />
+<meta name="twitter:description" content="Un jeu de carrière de footballeur où chaque choix compte. Transferts, Ballon d'Or, Coupe du Monde — écrivez votre légende." />
+
+<!-- Icônes & PWA -->
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<link rel="apple-touch-icon" href="src/img/icon-512.png" />
+<link rel="manifest" href="site.webmanifest" />
+
+<!-- Polices auto-hébergées : les @font-face sont dans style.css, plus aucun
+     appel à fonts.googleapis.com. On précharge les deux graisses visibles au
+     premier écran (titre Oswald · texte Poppins) pour éviter tout FOUT. -->
+<link rel="preload" href="src/fonts/poppins-400-latin.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="src/fonts/oswald-600-latin.woff2" as="font" type="font/woff2" crossorigin />
+
+<link rel="stylesheet" href="style.css?v=10.1" />
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ ÉCRAN ACCUEIL ============ -->
+  <section id="screen-home" class="screen active">
+    <div class="home-wrap">
+      <h1 class="title" id="home-title">Ope<img class="wm-11-img" src="src/img/logo-11-mark.png" alt="11" /> Eleven</h1>
+      <p class="tagline">Écrivez une carrière de footballeur, saison après saison.<br/>Chaque choix compte. Personne ne connaît son destin à l'avance.</p>
+      <button class="btn btn-primary" id="btn-resume" style="display:none"></button>
+      <button class="btn btn-primary" id="btn-start">Commencer ma carrière</button>
+      <div class="home-links">
+        <button class="btn-link" id="btn-shop">🛒 Boutique</button>
+        <button class="btn-link" id="btn-badges">🏅 Badges</button>
+        <button class="btn-link" id="btn-pantheon">🏛️ Panthéon</button>
+      </div>
+      <div class="daily-panel" id="daily-panel"></div>
+      <div class="quest-panel" id="quest-panel"></div>
+      <div class="duel-panel" id="duel-panel"></div>
+      <div class="story-panel" id="story-panel"></div>
+      <p class="home-meta" id="home-meta"></p>
+    </div>
+    <p class="brand-credit" id="brand-credit"></p>
+    <a class="github-link" href="https://github.com/xLaugh/open-eleven" target="_blank" rel="noopener" aria-label="Code source sur GitHub">
+      <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span>Code source</span>
+    </a>
+  </section>
+
+  <!-- ============ ÉCRAN BADGES ============ -->
+  <section id="screen-badges" class="screen">
+    <h2 class="screen-title">Badges</h2>
+    <p class="screen-sub" id="badge-meta">Vos exploits à travers toutes vos carrières.</p>
+    <div class="badge-grid" id="badge-grid"></div>
+    <button class="btn btn-secondary" id="btn-badges-back">Retour</button>
+  </section>
+
+  <!-- ============ ÉCRAN QUÊTES ============ -->
+  <section id="screen-quests" class="screen">
+    <h2 class="screen-title">Quêtes</h2>
+    <div class="quest-hero" id="quest-hero"></div>
+    <div class="quest-screen-body" id="quest-screen-body"></div>
+    <button class="btn btn-secondary" id="btn-quests-back">Retour</button>
+  </section>
+
+  <!-- ============ ÉCRAN PANTHÉON ============ -->
+  <section id="screen-pantheon" class="screen">
+    <h2 class="screen-title">Panthéon</h2>
+    <p class="screen-sub">Les légendes que vous avez écrites.</p>
+    <div class="pantheon-list" id="pantheon-list"></div>
+    <button class="btn btn-secondary" id="btn-pantheon-back">Retour</button>
+  </section>
+
+  <!-- ============ ÉCRAN BOUTIQUE (jetons) ============ -->
+  <section id="screen-shop" class="screen">
+    <h2 class="screen-title">Boutique</h2>
+    <div class="shop-balance" id="shop-balance"></div>
+    <p class="screen-sub shop-intro">Gagnez des <strong>jetons</strong> en accomplissant des quêtes. Dépensez-les pour débloquer des avantages, puis équipez-en jusqu'à 2 pour vos prochaines carrières. <em>Le Défi du jour les ignore : il reste équitable pour tous.</em></p>
+    <div class="shop-list" id="shop-list"></div>
+    <button class="btn btn-secondary" id="btn-shop-back">Retour</button>
+  </section>
+
+  <!-- ============ ÉCRAN DUEL (défi entre amis) ============ -->
+  <section id="screen-duel" class="screen">
+    <h2 class="screen-title">Défi entre amis</h2>
+    <div class="duel-body" id="duel-body"></div>
+  </section>
+
+  <!-- ============ ÉCRAN HISTOIRES (légendes masquées) ============ -->
+  <section id="screen-story" class="screen">
+    <h2 class="screen-title">Mode Histoire</h2>
+    <p class="screen-sub">Revivez une carrière de légende — et essayez de faire mieux qu'elle.</p>
+    <div class="story-list" id="story-list"></div>
+    <button class="btn btn-secondary" id="btn-story-back">Retour</button>
+  </section>
+
+  <!-- ============ CRÉATION : NATIONALITÉ ============ -->
+  <section id="screen-nationality" class="screen">
+    <p class="setup-steps"><span class="step-dot active"></span><span class="step-dot"></span><span class="step-dot"></span><span class="step-dot"></span><span class="step-dot"></span><span class="step-dot"></span></p>
+    <h2 class="screen-title" id="nationality-title">Votre nationalité</h2>
+    <p class="screen-sub" id="nationality-sub">Choisissez d'abord un continent.</p>
+    <div class="grid-cards" id="nationality-grid"></div>
+    <button class="btn btn-secondary creation-back">Retour</button>
+  </section>
+
+  <!-- ============ CRÉATION : POSTE ============ -->
+  <section id="screen-position" class="screen">
+    <p class="setup-steps"><span class="step-dot done"></span><span class="step-dot active"></span><span class="step-dot"></span><span class="step-dot"></span><span class="step-dot"></span><span class="step-dot"></span></p>
+    <h2 class="screen-title">Votre poste</h2>
+    <p class="screen-sub">Il façonnera vos statistiques, vos événements et votre légende.</p>
+    <div class="list-cards" id="position-list"></div>
+    <button class="btn btn-secondary creation-back">Retour</button>
+  </section>
+
+  <!-- ============ CRÉATION : ORIGINE ============ -->
+  <section id="screen-origin" class="screen">
+    <p class="setup-steps"><span class="step-dot done"></span><span class="step-dot done"></span><span class="step-dot active"></span><span class="step-dot"></span><span class="step-dot"></span><span class="step-dot"></span></p>
+    <h2 class="screen-title">Votre origine</h2>
+    <p class="screen-sub">D'où venez-vous, avant les projecteurs ?</p>
+    <div class="list-cards" id="origin-list"></div>
+    <button class="btn btn-secondary creation-back">Retour</button>
+  </section>
+
+  <!-- ============ CRÉATION : HYGIÈNE DE VIE ============ -->
+  <section id="screen-lifestyle" class="screen">
+    <p class="setup-steps"><span class="step-dot done"></span><span class="step-dot done"></span><span class="step-dot done"></span><span class="step-dot active"></span><span class="step-dot"></span><span class="step-dot"></span></p>
+    <h2 class="screen-title">Votre adolescence</h2>
+    <p class="screen-sub">Le mode de vie qui forgera votre discipline… et votre réputation.</p>
+    <p class="daily-reminder" id="daily-reminder" hidden></p>
+    <div class="list-cards" id="lifestyle-list"></div>
+    <button class="btn btn-secondary creation-back">Retour</button>
+  </section>
+
+  <!-- ============ CRÉATION : ENTOURAGE ============ -->
+  <section id="screen-entourage" class="screen">
+    <p class="setup-steps"><span class="step-dot done"></span><span class="step-dot done"></span><span class="step-dot done"></span><span class="step-dot done"></span><span class="step-dot active"></span><span class="step-dot"></span></p>
+    <h2 class="screen-title">Votre entourage</h2>
+    <p class="screen-sub">Qui gère vos intérêts avant même votre premier contrat ?</p>
+    <div class="list-cards" id="entourage-list"></div>
+    <button class="btn btn-secondary creation-back">Retour</button>
+  </section>
+
+  <!-- ============ CRÉATION : CENTRES DE FORMATION INTÉRESSÉS ============ -->
+  <section id="screen-academy" class="screen">
+    <p class="setup-steps"><span class="step-dot done"></span><span class="step-dot done"></span><span class="step-dot done"></span><span class="step-dot done"></span><span class="step-dot done"></span><span class="step-dot active"></span></p>
+    <h2 class="screen-title">Les clubs vous ont repéré</h2>
+    <p class="screen-sub" id="academy-sub">Les recruteurs ont observé votre profil.</p>
+    <div class="list-cards" id="academy-list"></div>
+    <button class="btn btn-secondary creation-back">Retour</button>
+  </section>
+
+  <!-- ============ ÉCRAN JEU ============ -->
+  <section id="screen-game" class="screen">
+    <header class="game-header">
+      <div class="hh-item hh-player" id="hh-player">—</div>
+      <div class="hh-item" id="hh-age">16 ans</div>
+      <div class="hh-item hh-club" id="hh-club">—</div>
+    </header>
+
+    <div class="game-subheader">
+      <div class="sub-item ovr-badge" title="Niveau général"><span id="hh-pos">⚽</span><span id="hh-ovr">50</span></div>
+      <div class="sub-item" id="hh-money" title="Fortune">0 M€</div>
+      <div class="sub-item rep-stars" id="hh-rep" title="Réputation">★☆☆☆☆</div>
+      <button class="sub-item profile-toggle" id="profile-toggle" title="Profil complet">📋</button>
+    </div>
+
+    <div class="gauges">
+      <div class="gauge"><span class="gauge-label">Forme</span><div class="gauge-bar"><div class="gauge-fill gauge-form" id="gauge-form-fill"></div></div></div>
+      <div class="gauge"><span class="gauge-label">Moral</span><div class="gauge-bar"><div class="gauge-fill gauge-moral" id="gauge-moral-fill"></div></div></div>
+    </div>
+
+    <div class="profile-panel" id="profile-panel">
+      <div id="profile-bars"></div>
+      <p class="profile-meta" id="profile-meta"></p>
+      <div class="profile-traits" id="profile-traits"></div>
+    </div>
+
+    <div class="age-progress"><div class="age-progress-fill" id="age-progress-fill"></div></div>
+
+    <div class="card-stage">
+      <div class="game-card" id="game-card"></div>
+    </div>
+  </section>
+
+  <!-- ============ ÉCRAN FICHE FINALE ============ -->
+  <section id="screen-final" class="screen">
+    <div class="player-card" id="final-card">
+      <div class="confetti-layer" id="confetti-layer"></div>
+      <div class="pc-top">
+        <span id="final-flag">🏳️</span>
+        <span id="final-age">Retraité</span>
+      </div>
+      <p class="pc-tier" id="final-tier">CARTE</p>
+      <div class="fut-head">
+        <div class="fut-left">
+          <span class="pc-ovr" id="final-ovr">—</span>
+          <span class="fut-pos" id="final-pos">ATT</span>
+          <img class="fut-flag" id="final-flag-img" alt="" style="display:none" />
+        </div>
+        <div class="fut-right">
+          <h2 class="pc-name" id="final-title">Carrière terminée</h2>
+          <p class="pc-nickname" id="final-nickname"></p>
+          <p class="pc-club" id="final-club"></p>
+          <p class="pc-trajectory" id="final-trajectory"></p>
+          <p class="pc-percentile" id="final-percentile"></p>
+        </div>
+      </div>
+      <div class="pc-traits" id="final-traits"></div>
+
+      <p class="pc-section-label">Statistiques</p>
+      <div class="pc-stats" id="final-stats"></div>
+
+      <p class="pc-section-label">Palmarès</p>
+      <div class="pc-trophies" id="final-trophies"></div>
+
+      <p class="pc-section-label" id="final-awards-label">Distinctions individuelles</p>
+      <div class="pc-trophies" id="final-awards"></div>
+
+      <p class="pc-section-label">Parcours</p>
+      <div class="pc-path" id="final-path"></div>
+
+      <button class="btn-link seasons-toggle" id="seasons-toggle">📅 Voir la carrière saison par saison</button>
+      <div class="pc-seasons" id="final-seasons" style="display:none"></div>
+
+      <p class="pc-section-label">Face à face</p>
+      <div class="rival-compare" id="rival-compare"></div>
+      <p class="rival-verdict" id="rival-verdict"></p>
+
+      <p class="pc-story" id="final-story"></p>
+      <p class="pc-untaken" id="final-untaken"></p>
+      <p class="badge-unlock-note" id="final-badge-note"></p>
+      <p class="badge-unlock-note quest-note" id="final-quest-note"></p>
+      <p class="badge-unlock-note daily-note" id="final-daily-note" style="display:none"></p>
+      <p class="badge-unlock-note jeton-note" id="final-jeton-note" style="display:none"></p>
+      <p class="badge-unlock-note legend-note" id="final-legend-note" style="display:none"></p>
+    </div>
+    <div class="final-actions">
+      <button class="btn btn-secondary" id="btn-share">📤 Partager</button>
+      <button class="btn btn-secondary" id="btn-download">💾 Ma fiche</button>
+      <button class="btn btn-secondary" id="btn-duel-share" style="display:none">🆚 Défier un ami</button>
+    </div>
+    <button class="btn btn-primary" id="btn-replay">Rejouer une carrière</button>
+  </section>
+
+</div>
+
+<!-- Modale de confirmation maison (remplace window.confirm). Générique :
+     titre, message et libellés remplis par game.js (confirmModal). -->
+<div class="modal-overlay" id="modal-overlay" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <p class="modal-icon" id="modal-icon">⚠️</p>
+    <h3 class="modal-title" id="modal-title"></h3>
+    <p class="modal-message" id="modal-message"></p>
+    <div class="modal-actions">
+      <button class="btn-modal btn-modal-cancel" id="modal-cancel">Annuler</button>
+      <button class="btn-modal btn-modal-confirm" id="modal-confirm">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js?v=10.1"></script>
+<script src="engine.js?v=10.1"></script>
+<script src="game.js?v=10.1"></script>
+<script>
+  // PWA : installable + chargement instantané au retour + hors-ligne.
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  }
+</script>
+</body>
+</html>

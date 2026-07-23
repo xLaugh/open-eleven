@@ -1,0 +1,1859 @@
+/* ============================================================
+   MOTEUR DE JEU v4 — logique pure, aucun accès DOM.
+   Toutes les fonctions prennent l'état en paramètre : le même
+   code sert au joueur (game.js), au rival et à simulate.js.
+
+   Nouveautés v4 : trajectoires de carrière (explosion précoce,
+   révélation tardive, météore…), vie des clubs (montées,
+   descentes, changements de dimension — niveau effectif par
+   carrière via s.clubLevels), Ballon d'Or à points de saison
+   avec momentum multi-Ballons, récompenses individuelles,
+   moments décisifs interactifs (finale de CDM, barrages),
+   prêts stratégiques avec bilan de retour, offres de transfert
+   ciblées (pays natal, rival domestique, transfert direct).
+   ============================================================ */
+(function () {
+  "use strict";
+
+  // --- Hasard seedable (déterminisme opt-in) -------------------------------
+  // Par défaut : Math.random → carrières normales 100 % aléatoires.
+  // setSeed(n) bascule sur un PRNG reproductible (mulberry32) : le Défi du jour
+  // et les duels deviennent déterministes — même graine + mêmes choix ⇒
+  // carrière identique (la divergence n'apparaît qu'après un choix différent).
+  // L'état tient dans UN entier (getSeedState/setSeedState) → sérialisable dans
+  // l'autosave pour une reprise déterministe. rng() est l'UNIQUE source de
+  // hasard du moteur (les ex-Math.random y passent tous désormais).
+  let _rngState = null; // null = Math.random (non seedé)
+  function rng() {
+    if (_rngState === null) return Math.random();
+    let a = _rngState | 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    _rngState = a;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  function setSeed(seed) { _rngState = (seed | 0) || 1; }
+  function clearSeed() { _rngState = null; }
+  function getSeedState() { return _rngState; }
+  function setSeedState(s) { _rngState = (s === null || s === undefined) ? null : (s | 0); }
+
+  // --- Utilitaires -----------------------------------------------------
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+  function rand(min, max) { return min + rng() * (max - min); }
+  function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
+  function pick(arr) { return arr[Math.floor(rng() * arr.length)]; }
+
+  function weightedRandom(items, weightFn) {
+    const getW = weightFn || ((it) => (it.weight != null ? it.weight : it.w));
+    const total = items.reduce((s, it) => s + getW(it), 0);
+    let roll = rng() * total;
+    for (const it of items) {
+      roll -= getW(it);
+      if (roll <= 0) return it;
+    }
+    return items[items.length - 1];
+  }
+
+  function countryOf(countryId) { return COUNTRIES.find((c) => c.id === countryId); }
+  function levelRank(levelId) { return LEVELS[levelId] ? LEVELS[levelId].rank : 0; }
+
+  // Niveau EFFECTIF d'un club pour cette carrière : les montées/descentes
+  // vécues sont stockées dans s.clubLevels sans toucher aux données globales.
+  function lvlOf(s, club) {
+    return (s.clubLevels && s.clubLevels[club.id]) || club.level;
+  }
+
+  // Visibilité médiatique effective : les championnats exotiques paient
+  // très cher mais exposent deux fois moins (gains de réputation réduits,
+  // Ballon d'Or hors de portée — cf. rollBallon).
+  function visibilityOf(s) {
+    const base = BALANCE.mediaVisibility[lvlOf(s, s.club)];
+    const country = countryOf(s.club.countryId);
+    return country && country.exotic ? base * 0.5 : base;
+  }
+  function setClubLevel(s, club, levelId) {
+    s.clubLevels[club.id] = levelId;
+  }
+  function shiftClubLevel(s, club, delta) {
+    const idx = clamp(LEVEL_ORDER.indexOf(lvlOf(s, club)) + delta, 0, LEVEL_ORDER.length - 1);
+    setClubLevel(s, club, LEVEL_ORDER[idx]);
+    return LEVEL_ORDER[idx];
+  }
+
+  function fmtMoney(m) {
+    if (m >= 1000) return `${(m / 1000).toFixed(1).replace(".", ",")} Md€`;
+    if (m > 0 && m < 0.1) return `${Math.max(1, Math.round(m * 1000))} k€`;
+    const v = m >= 10 ? Math.round(m) : Math.round(m * 10) / 10;
+    return `${String(v).replace(".", ",")} M€`;
+  }
+
+  // --- Potentiel caché & trajectoire -----------------------------------------
+  const ORIGIN_POT = { formation: 1, sportif: 1, quartier: 2, futsal: 2, tardif: -2 };
+
+  function rollPotential(origin, lifestyle, entourage) {
+    let cap = 72 + randInt(-4, 14);
+    cap += ORIGIN_POT[origin.id] || 0;
+    cap += lifestyle ? lifestyle.potBonus : 0;
+    if (entourage && entourage.id === "family") cap += 1;
+    return clamp(cap, 68, 97);
+  }
+
+  function potStars(potCap) {
+    if (potCap <= 74) return 1;
+    if (potCap <= 80) return 2;
+    if (potCap <= 85) return 3;
+    if (potCap <= 91) return 4;
+    return 5;
+  }
+
+  // Probabilité qu'un profil naisse « talent générationnel » : influencée par
+  // les choix de création (origine, hygiène de vie, entourage) et la nation.
+  // Base faible, meilleur profil possible ~5 % (cf. BALANCE.prodigy*).
+  function prodigyChance(profile) {
+    const b = BALANCE;
+    let p = b.prodigyBase;
+    p += b.prodigyOrigin[profile.origin.id] || 0;
+    if (profile.lifestyle) p += b.prodigyLifestyle[profile.lifestyle.id] || 0;
+    if (profile.entourage) p += b.prodigyEntourage[profile.entourage.id] || 0;
+    p *= profile.nationality ? profile.nationality.weight : 1;
+    return clamp(p, 0, b.prodigyChanceCap);
+  }
+
+  function pickTrajectory(origin) {
+    return weightedRandom(TRAJECTORIES, (t) => {
+      let w = t.w;
+      if (origin.id === "tardif" && (t.id === "late" || t.id === "surge")) w *= 4;
+      if (origin.id === "tardif" && (t.id === "early" || t.id === "flash")) w *= 0.2;
+      return w;
+    });
+  }
+
+  // Multiplicateur de progression selon la trajectoire et l'âge.
+  function trajGrowthMult(s) {
+    const a = s.age;
+    switch (s.trajectory.id) {
+      case "steady": return a <= 25 ? 0.8 : 1.1;
+      case "early": return a <= 21 ? 1.8 : a <= 25 ? 0.8 : 0.6;
+      case "late": return a <= 22 ? 0.7 : a <= 29 ? 1.7 : 1;
+      case "chaotic": return rand(0.4, 1.7);
+      case "unstable": return 1.2;
+      case "flash": return a <= 20 ? 1.9 : a <= 24 ? 0.5 : 0.3;
+      case "surge": return a < s.sparkAge ? 0.75 : a <= s.sparkAge + 2 ? 2.1 : 1;
+      default: return 1;
+    }
+  }
+
+  // --- Génération du centre de formation (départ de carrière) ---------------
+  const ORIGIN_ACADEMY = {
+    formation: { d1: 8, elite: 6, regional: -10 },
+    sportif: { elite: 10, d1: 4 },
+    quartier: { regional: 10, d2: 4, elite: -4 },
+    futsal: { d2: 6, d1: 2 },
+    tardif: { regional: 16, d2: 2, d1: -8, elite: -8 },
+  };
+  const LIFESTYLE_ACADEMY = { pro: { d1: 4, elite: 4 }, balance: {}, street: { elite: -4 } };
+  const ACADEMY_BLURBS = {
+    elite: "Centre d'élite — infrastructures de pointe, concurrence féroce",
+    d1: "Centre professionnel réputé — un cap sérieux vers le haut niveau",
+    d2: "Club formateur solide — du temps de jeu et de vrais éducateurs",
+    regional: "Club local — l'école de la débrouille, près des vôtres",
+  };
+
+  function academyOffers(profile) {
+    const w = { ...BALANCE.academyWeights };
+    const add = (obj) => { for (const k in obj) w[k] = (w[k] || 0) + obj[k]; };
+    add(ORIGIN_ACADEMY[profile.origin.id] || {});
+    add(LIFESTYLE_ACADEMY[profile.lifestyle.id] || {});
+    if (profile.entourage && profile.entourage.academy) add(profile.entourage.academy);
+    if (profile.potCap >= 88) add({ elite: 10, d1: 6 });
+    else if (profile.potCap <= 76) add({ elite: -8 });
+    for (const k in w) w[k] = Math.max(0, w[k]);
+
+    const homeId = profile.nationality.homeCountryId;
+    // Uniquement des centres du pays natal : un niveau sans club
+    // domestique (ex. élite au Brésil) est simplement inaccessible.
+    const clubsAt = (lvl) => CLUBS_BY_LEVEL[lvl].filter((c) => c.countryId === homeId);
+    for (const k in w) if (!clubsAt(k).length) w[k] = 0;
+
+    const count = randInt(2, 3);
+    const offers = [];
+    const remaining = { ...w };
+    for (let i = 0; i < count; i++) {
+      const entries = Object.entries(remaining).filter(([, weight]) => weight > 0);
+      if (!entries.length) break;
+      const [lvl] = weightedRandom(entries, (e) => e[1]);
+      delete remaining[lvl];
+      offers.push({ club: pick(clubsAt(lvl)), level: lvl, blurb: ACADEMY_BLURBS[lvl] });
+    }
+    if (!offers.some((o) => o.level === "elite") && clubsAt("elite").length && rng() < BALANCE.academySurpriseChance) {
+      offers[offers.length - 1] = {
+        club: pick(clubsAt("elite")), level: "elite",
+        blurb: ACADEMY_BLURBS.elite, surprise: true,
+      };
+    }
+    offers.sort((a, b) => levelRank(a.level) - levelRank(b.level));
+    return offers;
+  }
+
+  // --- Création de carrière ---------------------------------------------
+  function generateName(natId) {
+    const pool = NAME_POOLS[natId] || NAME_POOLS.fr;
+    return `${pick(pool.first)} ${pick(pool.last)}`;
+  }
+
+  function newCareer(opts) {
+    const lifestyle = opts.lifestyle || pick(LIFESTYLES);
+    const entourage = opts.entourage || pick(ENTOURAGES);
+    const trajectory = opts.trajectory || pickTrajectory(opts.origin);
+    const s = {
+      name: opts.name || generateName(opts.nationality.id),
+      nationality: opts.nationality,
+      origin: opts.origin,
+      position: opts.position,
+      lifestyle, entourage, trajectory,
+      sparkAge: randInt(22, 26), // année du déclic (trajectoire "surge")
+      age: BALANCE.ageMin,
+      year: opts.startYear || BALANCE.startYear, // mode Histoire : époque imposée
+      club: opts.club,
+      coach: pick(COACH_NAMES),
+      contract: { salary: 0.05, years: 3 },
+      stats: { t: 0, p: 0, m: 0, c: 0 },
+      rep: 0,
+      form: 68,
+      moral: 70,
+      discipline: 50,
+      coachRel: 58,
+      teamRel: 60,
+      money: 0.05,
+      potCap: opts.potCap != null ? opts.potCap : rollPotential(opts.origin, lifestyle, entourage),
+      traits: [],
+      flags: {},
+      usedEvents: [],
+      scheduled: [],
+      injuryWeeks: 0,
+      seasonTrophies: [],
+      seasonAwards: [],
+      loan: null,
+      loanReturn: null,
+      objective: null,
+      lastSeason: null,
+      clubLevels: {}, // niveaux effectifs des clubs (montées/descentes vécues)
+      clubMomentum: 0, // saisons consécutives dans le haut du classement
+      clubFade: 0, // saisons consécutives de déclin (élite)
+      awardCounts: {},
+      archetype: null,
+      leagueTitlesDetail: [], // titres de champion : { countryId, level, clubId, year }
+      continentalDetail: [], // coupes continentales : { continent, year }
+      momentWins: 0,
+      derbyWins: 0,
+      bestBallonRank: null,
+      prevClub: null, // club quitté au dernier transfert (retrouvailles)
+      natTeam: { active: false, retired: false, caps: 0, goals: 0 },
+      totals: { matches: 0, goals: 0, assists: 0, cleanSheets: 0 },
+      trophies: { league: 0, cup: 0, continental: 0, worldCup: 0, contInt: 0, ballon: 0, goldenBoot: 0 },
+      seasons: [],
+      transferHistory: [],
+      history: [],
+      peakOvr: 0,
+      clubsPlayed: [opts.club.id],
+      continentsPlayed: [(countryOf(opts.club.countryId) || {}).continent || "eu"],
+      retiring: false,
+      careerEnded: false,
+      careerEndReason: null,
+    };
+    const st = opts.origin.startStats;
+    s.stats = { t: st.t, p: st.p, m: st.m, c: st.c };
+    s.rep = st.rep;
+    if (opts.origin.id === "tardif") s.flags.lateBloomer = true;
+    // Talent générationnel : tirage caché influencé par les choix de création.
+    // Peut faire naître un phénomène adolescent — potentiel d'élite, trajectoire
+    // explosive, stats de départ au-dessus du lot. Jamais quand la trajectoire
+    // est imposée (mode Histoire : le potentiel y est déjà scénarisé).
+    if (!opts.trajectory && rng() < prodigyChance({ origin: opts.origin, lifestyle, entourage, nationality: opts.nationality })) {
+      s.flags.prodigy = true;
+      s.potCap = clamp(randInt(BALANCE.prodigyPotMin, BALANCE.prodigyPotMax), 68, 99);
+      s.trajectory = TRAJECTORIES.find((t) => t.id === (rng() < 0.65 ? "early" : "flash")) || s.trajectory;
+      // Déjà bien au-dessus du lot à 16 ans : un crack ne sort pas de nulle part.
+      s.stats.t = clamp(s.stats.t + randInt(9, 13), 1, 99);
+      s.stats.p = clamp(s.stats.p + randInt(4, 7), 1, 99);
+      s.stats.m = clamp(s.stats.m + randInt(2, 4), 1, 99);
+      s.stats.c = clamp(s.stats.c + randInt(1, 3), 1, 99);
+    }
+    if (s.trajectory.id === "unstable") s.potCap = clamp(s.potCap + 5, 68, 99);
+    if (s.trajectory.id === "flash") s.stats.t = clamp(s.stats.t + 4, 1, 99);
+    applyFx(s, lifestyle.fx || {});
+    applyFx(s, entourage.fx || {});
+    if (entourage.flag) s.flags[entourage.flag] = true;
+    if (opts.clubLevels) s.clubLevels = { ...opts.clubLevels }; // mode Histoire : niveaux d'époque
+    s.contract.salary = salaryFor(s, opts.club) * 0.3;
+    s.transferHistory.push({ age: s.age, toClubName: opts.club.name, countryName: countryOf(opts.club.countryId).name, fee: null, level: lvlOf(s, opts.club) });
+    s.peakOvr = ovr(s);
+    return s;
+  }
+
+  function ovr(s) {
+    return Math.round(0.4 * s.stats.t + 0.25 * s.stats.p + 0.2 * s.stats.m + 0.15 * s.stats.c);
+  }
+
+  function hasTrait(s, id) { return s.traits.includes(id); }
+
+  // --- Rendu des textes (templating) --------------------------------------
+  function renderText(s, text, extra) {
+    if (!text) return "";
+    const country = countryOf(s.club.countryId);
+    const contCup = (CONTINENTAL_CUPS[(country || {}).continent] || CONTINENTAL_CUPS.eu).name;
+    let out = text
+      .replace(/\{club\}/g, s.club.name)
+      .replace(/\{coach\}/g, s.coach)
+      .replace(/\{country\}/g, country ? country.name : "")
+      .replace(/\{contCup\}/g, contCup) // coupe continentale du club (Europe/Amériques/Afrique…)
+      .replace(/\{name\}/g, s.name)
+      .replace(/\{nat\}/g, s.nationality.name);
+    if (extra && extra.rival) out = out.replace(/\{rival\}/g, extra.rival);
+    else out = out.replace(/\{rival\}/g, "votre grand rival");
+    return out;
+  }
+
+  // --- Application des effets ("fx") ---------------------------------------
+  const STAT_LABELS = { t: "Technique", p: "Physique", m: "Mental", c: "Charisme" };
+
+  function applyFx(s, fx) {
+    const chips = [];
+    if (!fx) return chips;
+
+    for (const key of ["t", "p", "m", "c"]) {
+      if (fx[key]) {
+        let d = fx[key];
+        if (d > 0 && key === "t" && hasTrait(s, "genius") && s.age <= 23) d = Math.round(d * 1.4);
+        s.stats[key] = clamp(s.stats[key] + d, 1, 99);
+        chips.push({ label: `${d > 0 ? "+" : ""}${d} ${STAT_LABELS[key]}`, kind: d > 0 ? "good" : "bad" });
+      }
+    }
+    if (fx.rep) {
+      let d = fx.rep;
+      if (d > 0) d = Math.round(d * visibilityOf(s));
+      if (d > 0 && hasTrait(s, "showman")) d = Math.round(d * 1.3);
+      if (d > 0 && hasTrait(s, "mercenary")) d = Math.round(d * 0.85);
+      s.rep = clamp(s.rep + d, 0, 100);
+      if (d) chips.push({ label: `${d > 0 ? "+" : ""}${d} Réputation`, kind: d > 0 ? "good" : "bad" });
+    }
+    if (fx.form) {
+      s.form = clamp(s.form + fx.form, 5, 100);
+      chips.push({ label: `${fx.form > 0 ? "+" : ""}${fx.form} Forme`, kind: fx.form > 0 ? "good" : "bad" });
+    }
+    if (fx.mor) {
+      s.moral = clamp(s.moral + fx.mor, 5, 100);
+      chips.push({ label: `${fx.mor > 0 ? "+" : ""}${fx.mor} Moral`, kind: fx.mor > 0 ? "good" : "bad" });
+    }
+    if (fx.dis) {
+      s.discipline = clamp(s.discipline + fx.dis, 5, 100);
+      chips.push({ label: `${fx.dis > 0 ? "+" : ""}${fx.dis} Discipline`, kind: fx.dis > 0 ? "good" : "bad" });
+    }
+    if (fx.coach) {
+      s.coachRel = clamp(s.coachRel + fx.coach, 5, 100);
+      chips.push({ label: `${fx.coach > 0 ? "+" : ""}${fx.coach} Relation coach`, kind: fx.coach > 0 ? "good" : "bad" });
+    }
+    if (fx.team) {
+      s.teamRel = clamp(s.teamRel + fx.team, 5, 100);
+      chips.push({ label: `${fx.team > 0 ? "+" : ""}${fx.team} Vestiaire`, kind: fx.team > 0 ? "good" : "bad" });
+    }
+    if (fx.money) {
+      let d = fx.money;
+      if (d > 0 && hasTrait(s, "mercenary")) d *= 1.2;
+      s.money = Math.max(0, s.money + d);
+      chips.push({ label: `${d > 0 ? "+" : "−"}${fmtMoney(Math.abs(d))}`, kind: d > 0 ? "money" : "bad" });
+    }
+    if (fx.salaryMult) {
+      s.contract.salary = Math.round(s.contract.salary * fx.salaryMult * 100) / 100;
+      chips.push({ label: `📈 Salaire : ${fmtMoney(s.contract.salary)}/an`, kind: "money" });
+    }
+    if (fx.archetype) {
+      const arch = ARCHETYPES.find((a) => a.id === fx.archetype);
+      if (arch) {
+        s.archetype = arch;
+        chips.push({ label: `🧬 ${arch.name} : ${arch.effect || arch.desc}`, kind: "trait" });
+      }
+    }
+    if (fx.ban) {
+      s.injuryWeeks += fx.ban;
+      chips.push({ label: `⛔ ${fx.ban} semaines hors du groupe`, kind: "bad" });
+    }
+    if (fx.inj) {
+      let weeks = fx.inj;
+      if (hasTrait(s, "ironman")) weeks = Math.round(weeks * 0.6);
+      if (hasTrait(s, "glass")) weeks = Math.round(weeks * 1.5);
+      s.injuryWeeks += weeks;
+      chips.push({ label: `🩹 ${weeks} semaines d'absence`, kind: "bad" });
+    }
+    if (fx.pot) s.potCap = clamp(s.potCap + fx.pot, 68, 99);
+    if (fx.clubBoost) {
+      const newLvl = shiftClubLevel(s, s.club, fx.clubBoost);
+      chips.push({ label: `🏗️ ${s.club.name} passe en ${LEVELS[newLvl].short}`, kind: "trophy" });
+      s.history.push({ age: s.age, text: `Un investisseur propulse ${s.club.name} en ${LEVELS[newLvl].short}.`, impact: 8 });
+    }
+    if (fx.trait && !hasTrait(s, fx.trait)) {
+      s.traits.push(fx.trait);
+      const t = TRAITS[fx.trait];
+      chips.push({ label: `${t.icon} Trait : ${t.name}`, kind: "trait" });
+    }
+    if (fx.flag) s.flags[fx.flag] = true;
+    if (fx.clearFlag) delete s.flags[fx.clearFlag];
+    if (fx.sched) s.scheduled.push({ id: fx.sched.id, age: s.age + fx.sched.inYears });
+    if (fx.trophy) {
+      s.seasonTrophies.push(fx.trophy);
+      const comp = COMPETITIONS[fx.trophy];
+      if (comp) chips.push({ label: `${comp.icon} ${comp.name} !`, kind: "trophy" });
+    }
+    if (fx.award) {
+      // Distinction individuelle promise par un événement : créditée au
+      // bilan de la saison en cours (cf. playSeason), comme fx.trophy.
+      if (!s.seasonAwards) s.seasonAwards = [];
+      s.seasonAwards.push(fx.award);
+      const aw = AWARDS[fx.award];
+      if (aw) chips.push({ label: `${aw.icon} ${aw.name} !`, kind: "trophy" });
+    }
+    if (fx.natCall && !s.natTeam.active && !s.natTeam.retired) {
+      // Idempotent : si déjà international, l'événement reste cohérent (pas de doublon)
+      s.natTeam.active = true;
+      // Une première sélection décrochée PAR ÉVÉNEMENT compte autant que celle
+      // décrochée par les seuils d'advanceYear : sans ces drapeaux, le badge
+      // « Premier de cordée » et la quête « Pépite » restaient hors d'atteinte.
+      if (s.age <= 18) s.flags.early_cap = true;
+      if (s.age <= 20) s.flags.young_int = true;
+      chips.push({ label: `${s.nationality.flag} International !`, kind: "trophy" });
+    }
+    if (fx.natRetire) {
+      s.natTeam.active = false;
+      s.natTeam.retired = true;
+      chips.push({ label: `${s.nationality.flag} Retraite internationale`, kind: "neutral" });
+    }
+    if (fx.retire) {
+      s.retiring = true;
+      chips.push({ label: "👋 Retraite en fin de saison", kind: "neutral" });
+    }
+    if (fx.end) {
+      s.careerEnded = true;
+      s.careerEndReason = fx.end;
+    }
+    return chips;
+  }
+
+  // --- Sélection d'événement --------------------------------------------
+  function eventEligible(s, ev) {
+    if (ev.scheduledOnly) return false;
+    const c = ev.cond || {};
+    if (ev.once !== false && s.usedEvents.includes(ev.id)) return false;
+    if (c.aMin != null && s.age < c.aMin) return false;
+    if (c.aMax != null && s.age > c.aMax) return false;
+    if (c.levels && !c.levels.includes(lvlOf(s, s.club))) return false;
+    if (c.pos && !c.pos.includes(s.position.id)) return false;
+    if (c.origin && s.origin.id !== c.origin) return false;
+    if (c.lifestyle && s.lifestyle.id !== c.lifestyle) return false;
+    if (c.entourage && s.entourage.id !== c.entourage) return false;
+    const o = ovr(s);
+    if (c.minOvr != null && o < c.minOvr) return false;
+    if (c.maxOvr != null && o > c.maxOvr) return false;
+    if (c.minRep != null && s.rep < c.minRep) return false;
+    if (c.maxRep != null && s.rep > c.maxRep) return false;
+    if (c.minMoney != null && s.money < c.minMoney) return false;
+    if (c.minBallon != null && s.trophies.ballon < c.minBallon) return false;
+    if (c.minForm != null && s.form < c.minForm) return false;
+    if (c.maxForm != null && s.form > c.maxForm) return false;
+    if (c.minMor != null && s.moral < c.minMor) return false;
+    if (c.maxMor != null && s.moral > c.maxMor) return false;
+    if (c.minDis != null && s.discipline < c.minDis) return false;
+    if (c.maxDis != null && s.discipline > c.maxDis) return false;
+    if (c.minCoach != null && s.coachRel < c.minCoach) return false;
+    if (c.maxCoach != null && s.coachRel > c.maxCoach) return false;
+    if (c.minTeam != null && s.teamRel < c.minTeam) return false;
+    if (c.maxTeam != null && s.teamRel > c.maxTeam) return false;
+    if (c.flag && !s.flags[c.flag]) return false;
+    if (c.notFlag && s.flags[c.notFlag]) return false;
+    if (c.trait && !hasTrait(s, c.trait)) return false;
+    if (c.notTrait && hasTrait(s, c.notTrait)) return false;
+    if (c.nat === true && !s.natTeam.active) return false;
+    if (c.nat === false && (s.natTeam.active || s.natTeam.retired)) return false;
+    if (c.wc === true && !isWorldCupYear(s.year)) return false;
+    if (c.loan === true && !s.loan) return false;
+    if (c.loan === false && s.loan) return false;
+    if (c.abroad === true && s.club.countryId === s.nationality.homeCountryId) return false;
+    if (c.abroad === false && s.club.countryId !== s.nationality.homeCountryId) return false;
+    if (c.exoticClub === false && countryOf(s.club.countryId).exotic) return false;
+    // Continent d'origine du joueur (nationalité) : événements de sélection
+    // propres à un continent, ex. la Coupe d'Afrique (homeContinent: "af").
+    if (c.homeContinent) {
+      const homeCountry = countryOf(s.nationality.homeCountryId);
+      if (!homeCountry || homeCountry.continent !== c.homeContinent) return false;
+    }
+    if (c.originLevel) {
+      const originClub = CLUBS.find((cl) => cl.id === s.clubsPlayed[0]);
+      if (!originClub || !c.originLevel.includes(originClub.level)) return false;
+    }
+    if (c.notAtOriginClub && s.club.id === s.clubsPlayed[0]) return false;
+    // Les grands hommages exigent d'avoir marqué l'histoire DU club :
+    // ancienneté minimale au club actuel (saisons jouées sous ce maillot)
+    if (c.minClubSeasons != null) {
+      const seasonsHere = s.seasons.filter((se) => se.clubName === s.club.name).length;
+      if (seasonsHere < c.minClubSeasons) return false;
+    }
+    if (c.chance != null && rng() > c.chance) return false;
+    return true;
+  }
+
+  function pickEvent(s) {
+    // Décision de crépuscule imposée : la pression de retraite a déclenché
+    // l'an passé (advanceYear). « Raccrocher » ou « une saison de plus ? »
+    if (s.flags.retire_pending) {
+      const ev = EVENTS.find((e) => e.id === "ev_retire_decision");
+      if (ev) return ev; // le drapeau est retiré à la résolution (clearFlag)
+    }
+    const dueIdx = s.scheduled.findIndex((sc) => s.age >= sc.age);
+    if (dueIdx >= 0) {
+      const due = s.scheduled.splice(dueIdx, 1)[0];
+      const ev = EVENTS.find((e) => e.id === due.id);
+      if (ev) return ev;
+    }
+    // L'identité de jeu est un rite de passage garanti : si le hasard ne
+    // l'a pas proposée avant, le coach l'impose à 21 ans.
+    if (!s.archetype && s.age >= 21) {
+      const spec = EVENTS.find((e) => e.id === `ev_spec_${s.position.id}` && !s.usedEvents.includes(e.id));
+      if (spec) {
+        s.usedEvents.push(spec.id);
+        return spec;
+      }
+    }
+    const pool = EVENTS.filter((ev) => eventEligible(s, ev));
+    if (pool.length === 0) return null;
+    const ev = weightedRandom(pool, (e) => e.w || 10);
+    if (ev.once !== false) s.usedEvents.push(ev.id);
+    return ev;
+  }
+
+  // Résout une option : tirage pondéré + application. Les transferts
+  // "direct" (rejoindre LE club de l'histoire, sans liste d'offres)
+  // sont appliqués immédiatement ici, pour le joueur comme pour le rival.
+  // Une option peut être conditionnée (ex. "bon transfert" réservé aux
+  // joueurs réputés) : les portes de sortie dépendent du statut.
+  function optionEligible(s, option) {
+    const c = option.cond;
+    if (!c) return true;
+    if (c.minRep != null && s.rep < c.minRep) return false;
+    if (c.maxRep != null && s.rep > c.maxRep) return false;
+    if (c.minOvr != null && ovr(s) < c.minOvr) return false;
+    if (c.minMoney != null && s.money < c.minMoney) return false;
+    if (c.flag && !s.flags[c.flag]) return false;
+    if (c.notFlag && s.flags[c.notFlag]) return false;
+    return true;
+  }
+
+  function resolveOption(s, option) {
+    const outcome = weightedRandom(option.outcomes);
+    const chips = applyFx(s, outcome.fx || {});
+    let movedTo = null;
+    if (outcome.fx && outcome.fx.transfer && outcome.fx.transfer.direct) {
+      const offers = offersFor(s, outcome.fx.transfer);
+      if (offers.length) {
+        applyTransfer(s, offers[0]);
+        movedTo = offers[0].club;
+        chips.push({ label: `➜ ${movedTo.name}`, kind: "neutral" });
+      }
+    }
+    const impact = netImpact(outcome.fx);
+    s.history.push({ age: s.age, text: outcome.text, impact });
+    return { outcome, chips, tone: toneOf(outcome.fx, impact), movedTo };
+  }
+
+  function netImpact(fx) {
+    if (!fx) return 0;
+    let n = 0;
+    for (const k of ["t", "p", "m", "c", "rep"]) n += fx[k] || 0;
+    n += (fx.form || 0) * 0.5 + (fx.mor || 0) * 0.5 + (fx.money || 0) * 2;
+    n += (fx.dis || 0) * 0.3 + (fx.coach || 0) * 0.3 + (fx.team || 0) * 0.3;
+    if (fx.trophy) n += 12;
+    if (fx.inj) n -= fx.inj * 0.8;
+    if (fx.end) n = -100;
+    return n;
+  }
+
+  function toneOf(fx, impact) {
+    if (fx && fx.end) return "terrible";
+    if (fx && fx.trophy) return "great";
+    if (impact >= 9) return "great";
+    if (impact >= 3) return "good";
+    if (impact <= -12) return "terrible";
+    if (impact <= -3) return "bad";
+    return "neutral";
+  }
+
+  // --- Moments décisifs (interactifs) -----------------------------------------
+  // Sélectionne la variante d'un moment décisif : pool par poste si
+  // disponible, sinon gk/field, sinon générique. Chaque pool peut être
+  // un tableau de scénarios (variété anti-répétition).
+  function keyMomentFor(s, momentId) {
+    const variants = KEY_MOMENTS[momentId];
+    if (!variants) return null;
+    let pool = variants[s.position.id]
+      || (s.position.id === "gk" ? variants.gk : variants.field)
+      || variants.any;
+    if (Array.isArray(pool)) pool = pick(pool);
+    return pool;
+  }
+
+  function keyMomentSuccess(s, option) {
+    let p = option.base;
+    p += s.position.id === "gk" ? (s.stats.m - 60) / 300 : (s.stats.t - 70) / 350;
+    p += (s.form - 60) / 500;
+    if (hasTrait(s, "clutch")) p += 0.08;
+    return rng() < clamp(p, 0.15, 0.92);
+  }
+
+  // Applique un moment décisif générique : retourne { success, text, chips }.
+  function playKeyMoment(s, moment, option) {
+    const success = keyMomentSuccess(s, option);
+    const chips = [];
+    if (success && option.repWin) chips.push(...applyFx(s, { rep: option.repWin }));
+    if (!success && option.repFail) chips.push(...applyFx(s, { rep: option.repFail }));
+    if (success && option.traitWin && !hasTrait(s, option.traitWin)) {
+      chips.push(...applyFx(s, { trait: option.traitWin }));
+    }
+    // Beats scénarisés (mode Histoire) : drapeau posé selon le CHOIX (toujours),
+    // et textes propres à l'option si fournis (sinon ceux du moment).
+    if (option.flag) s.flags[option.flag] = true;
+    const winTxt = option.winText || moment.winText;
+    const failTxt = option.failText || moment.failText;
+    return { success, text: renderText(s, success ? winTxt : failTxt), chips };
+  }
+
+  // --- Coupe du Monde -------------------------------------------------------
+  function isWorldCupYear(year) { return year % 4 === 2; }
+
+  // Déroule le tournoi jusqu'à la finale éventuelle. Si la finale est
+  // atteinte, l'issue n'est PAS tirée ici : elle se joue dans un moment
+  // décisif (resolveWcFinal), interactif pour le joueur, auto pour le rival.
+  function playWorldCup(s) {
+    // Finale scénarisée (mode Histoire) : la nation atteint la finale à coup sûr
+    // l'année où le joueur a l'âge prévu, et le moment décisif de l'histoire
+    // remplace la finale générique (cf. STORIES.*.wcFinal).
+    const storyFinal = storyWcFinalFor(s);
+    const natW = s.nationality.weight;
+    const playerBoost = 0.6 + (ovr(s) / 100) * 0.8 + (hasTrait(s, "clutch") ? 0.15 : 0) + (s.flags.wc_fresh ? 0.1 : 0);
+    delete s.flags.wc_fresh;
+    let stage = weightedRandom(WC_STAGES, (st) => {
+      if (st.id === "champion" || st.id === "final") return (st.baseW / 2) * (0.4 + natW * playerBoost * BALANCE.wcBaseChampion);
+      if (st.id === "semi") return st.baseW * (0.5 + natW * playerBoost * 0.5);
+      return st.baseW;
+    });
+    if (storyFinal) stage = WC_STAGES.find((st) => st.id === "final") || WC_STAGES.find((st) => st.id === "champion") || stage;
+
+    const finalReached = !!storyFinal || stage.id === "champion" || stage.id === "final";
+    const wc = {
+      year: s.year,
+      stage: finalReached ? "final" : stage.id,
+      label: finalReached ? "En finale !" : stage.label,
+      text: finalReached
+        ? "Votre nation renverse tout sur son passage : LA FINALE ! À 90 minutes du toit du monde."
+        : stage.text,
+      finalPending: finalReached,
+      champion: false,
+      goldenBall: false,
+    };
+    if (!finalReached) {
+      if (stage.id === "semi") {
+        s.rep = clamp(s.rep + 4, 0, 100);
+        s.moral = clamp(s.moral - 4, 5, 100);
+        s.history.push({ age: s.age, text: `${stage.label} de la Coupe du Monde ${s.year}.`, impact: 8 });
+      } else {
+        s.moral = clamp(s.moral - 3, 5, 100);
+      }
+    }
+    const games = stage.id === "groups" ? 3 : stage.id === "r16" ? 4 : stage.id === "quarter" ? 5 : stage.id === "semi" ? 6 : 7;
+    s.natTeam.caps += games;
+    const wcGoals = Math.round(games * s.position.goalRate * (0.4 + s.stats.t / 150) * rand(0.5, 1.4));
+    s.natTeam.goals += wcGoals;
+    wc.games = games;
+    wc.goals = wcGoals;
+    if (finalReached) wc.moment = storyFinal || keyMomentFor(s, "wc_final");
+    if (storyFinal) wc.storyFinal = true;
+    return wc;
+  }
+
+  // --- Championnat continental de sélection (Euro / Copa América / CAN) --------
+  // Pendant continental de la Coupe du Monde, les années paires HORS Mondial.
+  // Auto-résolu (la CDM reste le seul tournoi à finale interactive) : un pendant
+  // plus accessible mais moins prestigieux. Le continent vient de la nationalité.
+  function isContinentalYear(year) { return year % 4 === 0; }
+
+  function playContinental(s, report) {
+    const continent = (countryOf(s.nationality.homeCountryId) || {}).continent;
+    const cup = NATIONAL_CUPS[continent];
+    if (!cup) return null; // continent sans tournoi (ne devrait pas arriver : nationalités eu/am/af)
+    const natW = s.nationality.weight;
+    const playerBoost = 0.6 + (ovr(s) / 100) * 0.8 + (hasTrait(s, "clutch") ? 0.15 : 0);
+    const stage = weightedRandom(WC_STAGES, (st) => {
+      if (st.id === "champion") return st.baseW * (0.6 + natW * playerBoost * BALANCE.contBaseChampion);
+      if (st.id === "final") return st.baseW * (0.5 + natW * playerBoost * 0.6);
+      if (st.id === "semi") return st.baseW * (0.5 + natW * playerBoost * 0.5);
+      return st.baseW;
+    });
+    const games = stage.id === "groups" ? 3 : stage.id === "r16" ? 4 : stage.id === "quarter" ? 5 : stage.id === "semi" ? 6 : 7;
+    s.natTeam.caps += games;
+    const goals = Math.round(games * s.position.goalRate * (0.4 + s.stats.t / 150) * rand(0.5, 1.4));
+    s.natTeam.goals += goals;
+    const cont = {
+      year: s.year, continent, cupName: cup.name, cupShort: cup.short, icon: cup.icon,
+      stage: stage.id, label: stage.label, text: stage.text, games, goals, champion: stage.id === "champion",
+    };
+    if (stage.id === "champion") {
+      s.trophies.contInt += 1;
+      s.continentalNatDetail = s.continentalNatDetail || [];
+      s.continentalNatDetail.push({ continent, year: s.year });
+      cont.label = `CHAMPION ${cup.of.toUpperCase()}`;
+      cont.text = cup.championText;
+      s.rep = clamp(s.rep + 6, 0, 100);
+      s.moral = clamp(s.moral + 10, 5, 100);
+      s.money += 1;
+      s.history.push({ age: s.age, text: `Champion ${cup.of} ${s.year} avec ${s.nationality.name} !`, impact: 22 });
+      if (!report.awards.includes("ballon_won")) rollBallon(s, report, 1.5); // coup de pouce Ballon d'Or (moindre que le Mondial)
+      recheckObjective(s, report);
+    } else if (stage.id === "final") {
+      cont.label = "Finaliste";
+      s.rep = clamp(s.rep + 3, 0, 100);
+      s.moral = clamp(s.moral - 5, 5, 100);
+      s.history.push({ age: s.age, text: `Finaliste ${cup.of} ${s.year} — l'argent au goût amer.`, impact: 9 });
+    } else if (stage.id === "semi") {
+      s.rep = clamp(s.rep + 2, 0, 100);
+      s.history.push({ age: s.age, text: `Demi-finaliste ${cup.of} ${s.year}.`, impact: 6 });
+    } else {
+      s.moral = clamp(s.moral - 2, 5, 100);
+    }
+    return cont;
+  }
+
+  // Renvoie le moment de finale scénarisée si le joueur suit une histoire dont
+  // la finale de CDM tombe à son âge actuel (année de Mondial garantie).
+  function storyWcFinalFor(s) {
+    if (!s.storyId || typeof STORIES === "undefined") return null;
+    const story = STORIES.find((st) => st.id === s.storyId);
+    if (story && story.wcFinal && s.age === story.wcFinal.age) return story.wcFinal;
+    return null;
+  }
+
+  // Résout la finale de CDM. optionId null → choix aléatoire (rival, simu).
+  function resolveWcFinal(s, report, optionId) {
+    const wc = report.wc;
+    const moment = wc.moment;
+    const option = moment.options.find((o) => o.id === optionId) || pick(moment.options);
+    const res = playKeyMoment(s, moment, option);
+    res.option = option;
+    wc.finalPending = false;
+    if (res.success) {
+      s.momentWins += 1;
+      if (option.id === "panenka") s.flags.panenka_final = true;
+      wc.champion = true;
+      wc.stage = "champion";
+      wc.label = "CHAMPION DU MONDE";
+      s.trophies.worldCup += 1;
+      report.trophies.push("worldCup");
+      s.rep = clamp(s.rep + 8, 0, 100);
+      s.moral = clamp(s.moral + 12, 5, 100);
+      s.money += 2;
+      s.history.push({ age: s.age, text: `Champion du monde ${s.year} avec ${s.nationality.name} !`, impact: 40 });
+      // Distinctions du tournoi
+      if (ovr(s) >= 85 && rng() < 0.55) {
+        wc.goldenBall = true;
+        grantAward(s, report, "wc_golden_ball");
+      }
+      if (wc.goals >= 5) grantAward(s, report, "wc_top_scorer");
+      // Le sacre mondial rebat les cartes du Ballon d'Or de fin d'année
+      if (!report.awards.includes("ballon_won")) rollBallon(s, report, 3 + (wc.goldenBall ? 2.5 : 0));
+      recheckObjective(s, report); // « Ramener un trophée majeur » : le Mondial compte
+    } else {
+      wc.stage = "final";
+      wc.label = "Finaliste";
+      s.rep = clamp(s.rep + 4, 0, 100);
+      s.moral = clamp(s.moral - 8, 5, 100);
+      s.history.push({ age: s.age, text: `Finaliste de la Coupe du Monde ${s.year} — si près du rêve.`, impact: 10 });
+    }
+    return res;
+  }
+
+  // --- Temps de jeu -----------------------------------------------------------
+  function playingTimeFactor(s) {
+    const expected = BALANCE.expectedLevel[lvlOf(s, s.club)];
+    let pt = 0.3 + (ovr(s) - expected + 16) / 38 + (s.coachRel - 55) / 300;
+    if (s.loan) pt += 0.22;
+    if (s.flags.prodigy && s.age <= 20) pt += 0.2; // on lance les cracks très tôt
+    // Rotation du vétéran : après 32 ans, la jeunesse pousse et le temps de jeu
+    // s'érode un peu chaque saison — sauf les gardiens, qui enchaînent tard.
+    if (s.age > 32 && s.position.id !== "gk") pt -= (s.age - 32) * 0.03;
+    return clamp(pt, 0.1, 1);
+  }
+
+  // Aptitude à durer (recalculée chaque saison : un trait gagné en cours de route
+  // compte). Repousse le pivot de la pression de retraite. ~[-6, +10].
+  function longevityScore(s) {
+    let L = 0;
+    L += s.position.id === "gk" ? 4 : s.position.id === "def" ? 2 : s.position.id === "mil" ? 1 : 0;
+    if (hasTrait(s, "ironman")) L += 4;
+    if (hasTrait(s, "glass")) L -= 4;
+    if (hasTrait(s, "zen")) L += 1;
+    L += (s.discipline - 50) / 12;
+    L += (s.stats.p - 60) / 15;
+    return L;
+  }
+
+  // --- Objectif de saison fixé par le club --------------------------------------
+  function setSeasonObjective(s) {
+    const lvl = lvlOf(s, s.club);
+    if (rng() < 0.5) {
+      if (s.position.id === "att") {
+        const n = Math.max(6, Math.round(38 * s.position.goalRate * (0.5 + ovr(s) / 220)));
+        return { type: "goals", n, label: `Marquer ${n} buts` };
+      }
+      if (s.position.id === "gk") {
+        const n = Math.max(6, Math.round(38 * (0.2 + ovr(s) / 320)));
+        return { type: "cs", n, label: `${n} clean sheets` };
+      }
+      const n = lvl === "elite" ? 7.0 : lvl === "d1" ? 6.8 : 6.5;
+      return { type: "rating", n, label: `Note de saison ≥ ${n.toFixed(1)}` };
+    }
+    if (lvl === "elite") return { type: "trophy", label: "Ramener un trophée majeur" };
+    if (lvl === "d1") return { type: "top", n: 6, label: "Accrocher le top 6" };
+    if (lvl === "d2") return { type: "top", n: 5, label: "Jouer la montée (top 5)" };
+    return { type: "top", n: 8, label: "Viser le haut de tableau (top 8)" };
+  }
+
+  function objectiveMet(obj, report) {
+    if (!obj) return false;
+    if (obj.type === "goals") return report.goals >= obj.n;
+    if (obj.type === "cs") return report.cleanSheets >= obj.n;
+    if (obj.type === "rating") return report.rating >= obj.n;
+    if (obj.type === "trophy") return report.trophies.length > 0;
+    if (obj.type === "top") return report.leaguePos <= obj.n;
+    return false;
+  }
+
+  // --- Une de presse de fin de saison ---------------------------------------------
+  function headlineFor(s, report) {
+    // Une saison réellement PRODUCTIVE (buts + passes décisives) n'est jamais
+    // une "année blanche", même si la note brute est modeste — typiquement un
+    // jeune à l'OVR encore faible qui performe déjà. Le commentaire doit coller
+    // aux statistiques affichées, pas à la seule note.
+    const productive = report.matches >= 10 &&
+      (report.goals + report.assists) >= report.matches * 0.33;
+    let pool = null;
+    if (report.injuryWeeks >= 12) pool = HEADLINES.injury;
+    else if (report.benched) pool = HEADLINES.benched;
+    else if (report.trophies.length > 0) pool = HEADLINES.trophy;
+    else if (report.rating >= 7.8) pool = HEADLINES.wonder;
+    else if (productive && report.rating <= 5.3) pool = HEADLINES.solid; // productif mais mal noté → "valeur sûre", pas "flop"
+    else if (report.rating <= 5.3) pool = HEADLINES.flop;
+    else if ((report.rating >= 7 || productive) && rng() < 0.6) pool = HEADLINES.solid;
+    if (!pool) return null;
+    return pick(pool).replace(/\{name\}/g, s.name).replace(/\{club\}/g, s.club.name);
+  }
+
+  // --- Récompenses individuelles ----------------------------------------------
+  function grantAward(s, report, id) {
+    if (report.awards.includes(id)) return;
+    const award = AWARDS[id];
+    if (!award) return;
+    applyFx(s, award.fx || {});
+    report.awards.push(id);
+    s.awardCounts[id] = (s.awardCounts[id] || 0) + 1;
+    if (["league_mvp", "wc_golden_ball", "cl_mvp"].includes(id)) {
+      s.history.push({ age: s.age, text: `${award.icon} ${award.name} ${s.year}.`, impact: 12 });
+    }
+  }
+
+  function rollSeasonAwards(s, report) {
+    const lvl = lvlOf(s, s.club);
+    const isTop = lvl === "elite" || lvl === "d1";
+    const r = report.rating;
+    if (isTop) {
+      if (r >= 7.9 && rng() < 0.65) grantAward(s, report, "league_mvp");
+      else if (r >= 7.5 && s.age <= 21 && rng() < 0.6) grantAward(s, report, "young_star");
+      if (report.assists >= 14 && rng() < 0.5) grantAward(s, report, "top_assist");
+      if (r >= 7.3 && rng() < 0.6) grantAward(s, report, "team_of_season");
+      if (s.position.id === "gk" && report.cleanSheets >= 17 && rng() < 0.5) grantAward(s, report, "golden_glove");
+      if (!s.flags.revelation_won && r >= 7.4 && s.age <= 22) {
+        s.flags.revelation_won = true;
+        grantAward(s, report, "revelation");
+      }
+    }
+    if (report.trophies.includes("continental") && r >= 7.5 && rng() < 0.5) grantAward(s, report, "cl_mvp");
+    // Légende du club : longévité + statut au même endroit
+    if (!s.flags.club_legend_won && s.rep >= 70) {
+      const seasonsHere = s.seasons.filter((se) => se.clubName === s.club.name).length;
+      if (seasonsHere >= 7) {
+        s.flags.club_legend_won = true;
+        grantAward(s, report, "club_legend");
+      }
+    }
+  }
+
+  // --- Ballon d'Or (modèle à points de saison + classement top 30) ---------------
+  // extraPts : points supplémentaires injectés après coup (sacre mondial).
+  // Si la saison ne suffit pas pour le sacre, elle peut valoir une place
+  // dans le classement (top 30) — uniquement quand c'est crédible.
+  function rollBallon(s, report, extraPts) {
+    if (report.awards.includes("ballon_won")) return false;
+    const lvl = lvlOf(s, s.club);
+    if (lvl !== "elite" && lvl !== "d1") return false;
+    // Loin des radars européens, ni sacre ni classement : le prix de l'exil doré
+    if ((countryOf(s.club.countryId) || {}).exotic) return false;
+
+    // Points de saison (communs au sacre et au classement)
+    let pts = (report.rating - 7) * 2.2 + (extraPts || 0);
+    if (report.trophies.includes("continental")) pts += report.continentalContinent === "eu" ? 2.2 : 0.8;
+    if (report.trophies.includes("worldCup") && !extraPts) pts += 3;
+    if (report.trophies.includes("league")) pts += 1.2;
+    if (report.trophies.includes("cup")) pts += 0.4;
+    if (report.trophies.includes("goldenBoot")) pts += 1.5;
+    for (const id of report.awards) pts += (AWARDS[id] && AWARDS[id].ballonPts) || 0;
+    if (s.rep >= 85) pts += 0.8;
+    else if (s.rep >= 75) pts += 0.4;
+    if (lvl === "elite") pts += 0.6;
+    if (hasTrait(s, "clutch")) pts += 0.3;
+
+    // Sacre : réservé aux saisons vraiment exceptionnelles
+    if (ovr(s) >= BALANCE.ballonMinOvr && s.rep >= BALANCE.ballonMinRep && report.rating >= 7.2) {
+      const count = s.trophies.ballon;
+      const momentum = count === 0 ? 1 : count <= 2 ? BALANCE.ballonMomentum : BALANCE.ballonDynasty;
+      const chance = clamp((pts - BALANCE.ballonPtsFloor) * BALANCE.ballonSlope, 0, BALANCE.ballonCap) * s.nationality.weight * momentum;
+      if (rng() < chance) {
+        s.trophies.ballon += 1;
+        report.trophies.push("ballon");
+        report.awards.push("ballon_won");
+        report.ballonRank = 1;
+        s.bestBallonRank = 1;
+        s.rep = clamp(s.rep + 8, 0, 100);
+        s.money += 1.5;
+        s.history.push({ age: s.age, text: `Ballon d'Or ${s.year} — le monde à vos pieds.`, impact: 30 });
+        if (s.age <= 23) s.flags.early_ballon = true;
+        return true;
+      }
+    }
+
+    // Classement top 30 : grande saison exigée, cohérence stricte —
+    // défenseurs/gardiens et championnats moins huppés classés plus bas,
+    // sauf saison hors norme.
+    if (report.rating >= 7 && ovr(s) >= 78 && s.rep >= 55 && pts >= 2.2) {
+      let rankPts = pts;
+      if ((s.position.id === "def" || s.position.id === "gk") && report.rating < 8) rankPts -= 1.2;
+      if (lvl === "d1") rankPts -= 0.8;
+      let rank;
+      if (rankPts >= 8) rank = randInt(2, 3);
+      else if (rankPts >= 6.5) rank = randInt(2, 5);
+      else if (rankPts >= 5) rank = randInt(4, 10);
+      else if (rankPts >= 3.5) rank = randInt(8, 20);
+      else rank = randInt(15, 30);
+      report.ballonRank = rank;
+      if (!s.bestBallonRank || rank < s.bestBallonRank) s.bestBallonRank = rank;
+      if (rank <= 10) s.rep = clamp(s.rep + 2, 0, 100);
+      if (rank <= 3) s.history.push({ age: s.age, text: `Sur le podium du Ballon d'Or ${s.year} (${rank}ᵉ).`, impact: 12 });
+    }
+    return false;
+  }
+
+  // --- Simulation d'une saison ----------------------------------------------
+  function playSeason(s) {
+    const lvl = lvlOf(s, s.club);
+    const report = { age: s.age, year: s.year, clubName: s.club.name, level: lvl, trophies: [], awards: [], lines: [], pendingMoments: [], onLoan: !!s.loan };
+    s.objective = setSeasonObjective(s);
+    report.objectiveLabel = s.objective.label;
+
+    // Brèves de saison
+    if (rng() < BALANCE.microChance) {
+      const eligible = MICRO_EVENTS.filter((m) => s.age >= m.aMin && s.age <= m.aMax && (!m.pos || m.pos.includes(s.position.id)));
+      if (eligible.length) {
+        const micro = weightedRandom(eligible, (m) => m.w);
+        applyFx(s, micro.fx || {});
+        report.lines.push({ text: micro.text, impact: netImpact(micro.fx) });
+        if (Math.abs(netImpact(micro.fx)) >= 8) s.history.push({ age: s.age, text: micro.text, impact: netImpact(micro.fx) });
+      }
+    }
+
+    // Hygiène de vie
+    if (s.discipline < 40 && rng() < 0.35) {
+      s.form = clamp(s.form - 4, 5, 100);
+      s.injuryWeeks += 2;
+      report.lines.push({ text: "Des écarts d'hygiène de vie répétés se paient sur le terrain.", impact: -5 });
+    } else if (s.discipline >= 72) {
+      s.form = clamp(s.form + 2, 5, 100);
+    }
+    // Trajectoire instable : le mental fait le yoyo
+    if (s.trajectory.id === "unstable" && rng() < 0.4) {
+      s.form = clamp(s.form - randInt(2, 8), 5, 100);
+      s.moral = clamp(s.moral - randInt(0, 6), 5, 100);
+    }
+
+    // Temps de jeu et matchs
+    const pt = playingTimeFactor(s);
+    report.pt = pt;
+    const [mMin, mMax] = BALANCE.matchesByLevel[lvl];
+    const injuryFactor = clamp(1 - s.injuryWeeks / 42, 0.05, 1);
+    const matches = Math.round(rand(mMin, mMax) * pt * injuryFactor);
+    report.matches = matches;
+    report.injuryWeeks = s.injuryWeeks;
+
+    // Performance individuelle (modulée par l'archétype de jeu)
+    const arch = s.archetype ? s.archetype.mods : {};
+    const perf = 0.32 + s.stats.t / 160 + (s.form - 60) / 400 + (s.moral - 60) / 600;
+    report.goals = Math.max(0, Math.round(matches * s.position.goalRate * perf * (arch.goals || 1) * rand(0.75, 1.3)));
+    report.assists = Math.max(0, Math.round(matches * s.position.assistRate * perf * (arch.assists || 1) * rand(0.7, 1.3)));
+    report.cleanSheets = s.position.id === "gk"
+      ? Math.max(0, Math.round(matches * (0.18 + ovr(s) / 280) * (arch.cs || 1) * rand(0.8, 1.2)))
+      : 0;
+
+    // Note de saison
+    let rating = 5.4 + (ovr(s) - 62) / 14 + (s.form - 60) / 90 + (pt - 0.7) * 0.8 + (arch.rating || 0);
+    // Rendement offensif : buts ET passes décisives (les passes ne comptaient
+    // PAS avant). Rapporté à l'attendu du poste → neutre pour une saison type,
+    // franchement positif pour une vraie production. Un jeune qui plante 15 G/A
+    // n'est plus "en échec" juste parce que son OVR est encore modeste.
+    if (s.position.id !== "gk") {
+      const expGA = matches * (s.position.goalRate + s.position.assistRate);
+      rating += clamp((report.goals + report.assists - expGA * 0.9) / 24, -0.6, 1.6);
+    }
+    rating = clamp(rating + rand(-0.35, 0.45), 3.5, 9.9);
+    report.rating = Math.round(rating * 10) / 10;
+
+    // Trophées collectifs & destin du club (titre, montée, barrage, relégation)
+    const isTopFlight = lvl === "elite" || lvl === "d1";
+    const teamBoost = 1 + (rating - 6.6) * 0.12;
+    const evTrophies = s.seasonTrophies.splice(0);
+    for (const tr of evTrophies) {
+      if (tr === "league") s.trophies.league += 1;
+      if (tr === "cup") s.trophies.cup += 1;
+      if (tr === "continental") {
+        s.trophies.continental += 1;
+        const cont = (countryOf(s.club.countryId) || {}).continent || "eu";
+        report.continentalContinent = cont;
+        s.continentalDetail.push({ continent: cont, year: s.year });
+      }
+      if (tr === "goldenBoot") s.trophies.goldenBoot += 1;
+      if (tr !== "worldCup") report.trophies.push(tr);
+    }
+    if (evTrophies.includes("league")) {
+      s.leagueTitlesDetail.push({ countryId: s.club.countryId, level: lvl, clubId: s.club.id, year: s.year });
+    }
+    const wonDivision = !evTrophies.includes("league") && rng() < BALANCE.titleChance[lvl] * teamBoost;
+    if (wonDivision && isTopFlight) {
+      s.trophies.league += 1;
+      report.trophies.push("league");
+      s.leagueTitlesDetail.push({ countryId: s.club.countryId, level: lvl, clubId: s.club.id, year: s.year });
+    } else if (wonDivision) {
+      report.divisionTitle = true;
+      report.promoted = true;
+      s.leagueTitlesDetail.push({ countryId: s.club.countryId, level: lvl, clubId: s.club.id, year: s.year });
+      s.rep = clamp(s.rep + Math.round(4 * visibilityOf(s)), 0, 100);
+      s.moral = clamp(s.moral + 6, 5, 100);
+      s.history.push({ age: s.age, text: `Champion de ${LEVELS[lvl].short} ${s.year} avec ${s.club.name} — la montée !`, impact: 9 });
+    } else if (!isTopFlight && rating >= 6.4 && rng() < (BALANCE.playoffChance[lvl] || 0) * teamBoost) {
+      // Saison solide sans titre : la montée se joue en barrage (moment décisif)
+      report.playoffRun = true;
+      report.pendingMoments.push({
+        type: "playoff", label: "Barrage de montée",
+        winLabel: "MONTÉE !", failLabel: "Échec en barrage",
+        moment: keyMomentFor(s, "promo_playoff"),
+      });
+    }
+    // Relégation (d1 et d2) : vos performances protègent le club — et les
+    // géants historiques ne coulent presque jamais plus bas que la D1
+    let relegBase = BALANCE.relegationChance[lvl] || 0;
+    if (relegBase && lvl === "d1" && s.club.level === "elite") relegBase *= BALANCE.eliteRelegShield;
+    if (!report.promoted && !report.playoffRun && relegBase > 0 &&
+        rng() < relegBase * clamp(1 - (rating - 6.3) * 0.35, 0.2, 1.6)) {
+      report.relegated = true;
+      s.moral = clamp(s.moral - 8, 5, 100);
+      s.history.push({ age: s.age, text: `Relégation de ${s.club.name} en ${s.year} — une saison noire.`, impact: -10 });
+    }
+    // La coupe nationale : atteindre la finale se joue ici, la gagner se
+    // joue dans un moment décisif
+    if (!evTrophies.includes("cup") && rng() < BALANCE.cupChance[lvl] * BALANCE.cupFinalReachMult * teamBoost) {
+      report.pendingMoments.push({
+        type: "cup_final", label: "Finale de la Coupe Nationale",
+        winLabel: "VAINQUEUR !", failLabel: "Finale perdue",
+        moment: keyMomentFor(s, "cup_final"),
+      });
+    }
+    // Coupe continentale de club : ATTEINDRE la finale se joue ici, la GAGNER se
+    // joue dans un moment décisif interactif (continental_final). Hors d'Europe,
+    // la D1 est le sommet (pas de clubs "élite") → elle conteste sa Coupe des Champions.
+    if (!evTrophies.includes("continental")) {
+      const continent = (countryOf(s.club.countryId) || {}).continent || "eu";
+      const reachTable = continent === "eu" ? BALANCE.continentalReach.eu : BALANCE.continentalReach.other;
+      if (rng() < (reachTable[lvl] || 0) * teamBoost) {
+        const cup = CONTINENTAL_CUPS[continent] || CONTINENTAL_CUPS.eu;
+        report.pendingMoments.push({
+          type: "continental_final",
+          label: `Finale · ${cup.name}`,
+          winLabel: "SACRE CONTINENTAL !",
+          failLabel: "Finale continentale perdue",
+          moment: keyMomentFor(s, "continental_final"),
+          continent,
+        });
+      }
+    }
+
+    // Classement (mise en scène cohérente avec le destin du club)
+    if (report.trophies.includes("league") || report.divisionTitle) report.leaguePos = 1;
+    else if (report.playoffRun) report.leaguePos = randInt(2, 4);
+    else if (report.relegated) report.leaguePos = lvl === "d1" ? randInt(16, 18) : randInt(17, 19);
+    else report.leaguePos = lvl === "elite" ? randInt(2, 7) : lvl === "d1" ? randInt(2, 12) : randInt(4, 14);
+
+    // Autres moments décisifs de la saison (2 maximum par saison).
+    // Retrouvailles : uniquement si le match est crédible — même pays
+    // (donc même championnat ou coupe nationale) ou trahison d'un rival.
+    // (et jamais en doublon d'un retour hostile déjà programmé chez le rival)
+    const oldClubPlausible = s.justTransferred && s.prevClub &&
+      (s.prevClub.countryId === s.club.countryId || s.flags.traitor) &&
+      !s.scheduled.some((sc) => sc.id === "ev_traitor_return");
+    if (report.pendingMoments.length < 2 && matches > 8) {
+      if (oldClubPlausible && rng() < BALANCE.oldClubMomentChance) {
+        report.pendingMoments.push({
+          type: "old_club", label: "Retrouvailles avec votre ancien club",
+          winLabel: "Retrouvailles maîtrisées", failLabel: "Soirée compliquée",
+          moment: keyMomentFor(s, "old_club"),
+        });
+      } else if (rng() < BALANCE.derbyMomentChance) {
+        report.pendingMoments.push({
+          type: "derby", label: "Le derby",
+          winLabel: "Derby remporté !", failLabel: "Derby perdu",
+          moment: keyMomentFor(s, "derby"),
+        });
+      }
+    }
+    s.justTransferred = false;
+
+    // Meilleurs buteurs — deux distinctions séparées : le titre domestique
+    // (chaque championnat couronne le sien, seuil selon le niveau) et le
+    // Soulier d'Or européen, attribué aux buts × coefficient de championnat
+    // (élite ×2, D1 ×1,5 — hors d'Europe, les buts ne comptent pas).
+    if (report.goals >= BALANCE.topScorerGoals[lvl] && rng() < BALANCE.topScorerChance) {
+      grantAward(s, report, "top_scorer");
+    }
+    const shoeCoef = ((countryOf(s.club.countryId) || {}).continent === "eu" && BALANCE.goldenShoeCoef[lvl]) || 0;
+    if (shoeCoef && report.goals * shoeCoef >= BALANCE.goldenShoePts && !evTrophies.includes("goldenBoot") && rng() < BALANCE.goldenShoeChance) {
+      s.trophies.goldenBoot += 1;
+      report.trophies.push("goldenBoot");
+      s.history.push({ age: s.age, text: `Soulier d'Or européen ${s.year} — meilleur buteur du continent.`, impact: 12 });
+    }
+
+    // Sélection Espoirs : l'antichambre des A pour les jeunes qui percent
+    if (!s.natTeam.active && !s.natTeam.retired && !s.flags.youth_int &&
+        s.age >= 17 && s.age <= 20 && ovr(s) >= 71 && s.rep >= 35) {
+      s.flags.youth_int = true;
+      s.rep = clamp(s.rep + 2, 0, 100);
+      report.lines.push({ text: `Première convocation avec les Espoirs de ${s.nationality.name} — l'antichambre des A.`, impact: 5 });
+      s.history.push({ age: s.age, text: `Sélectionné avec les Espoirs de ${s.nationality.name}.`, impact: 5 });
+    }
+
+    // Mode Histoire : la finale mondiale scénarisée impose la sélection cette
+    // année-là (le maître ne rate pas SON dernier Mondial).
+    if (storyWcFinalFor(s) && !s.careerEnded) { s.natTeam.active = true; s.natTeam.retired = false; }
+
+    // Sélection nationale
+    if (s.natTeam.active) {
+      // caps encore à 0 → c'est la toute première convocation en A (robuste au
+      // rechargement d'une sauvegarde : aucun nouveau champ d'état requis).
+      const firstCap = s.natTeam.caps === 0;
+      const caps = randInt(4, 9);
+      s.natTeam.caps += caps;
+      const natGoals = Math.round(caps * s.position.goalRate * perf * rand(0.5, 1.2));
+      s.natTeam.goals += natGoals;
+      report.caps = caps;
+      report.natGoals = natGoals;
+      report.firstCap = firstCap;
+      // Les matchs & buts d'un grand tournoi comptent dans le bilan sélection de
+      // la saison (affiché au récap), en plus de leur propre carte dédiée.
+      if (isWorldCupYear(s.year)) { report.wc = playWorldCup(s); report.caps += report.wc.games; report.natGoals += report.wc.goals; }
+      else if (isContinentalYear(s.year)) { report.cont = playContinental(s, report); report.caps += report.cont.games; report.natGoals += report.cont.goals; }
+    }
+
+    // Distinctions promises par les événements, puis celles de la saison, puis Ballon d'Or
+    if (s.seasonAwards) for (const id of s.seasonAwards.splice(0)) grantAward(s, report, id);
+    rollSeasonAwards(s, report);
+    rollBallon(s, report, 0);
+
+    // Objectif du club
+    const met = objectiveMet(s.objective, report);
+    report.objectiveMet = met;
+    if (met) {
+      s.coachRel = clamp(s.coachRel + 6, 5, 100);
+      s.rep = clamp(s.rep + 2, 0, 100);
+      const bonus = s.contract.salary * 0.12;
+      s.money += bonus;
+      report.objectiveBonus = bonus;
+    } else {
+      s.coachRel = clamp(s.coachRel - 5, 5, 100);
+      s.moral = clamp(s.moral - 3, 5, 100);
+    }
+
+    // Revenus
+    const sponsors = (s.rep / 100) * (s.stats.c / 100) * visibilityOf(s) * 1.8;
+    const income = s.contract.salary * 0.55 + sponsors * rand(0.6, 1.2);
+    s.money += income;
+    report.income = income + (report.objectiveBonus || 0);
+    const prize = report.trophies.length * 0.3;
+    if (prize) s.money += prize;
+
+    if (report.trophies.includes("league")) s.history.push({ age: s.age, text: `Champion national ${s.year} avec ${s.club.name}.`, impact: 10 });
+
+    // Totaux carrière
+    s.totals.matches += matches;
+    s.totals.goals += report.goals;
+    s.totals.assists += report.assists;
+    s.totals.cleanSheets += report.cleanSheets;
+    s.peakOvr = Math.max(s.peakOvr, ovr(s));
+    s.seasons.push({ age: s.age, year: s.year, clubName: s.club.name, countryId: s.club.countryId, level: lvl, matches, goals: report.goals, assists: report.assists, cleanSheets: report.cleanSheets, rating: report.rating, trophies: report.trophies, onLoan: !!s.loan, leaguePos: report.leaguePos });
+
+    // Relations
+    if (rating >= 7.4) s.coachRel = clamp(s.coachRel + 4, 5, 100);
+    else if (rating <= 5.5) s.coachRel = clamp(s.coachRel - 5, 5, 100);
+    if (s.teamRel >= 70) s.moral = clamp(s.moral + 2, 5, 100);
+    else if (s.teamRel <= 35) s.moral = clamp(s.moral - 3, 5, 100);
+    if (pt < 0.45) { s.moral = clamp(s.moral - 8, 5, 100); report.benched = true; }
+    else if (pt > 0.85) s.moral = clamp(s.moral + 3, 5, 100);
+
+    if (s.loan) s.loan.rating = report.rating;
+    s.lastSeason = { clubId: s.club.id, leaguePos: report.leaguePos, promoted: !!report.promoted, relegated: !!report.relegated, rating: report.rating };
+    report.headline = headlineFor(s, report);
+    return report;
+  }
+
+  // playSeason évalue l'objectif du club AVANT que les moments décisifs
+  // (finale de coupe, finale de Mondial, barrage) ne soient joués — ils sont
+  // interactifs et n'arrivent qu'après. Un trophée décroché là peut donc
+  // valider l'objectif a posteriori : on annule la sanction déjà appliquée
+  // et on verse la récompense prévue. Sans hasard consommé, pour ne pas
+  // décaler le PRNG (Défi du jour / rejeu de duel restent identiques).
+  function recheckObjective(s, report) {
+    if (!report || report.objectiveMet) return false;
+    if (!objectiveMet(s.objective, report)) return false;
+    report.objectiveMet = true;
+    s.coachRel = clamp(s.coachRel + 5, 5, 100);  // annule le −5 de l'échec
+    s.moral = clamp(s.moral + 3, 5, 100);        // annule le −3 de l'échec
+    s.coachRel = clamp(s.coachRel + 6, 5, 100);  // puis la récompense
+    s.rep = clamp(s.rep + 2, 0, 100);
+    const bonus = s.contract.salary * 0.12;
+    s.money += bonus;
+    report.objectiveBonus = (report.objectiveBonus || 0) + bonus;
+    report.income = (report.income || 0) + bonus;
+    return true;
+  }
+
+  // Résout un moment décisif de saison (barrage, finale de coupe, derby,
+  // retrouvailles). optionId null → choix aléatoire (rival, simulation).
+  function resolveSeasonMoment(s, report, entry, optionId) {
+    const moment = entry.moment;
+    const option = moment.options.find((o) => o.id === optionId) || pick(moment.options);
+    const res = playKeyMoment(s, moment, option);
+    res.option = option;
+    if (res.success) {
+      s.momentWins += 1;
+      if (entry.type === "derby") s.derbyWins += 1;
+      if (option.id === "panenka" && entry.type === "cup_final") s.flags.panenka_final = true;
+    }
+    if (entry.type === "playoff") {
+      if (res.success) {
+        report.promoted = true;
+        if (s.lastSeason) s.lastSeason.promoted = true;
+        s.moral = clamp(s.moral + 10, 5, 100);
+        s.rep = clamp(s.rep + 4, 0, 100);
+        s.history.push({ age: s.age, text: `Montée décrochée en barrage avec ${s.club.name} (${s.year}) !`, impact: 12 });
+        recheckObjective(s, report);
+      } else {
+        s.moral = clamp(s.moral - 6, 5, 100);
+        s.history.push({ age: s.age, text: `Barrage de montée perdu avec ${s.club.name} (${s.year}).`, impact: -6 });
+      }
+    } else if (entry.type === "cup_final") {
+      if (res.success) {
+        s.trophies.cup += 1;
+        report.trophies.push("cup");
+        s.money += 0.3;
+        s.moral = clamp(s.moral + 8, 5, 100);
+        s.history.push({ age: s.age, text: `Vainqueur de la ${COMPETITIONS.cup.name} ${s.year} avec ${s.club.name}.`, impact: 9 });
+        recheckObjective(s, report);
+      } else {
+        s.moral = clamp(s.moral - 5, 5, 100);
+        s.history.push({ age: s.age, text: `Finale de ${COMPETITIONS.cup.name} perdue en ${s.year}.`, impact: -4 });
+      }
+    } else if (entry.type === "continental_final") {
+      const continent = entry.continent || "eu";
+      const cup = CONTINENTAL_CUPS[continent] || CONTINENTAL_CUPS.eu;
+      if (res.success) {
+        s.trophies.continental += 1;
+        report.trophies.push("continental");
+        report.continentalContinent = continent;
+        s.continentalDetail.push({ continent, year: s.year });
+        s.money += continent === "eu" ? 1.2 : 0.6;
+        s.rep = clamp(s.rep + (continent === "eu" ? 6 : 4), 0, 100);
+        s.moral = clamp(s.moral + 10, 5, 100);
+        s.history.push({ age: s.age, text: `Vainqueur de la ${cup.name} avec ${s.club.name} (${s.year}) !`, impact: continent === "eu" ? 15 : 11 });
+        recheckObjective(s, report);
+        // Le sacre continental rebat les cartes du Ballon d'Or (comme le Mondial).
+        if (!report.awards.includes("ballon_won")) rollBallon(s, report, 0);
+      } else {
+        s.rep = clamp(s.rep + 2, 0, 100);
+        s.moral = clamp(s.moral - 6, 5, 100);
+        s.history.push({ age: s.age, text: `Finale de ${cup.name} perdue en ${s.year} — si près du toit du continent.`, impact: -5 });
+      }
+    } else if (entry.type === "derby") {
+      if (res.success) {
+        s.moral = clamp(s.moral + 6, 5, 100);
+        s.teamRel = clamp(s.teamRel + 4, 5, 100);
+      } else {
+        s.moral = clamp(s.moral - 5, 5, 100);
+      }
+    } else if (entry.type === "old_club") {
+      s.moral = clamp(s.moral + (res.success ? 5 : -4), 5, 100);
+    }
+    return res;
+  }
+
+  // --- Vieillissement, vie du club & intersaison ------------------------------
+  function advanceYear(s) {
+    const pt = playingTimeFactor(s);
+    const infra = BALANCE.growthInfra[lvlOf(s, s.club)];
+    const gap = s.potCap - ovr(s);
+    let potDamp = gap <= 0 ? 0.15 : gap <= 4 ? 0.45 : 1;
+    if (s.flags.prodigy && s.age <= 20) potDamp = Math.max(potDamp, 0.85); // un prodige ne freine pas jeune
+    const g = (s.flags.lateBloomer ? 1.15 : 1) * infra * potDamp * trajGrowthMult(s);
+
+    if (s.age <= 21) {
+      s.stats.t = clamp(s.stats.t + Math.round(rand(2, 4) * pt * g * (hasTrait(s, "genius") ? 1.4 : 1)), 1, 99);
+      s.stats.p = clamp(s.stats.p + randInt(1, 3), 1, 99);
+      s.stats.m = clamp(s.stats.m + randInt(0, 2), 1, 99);
+      s.stats.c = clamp(s.stats.c + randInt(0, 1), 1, 99);
+      // Saison de percée : les trajectoires explosives peuvent brûler
+      // les étapes — c'est ici que naissent les phénomènes à 85 avant 22 ans
+      const explosive = (s.trajectory.id === "early" || s.trajectory.id === "flash") ||
+        (s.trajectory.id === "surge" && s.age >= s.sparkAge);
+      const prod = s.flags.prodigy && s.age <= 20; // un crack brûle vraiment les étapes
+      if (explosive && pt >= (prod ? 0.3 : 0.5) && rng() < (prod ? 0.9 : 0.6)) {
+        s.stats.t = clamp(s.stats.t + randInt(prod ? 5 : 3, prod ? 9 : 6), 1, 99);
+        s.stats.p = clamp(s.stats.p + randInt(prod ? 3 : 2, prod ? 5 : 4), 1, 99);
+        s.stats.m = clamp(s.stats.m + randInt(prod ? 2 : 1, prod ? 4 : 3), 1, 99);
+      }
+      // Fenêtre 16-18 ans : un phénomène éclate MAINTENANT, pas à 20 ans.
+      if (s.flags.prodigy && s.age <= 18) {
+        s.stats.t = clamp(s.stats.t + randInt(2, 4), 1, 99);
+        s.stats.p = clamp(s.stats.p + randInt(1, 3), 1, 99);
+      }
+    } else if (s.age <= 25) {
+      s.stats.t = clamp(s.stats.t + Math.round(rand(1, 2.5) * pt * g), 1, 99);
+      s.stats.p = clamp(s.stats.p + randInt(0, 2), 1, 99);
+      s.stats.m = clamp(s.stats.m + randInt(0, 2), 1, 99);
+      s.stats.c = clamp(s.stats.c + randInt(0, 1), 1, 99);
+      if (s.trajectory.id === "surge" && s.age >= s.sparkAge && s.age <= s.sparkAge + 2 && rng() < 0.7) {
+        s.stats.t = clamp(s.stats.t + randInt(2, 5), 1, 99);
+        s.stats.p = clamp(s.stats.p + randInt(1, 3), 1, 99);
+        s.stats.m = clamp(s.stats.m + randInt(1, 3), 1, 99);
+      }
+    } else if (s.age <= 29) {
+      s.stats.t = clamp(s.stats.t + Math.round(rand(0, 1.5) * pt * (g > 1.3 ? g * 0.6 : 0)), 1, 99);
+      s.stats.m = clamp(s.stats.m + randInt(0, 1), 1, 99);
+      if (rng() < 0.4) s.stats.p = clamp(s.stats.p - 1, 1, 99);
+    } else if (s.age <= 32) {
+      s.stats.p = clamp(s.stats.p - randInt(1, 3), 1, 99);
+      if (rng() < 0.4) s.stats.t = clamp(s.stats.t - 1, 1, 99);
+      s.stats.m = clamp(s.stats.m + randInt(0, 1), 1, 99);
+    } else if (s.age <= 36) {
+      s.stats.p = clamp(s.stats.p - Math.round(randInt(2, 4) * (hasTrait(s, "ironman") ? 0.6 : 1)), 1, 99);
+      s.stats.t = clamp(s.stats.t - randInt(0, 2), 1, 99);
+    } else {
+      // Crépuscule (37-42) : déclin physique plus marqué, adouci par la longévité
+      // (Increvable, gardien, défenseur). Le physique baisse, mais la lecture du
+      // jeu — le mental — peut encore progresser : c'est ce qui fait durer les vieux sages.
+      const soft = hasTrait(s, "ironman") ? 0.55 : 1;
+      const posSoft = s.position.id === "gk" ? 0.6 : s.position.id === "def" ? 0.8 : 1;
+      s.stats.p = clamp(s.stats.p - Math.round(randInt(2, 5) * soft * posSoft), 1, 99);
+      s.stats.t = clamp(s.stats.t - randInt(0, 2), 1, 99);
+      if (rng() < 0.25) s.stats.m = clamp(s.stats.m + 1, 1, 99);
+    }
+    // Trajectoires : usure spécifique
+    if (s.trajectory.id === "flash" && s.age >= 28) {
+      s.stats.p = clamp(s.stats.p - 1, 1, 99);
+      if (rng() < 0.5) s.stats.t = clamp(s.stats.t - 1, 1, 99);
+    }
+    if (s.trajectory.id === "steady" && s.age >= 30 && rng() < 0.5) {
+      s.stats.p = clamp(s.stats.p + 1, 1, 99); // vieillit mieux que les autres
+    }
+    if (hasTrait(s, "leader")) s.stats.m = clamp(s.stats.m + 1, 1, 99);
+    if (s.archetype && s.archetype.mods.mGrowth) s.stats.m = clamp(s.stats.m + s.archetype.mods.mGrowth, 1, 99);
+    if (hasTrait(s, "party")) { s.form = clamp(s.form - 4, 5, 100); s.stats.c = clamp(s.stats.c + 1, 1, 99); }
+    if (s.discipline >= 72 && rng() < 0.5) s.stats.t = clamp(s.stats.t + 1, 1, 99);
+
+    // Un phénomène est né ?
+    if (!s.flags.wonderkid && s.age < 22 && ovr(s) >= 85) {
+      s.flags.wonderkid = true;
+      s.history.push({ age: s.age, text: `À ${s.age} ans, le monde entier parle déjà de vous comme d'un phénomène.`, impact: 15 });
+    }
+    if (s.age < 23 && ovr(s) >= 85) s.flags.high_early = true;
+
+    // Vie du club : montée effective, relégation, changement de dimension.
+    // IMPORTANT : le destin (montée/descente) s'applique au club où la
+    // saison a été jouée — jamais au nouveau club si le joueur est parti
+    // entre-temps. Chaque club garde sa propre division.
+    const ls = s.lastSeason;
+    if (ls) {
+      const seasonClub = CLUBS.find((c) => c.id === ls.clubId);
+      const stayed = seasonClub && s.club.id === ls.clubId && !s.loan;
+      if (seasonClub) {
+        const lvl = lvlOf(s, seasonClub);
+        if (ls.promoted && (lvl === "regional" || lvl === "d2")) {
+          const newLvl = shiftClubLevel(s, seasonClub, 1);
+          if (stayed) s.history.push({ age: s.age, text: `${seasonClub.name} évolue désormais en ${LEVELS[newLvl].short} — l'ascension continue.`, impact: 6 });
+        } else if (ls.relegated && (lvl === "d1" || lvl === "d2")) {
+          shiftClubLevel(s, seasonClub, -1);
+        } else if (stayed && lvl === "d1") {
+          s.clubMomentum = ls.leaguePos <= 2 ? s.clubMomentum + 1 : 0;
+          if (s.clubMomentum >= BALANCE.clubRiseSeasons) {
+            setClubLevel(s, seasonClub, "elite");
+            s.clubMomentum = 0;
+            s.history.push({ age: s.age, text: `${seasonClub.name} change de dimension et rejoint l'élite européenne.`, impact: 8 });
+          }
+        } else if (stayed && lvl === "elite") {
+          // Un cador peut décliner s'il enchaîne les saisons ratées
+          s.clubFade = ls.leaguePos >= 7 ? s.clubFade + 1 : 0;
+          if (s.clubFade >= BALANCE.clubFadeSeasons) {
+            setClubLevel(s, seasonClub, "d1");
+            s.clubFade = 0;
+            s.history.push({ age: s.age, text: `${seasonClub.name} n'est plus que l'ombre du géant qu'il fut.`, impact: -5 });
+          }
+        }
+      }
+    }
+
+    // Dérive des jauges
+    const formTarget = 65;
+    const moralTarget = (hasTrait(s, "zen") ? 70 : 60) + Math.round((s.teamRel - 55) / 8);
+    s.form = clamp(Math.round(s.form + (formTarget - s.form) * 0.35 + rand(-6, 6)), 5, 100);
+    s.moral = clamp(Math.round(s.moral + (moralTarget - s.moral) * 0.25 + rand(-4, 4)), 5, 100);
+    if (hasTrait(s, "leader")) s.moral = Math.max(s.moral, 40);
+    s.discipline = clamp(Math.round(s.discipline + (50 - s.discipline) * 0.06), 5, 100);
+    s.coachRel = clamp(Math.round(s.coachRel + (55 - s.coachRel) * 0.15), 5, 100);
+    s.teamRel = clamp(Math.round(s.teamRel + (55 - s.teamRel) * 0.12 + rand(-3, 3)), 5, 100);
+
+    // Retour de prêt : bilan sportif et conséquences réelles
+    if (s.loan) {
+      const parent = s.loan;
+      const loanRating = parent.rating || 6.5;
+      s.club = parent.parentClub;
+      s.coach = parent.parentCoach;
+      s.loan = null;
+      if (loanRating >= 7.2) {
+        s.coachRel = 72;
+        s.form = clamp(s.form + 6, 5, 100);
+        s.history.push({ age: s.age, text: `Retour de prêt convaincant : ${parent.parentClub.name} compte enfin sur vous.`, impact: 8 });
+        if (rng() < 0.6) s.loanReturn = { clubId: parent.loanClubId, rating: loanRating };
+      } else if (loanRating >= 6.3) {
+        s.coachRel = 60;
+        s.history.push({ age: s.age, text: `Retour de prêt à ${parent.parentClub.name}, avec une copie honnête.`, impact: 3 });
+      } else {
+        s.coachRel = 46;
+        s.rep = clamp(s.rep - 2, 0, 100);
+        s.history.push({ age: s.age, text: `Un prêt raté : ${parent.parentClub.name} doute ouvertement de vous.`, impact: -6 });
+      }
+      s.transferHistory.push({ age: s.age + 1, toClubName: parent.parentClub.name, countryName: countryOf(parent.parentClub.countryId).name, fee: null, loanReturn: true, level: lvlOf(s, parent.parentClub) });
+    } else if (rng() < BALANCE.coachChangeChance) {
+      s.coach = pick(COACH_NAMES);
+      s.coachRel = 48 + randInt(0, 14);
+    }
+
+    s.injuryWeeks = 0;
+    s.age += 1;
+    s.year += 1;
+    s.contract.years -= 1;
+
+    // Sélection : possible dès 17 ans pour un crack, de plus en plus
+    // accessible entre 21 et 23 ans ; la visibilité du niveau compte,
+    // et un passage par les Espoirs ouvre des portes.
+    if (!s.natTeam.active && !s.natTeam.retired && s.age >= 17) {
+      const rank = levelRank(lvlOf(s, s.club));
+      let ovrNeed, repNeed;
+      if (s.age <= 18) { ovrNeed = 81; repNeed = 58; }
+      else if (s.age <= 20) { ovrNeed = 77; repNeed = 52; }
+      else if (s.age <= 23) { ovrNeed = 74; repNeed = 50; }
+      else { ovrNeed = 73; repNeed = 48; }
+      if (rank === 1) { ovrNeed += 2; repNeed += 8; }
+      else if (rank === 0) { ovrNeed += 5; repNeed += 16; }
+      if (s.flags.youth_int) repNeed -= 4;
+      if (s.rep >= repNeed && ovr(s) >= ovrNeed) {
+        s.natTeam.active = true;
+        if (s.age <= 18) s.flags.early_cap = true;
+        if (s.age <= 20) s.flags.young_int = true;
+        s.history.push({ age: s.age, text: `Première convocation avec ${s.nationality.name}${s.age <= 19 ? ` — à seulement ${s.age} ans !` : ""}.`, impact: 8 });
+      }
+    }
+
+    // Crépuscule : pression de retraite croissante. Le pivot recule avec la
+    // longévité (un gardien Increvable discipliné est encore titulaire à 40 ans).
+    // Quand elle déclenche, la décision « une saison de plus ? » s'impose à la
+    // saison suivante (ev_retire_decision via pickEvent). Le joueur reste maître :
+    // pousser jusqu'à 42 ans est possible, mais le corps et les clubs pèsent.
+    if (s.age >= BALANCE.retireFloor && !s.retiring && !s.careerEnded && s.age < BALANCE.ageMax) {
+      const pivot = BALANCE.retireBaseAge + longevityScore(s) * 0.6;
+      let p = 0.10 + (s.age - pivot) * 0.18;
+      const pt = playingTimeFactor(s);
+      if (pt < 0.4) p += 0.20;          // relégué sur le banc : le signal de partir
+      if (s.form < 45) p += 0.10;
+      if (s.injuryWeeks > 20) p += 0.10;
+      if (s.moral > 70) p -= 0.08;      // l'envie, encore intacte, fait tenir
+      if (hasTrait(s, "loyal")) p -= 0.05;
+      if (rng() < clamp(p, 0, 0.95)) s.flags.retire_pending = true;
+    }
+  }
+
+  // --- Mercato -----------------------------------------------------------------
+  function marketValue(s) {
+    const ageF = s.age < 24 ? 1.35 : s.age <= 28 ? 1.1 : s.age <= 31 ? 0.65 : 0.3;
+    return Math.max(0.2, (ovr(s) - 50) * 1.5 * ageF * (1 + s.rep / 90));
+  }
+
+  function salaryFor(s, club) {
+    const country = countryOf(club.countryId);
+    // Les destinations exotiques paient sur une base "élite" quel que soit
+    // le niveau réel du club : c'est tout leur argument.
+    const levelBase = country && country.exotic ? BALANCE.salaryBase.elite : BALANCE.salaryBase[lvlOf(s, club)];
+    const base = levelBase * (country ? country.salaryMult : 1);
+    return Math.max(0.02, Math.round(base * (0.4 + ovr(s) / 90 + s.rep / 160) * rand(0.85, 1.25) * 100) / 100);
+  }
+
+  function buildOffer(s, club) {
+    const exotic = !!countryOf(club.countryId).exotic;
+    return {
+      club,
+      fee: Math.max(0.1, Math.round(marketValue(s) * BALANCE.feeMult[lvlOf(s, club)] * (exotic ? 1.4 : 1) * rand(0.8, 1.3) * 10) / 10),
+      salary: salaryFor(s, club),
+      years: randInt(2, 5),
+      exotic,
+    };
+  }
+
+  // spec : { d, toLevel (niveau imposé), cross, exotic, home (pays natal),
+  //          domestic (même pays) }. Règle des mineurs : avant 18 ans, un
+  //          joueur au Brésil ne peut pas être transféré à l'étranger.
+  function offersFor(s, spec) {
+    const d = spec && spec.d != null ? spec.d : 0;
+    const targetLevel = spec && spec.toLevel
+      ? spec.toLevel
+      : LEVEL_ORDER[clamp(LEVEL_ORDER.indexOf(lvlOf(s, s.club)) + d, 0, LEVEL_ORDER.length - 1)];
+    const minorLock = s.age < 18 && s.club.countryId === "br";
+    let pool;
+    if (spec && spec.clubId) {
+      // Événement/Histoire ciblé : UN club précis vient vous chercher.
+      const target = CLUBS.filter((c) => c.id === spec.clubId && c.id !== s.club.id);
+      return target.map((club) => buildOffer(s, club));
+    } else if (spec && spec.origin) {
+      // Retour aux sources : uniquement le club formateur (aucun repli)
+      const originPool = CLUBS.filter((c) => c.id === s.clubsPlayed[0] && c.id !== s.club.id);
+      return originPool.map((club) => buildOffer(s, club));
+    } else if (spec && spec.exotic && !minorLock) {
+      pool = CLUBS.filter((c) => { const co = countryOf(c.countryId); return co.exotic && c.id !== s.club.id; });
+    } else {
+      pool = CLUBS_BY_LEVEL[targetLevel].filter((c) => {
+        const co = countryOf(c.countryId);
+        if (co.exotic) return false;
+        if (c.id === s.club.id) return false;
+        if (minorLock) return c.countryId === s.club.countryId;
+        if (spec && spec.home) return c.countryId === s.nationality.homeCountryId;
+        if (spec && spec.domestic) return c.countryId === s.club.countryId;
+        if (spec && spec.cross) return c.countryId !== s.club.countryId;
+        return true;
+      });
+    }
+    if (pool.length === 0 && spec && spec.home) {
+      // Aucun club du pays natal à ce niveau : élargir aux niveaux voisins
+      pool = CLUBS.filter((c) => c.countryId === s.nationality.homeCountryId && c.id !== s.club.id && !countryOf(c.countryId).exotic);
+    }
+    if (pool.length === 0) pool = CLUBS_BY_LEVEL[targetLevel].filter((c) => c.id !== s.club.id);
+    const count = Math.min(pool.length, randInt(1, 3));
+    const shuffled = [...pool].sort(() => rng() - 0.5).slice(0, count);
+    const offers = shuffled.map((club) => buildOffer(s, club));
+    // Une clause libératoire rend le joueur plus abordable → plus d'offres sérieuses
+    if (s.flags.release_clause) offers.forEach((o) => { o.fee = Math.round(o.fee * 0.75 * 10) / 10; });
+    return offers;
+  }
+
+  function loanOffersFor(s) {
+    const idx = LEVEL_ORDER.indexOf(lvlOf(s, s.club));
+    const levels = [LEVEL_ORDER[Math.max(0, idx - 1)], LEVEL_ORDER[Math.max(0, idx - 2)]];
+    let pool = CLUBS.filter((c) => levels.includes(c.level) && c.id !== s.club.id && !countryOf(c.countryId).exotic);
+    const domestic = pool.filter((c) => c.countryId === s.club.countryId);
+    if (domestic.length >= 2) pool = domestic;
+    const shuffled = [...pool].sort(() => rng() - 0.5).slice(0, Math.min(pool.length, randInt(2, 3)));
+    return shuffled.map((club) => ({ club, loan: true }));
+  }
+
+  function applyLoan(s, offer) {
+    s.loan = { parentClub: s.club, parentCoach: s.coach, loanClubId: offer.club.id };
+    s.club = offer.club;
+    s.coach = pick(COACH_NAMES);
+    s.coachRel = 58;
+    if (!s.clubsPlayed.includes(offer.club.id)) s.clubsPlayed.push(offer.club.id);
+    s.transferHistory.push({
+      age: s.age,
+      fromClubName: s.loan.parentClub.name,
+      toClubName: offer.club.name,
+      countryName: countryOf(offer.club.countryId).name,
+      fee: null,
+      loan: true,
+      level: lvlOf(s, offer.club),
+    });
+    s.history.push({ age: s.age, text: `Prêté une saison à ${offer.club.name} pour s'aguerrir.`, impact: 4 });
+  }
+
+  function transferWindow(s, report) {
+    if (s.age >= BALANCE.ageMax) return null;
+    if (s.loan) return null;
+    const contractUp = s.contract.years <= 0;
+    let reason = null, spec = { d: 0 };
+
+    // Le club de prêt de l'an passé revient avec une offre définitive
+    if (s.loanReturn) {
+      const club = CLUBS.find((c) => c.id === s.loanReturn.clubId);
+      s.loanReturn = null;
+      if (club) {
+        return {
+          reason: `${club.name} n'a pas oublié votre prêt réussi : offre de transfert définitif sur la table.`,
+          offers: [buildOffer(s, club)],
+          contractUp: false,
+          renewSalary: salaryFor(s, s.club),
+        };
+      }
+    }
+
+    if (contractUp) {
+      reason = "Votre contrat expire : il faut trancher.";
+      spec = { d: report && report.rating >= 7.2 ? 1 : 0 };
+    } else if (report && report.promoted) {
+      reason = `La montée de ${s.club.name} fait de vous une cible : rester pour l'aventure, ou viser encore plus haut ?`;
+      spec = { d: 1 };
+    } else if (report && report.relegated) {
+      reason = `La relégation de ${s.club.name} ouvre votre bon de sortie.`;
+      spec = { d: 0 };
+    } else if (report && report.benched) {
+      if (rng() < 0.65) { reason = "Votre temps de jeu famélique alerte tout le marché."; spec = { d: -1 }; }
+    } else if (report && report.rating >= 7.8 && s.rep >= 50 && lvlOf(s, s.club) !== "elite") {
+      if (rng() < 0.5) { reason = "Votre saison XXL affole les recruteurs."; spec = { d: 1 }; }
+    } else if (s.flags.listed) {
+      // Placé sur la liste des transferts après un bras de fer
+      delete s.flags.listed;
+      reason = "Le club vous a placé sur la liste des transferts : le marché s'organise.";
+      spec = { d: report && report.rating >= 7 ? 0 : -1 };
+    } else if (rng() < BALANCE.windowRandomChance) {
+      reason = "Le mercato s'agite autour de votre nom.";
+      spec = { d: rng() < 0.35 ? 1 : 0, cross: rng() < 0.3 };
+    }
+    if (!reason) return null;
+    if (s.age >= 28 && s.rep >= 55 && rng() < 0.25) spec.exoticExtra = true;
+
+    let offers = rng() < BALANCE.noOfferChance && !contractUp ? [] : offersFor(s, spec);
+    if (spec.exoticExtra) {
+      const exotic = offersFor(s, { exotic: true });
+      if (exotic.length) offers = offers.concat(exotic.slice(0, 1));
+    }
+    return { reason, offers, contractUp, renewSalary: salaryFor(s, s.club) };
+  }
+
+  function applyTransfer(s, offer) {
+    const from = s.club;
+    s.prevClub = { id: from.id, name: from.name, countryId: from.countryId, level: lvlOf(s, from) };
+    s.club = offer.club;
+    s.coach = pick(COACH_NAMES);
+    s.coachRel = 55 + randInt(0, 8);
+    s.teamRel = 52 + randInt(0, 10);
+    s.contract = { salary: offer.salary, years: offer.years };
+    s.money += Math.min(3, offer.fee * 0.06);
+    s.clubMomentum = 0;
+    s.clubFade = 0;
+    if (!s.clubsPlayed.includes(offer.club.id)) s.clubsPlayed.push(offer.club.id);
+    s.transferHistory.push({
+      age: s.age,
+      fromClubName: from.name,
+      toClubName: offer.club.name,
+      countryName: countryOf(offer.club.countryId).name,
+      fee: offer.fee,
+      level: lvlOf(s, offer.club),
+    });
+    s.history.push({ age: s.age, text: `Transfert à ${offer.club.name} pour ${fmtMoney(offer.fee)}.`, impact: 5 });
+    s.justTransferred = true; // retrouvailles possibles la saison suivante
+    const newCountry = countryOf(offer.club.countryId);
+    if (newCountry) {
+      if (!s.continentsPlayed.includes(newCountry.continent)) s.continentsPlayed.push(newCountry.continent);
+      if (newCountry.exotic) {
+        s.flags.played_exotic = true;
+        if (s.age >= 33) s.flags.exotic_late = true;
+      }
+    }
+    if (hasTrait(s, "loyal")) s.moral = clamp(s.moral - 4, 5, 100);
+  }
+
+  function renewContract(s, window) {
+    s.contract = { salary: window ? window.renewSalary : salaryFor(s, s.club), years: randInt(2, 4) };
+    if (hasTrait(s, "loyal")) s.moral = clamp(s.moral + 4, 5, 100);
+  }
+
+  // --- Fin de carrière ------------------------------------------------------
+  function totalAwards(s) {
+    return Object.values(s.awardCounts).reduce((a, b) => a + b, 0);
+  }
+
+  // Note de carrière affichée sur la carte finale : l'OVR max, bonifié par
+  // ce qui fait les monstres sacrés (Ballons d'Or, Mondial, palmarès,
+  // longévité, sélection). Une carrière légendaire atteint 93-95.
+  function careerRating(s) {
+    const t = s.trophies;
+    let bonus = t.ballon * 2 + t.worldCup * 2 + Math.min(3, t.continental) +
+      Math.min(2, (t.contInt || 0) * 0.7) +
+      Math.min(2, t.league * 0.4) + Math.min(1.5, totalAwards(s) * 0.15) +
+      (s.natTeam.caps >= 100 ? 1 : 0) + (s.totals.matches >= 700 ? 0.5 : 0) +
+      (s.rep >= 90 ? 1 : 0);
+    return Math.min(97, Math.round(s.peakOvr + Math.min(11, bonus)));
+  }
+
+  function computeCareerScore(s) {
+    const t = s.trophies;
+    return Math.round(
+      s.peakOvr * 1.0 + s.rep * 0.45 +
+      t.worldCup * 20 + t.ballon * 18 + t.continental * 9 + (t.contInt || 0) * 11 +
+      t.league * 4 + t.cup * 2 + t.goldenBoot * 5 +
+      Math.min(12, totalAwards(s) * 1.2) +
+      Math.min(20, s.natTeam.caps / 6) + Math.min(15, s.totals.goals / 30) +
+      s.money * 0.05
+    );
+  }
+
+  function careerTitle(s) {
+    if (s.careerEnded && s.careerEndReason) {
+      return s.careerEndReason === "medical"
+        ? { title: "Carrière jamais commencée", story: "Un diagnostic médical implacable a mis fin à vos espoirs avant même vos débuts professionnels. Une histoire qui aurait pu être si différente." }
+        : { title: "Carrière brisée", story: "Une blessure sévère a stoppé net votre progression, alors que tout semblait encore possible. Le destin en a décidé autrement." };
+    }
+    const score = computeCareerScore(s);
+    const t = s.trophies;
+    if ((t.worldCup > 0 || t.ballon > 0) && score < 170) {
+      return { title: "Star inattendue", story: "Rien ne laissait présager un tel sommet, et pourtant vous avez soulevé le plus grand des trophées. Une carrière que personne n'avait vue venir." };
+    }
+    if (score >= 235) return { title: "Légende du football mondial", story: "Votre nom restera gravé parmi les plus grands. Les gamins du monde entier porteront votre maillot pendant des décennies." };
+    if (score >= 196) return { title: "Star mondiale", story: "Vous avez marqué votre époque et forcé le respect de tout un sport, bien au-delà des frontières de vos clubs." };
+    if (score >= 148) return { title: "Joueur de classe internationale", story: "Une carrière remarquable, de celles qui remplissent les stades et les albums de vignettes." };
+    if (score >= 105) return { title: "Carrière solide et respectée", story: "Sans être une superstar, vous avez mené une carrière dont vous pouvez être fier, reconnue par vos pairs." };
+    if (score >= 78) return { title: "Honnête professionnel", story: "Une carrière sans éclat majeur, mais menée avec sérieux jusqu'au bout, loin des projecteurs." };
+    return { title: "Carrière discrète", story: "Le grand public ne retiendra pas votre nom, mais vous avez vécu de votre passion, et ça n'a pas de prix." };
+  }
+
+  function pickHighlights(history, count) {
+    return [...history].sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact)).slice(0, count);
+  }
+
+  function buildNarrative(s) {
+    const base = careerTitle(s);
+    const highlights = pickHighlights(s.history, 2).map((h) => h.text).join(" ");
+    return { title: base.title, story: highlights ? `${base.story} ${highlights}` : base.story };
+  }
+
+  function buildUntakenPath(s) {
+    const moments = s.history.filter((h) => Math.abs(h.impact) >= 5);
+    if (!moments.length) return null;
+    const chosen = pick(moments.slice(0, 6));
+    return pick(UNTAKEN_PATH_TEMPLATES).replace("{age}", chosen.age);
+  }
+
+  // --- Rival ------------------------------------------------------------------
+  // Le rival joue au même poste que le joueur quand il est fourni :
+  // une vraie rivalité se joue sur le même territoire.
+  function newRival(forcedPosition) {
+    const nat = pick(NATIONALITIES);
+    const origin = pick(ORIGINS);
+    const position = forcedPosition || pick(POSITIONS);
+    const lifestyle = pick(LIFESTYLES);
+    const entourage = pick(ENTOURAGES);
+    const potCap = rollPotential(origin, lifestyle, entourage);
+    const offers = academyOffers({ nationality: nat, origin, lifestyle, entourage, potCap });
+    const start = offers.length ? pick(offers).club : pick(CLUBS_BY_LEVEL.regional);
+    return newCareer({ nationality: nat, origin, position, lifestyle, entourage, potCap, club: start });
+  }
+
+  function rivalSeason(r) {
+    if (r.careerEnded || r.retiring || r.age > BALANCE.ageMax) return null;
+    const ev = pickEvent(r);
+    if (ev) {
+      const eligible = ev.options.filter((o) => optionEligible(r, o));
+      const opt = pick(eligible.length ? eligible : ev.options);
+      const res = resolveOption(r, opt);
+      if (r.careerEnded) return null;
+      if (res.outcome.fx && res.outcome.fx.transfer && !res.outcome.fx.transfer.direct) {
+        const offers = offersFor(r, res.outcome.fx.transfer);
+        if (offers.length && rng() < 0.7) applyTransfer(r, pick(offers));
+      } else if (res.outcome.fx && res.outcome.fx.loan) {
+        const offers = loanOffersFor(r);
+        if (offers.length) applyLoan(r, pick(offers));
+      }
+    }
+    if (r.age <= 18 && rng() < BALANCE.earlyEndChance) {
+      r.careerEnded = true;
+      r.careerEndReason = "injury";
+      return null;
+    }
+    const report = playSeason(r);
+    if (report.wc && report.wc.finalPending) resolveWcFinal(r, report, null);
+    while (report.pendingMoments.length) resolveSeasonMoment(r, report, report.pendingMoments.shift(), null);
+    const window = transferWindow(r, report);
+    if (window) {
+      if (window.offers.length && rng() < 0.6) applyTransfer(r, pick(window.offers));
+      else renewContract(r, window);
+    }
+    advanceYear(r);
+    return report;
+  }
+
+  // diff (optionnel) : score du joueur − score du rival, pour les unes
+  // comparatives qui font vivre le duel de génération.
+  function rivalNewsLine(r, report, diff) {
+    if (!report) return null;
+    if (diff != null && Math.abs(diff) > 12 && rng() < 0.35) {
+      const tpl = pick(diff >= 0 ? RIVAL_NEWS_AHEAD : RIVAL_NEWS_BEHIND);
+      return tpl.replace(/\{rival\}/g, r.name);
+    }
+    const good = report.rating >= 7 || report.trophies.length > 0;
+    const tpl = pick(good ? RIVAL_NEWS_GOOD : RIVAL_NEWS_BAD);
+    return tpl.replace(/\{rival\}/g, r.name);
+  }
+
+  function compareVerdict(s, r) {
+    if (s.careerEnded) return `Le destin ne vous aura pas laissé la moindre chance de rivaliser. ${r.name} aura eu l'opportunité de construire la carrière qui vous a échappé.`;
+    if (r.careerEnded) return `${r.name} n'aura même pas eu la chance de faire ses preuves. Le destin vous aura été bien plus favorable qu'à lui.`;
+    const diff = computeCareerScore(s) - computeCareerScore(r);
+    if (diff > 50) return `Vous surpassez très largement ${r.name} : cette rivalité n'en aura jamais vraiment été une.`;
+    if (diff > 18) return `Vous prenez clairement le dessus sur ${r.name} au fil des années.`;
+    if (diff > -18) return `Une rivalité aussi intense que serrée avec ${r.name} — tout aurait pu basculer à tout moment.`;
+    if (diff > -50) return `${r.name} vous aura devancé sur la majeure partie de votre carrière.`;
+    return `${r.name} aura eu la carrière que vous auriez rêvé d'avoir.`;
+  }
+
+  // --- Export ------------------------------------------------------------------
+  const Engine = {
+    rng, setSeed, clearSeed, getSeedState, setSeedState,
+    clamp, rand, randInt, pick, weightedRandom, countryOf, levelRank, lvlOf,
+    fmtMoney, rollPotential, potStars, prodigyChance, pickTrajectory, academyOffers,
+    generateName, newCareer, ovr, hasTrait, renderText, applyFx,
+    eventEligible, pickEvent, optionEligible, resolveOption, netImpact, toneOf,
+    keyMomentFor, keyMomentSuccess, playKeyMoment, isWorldCupYear,
+    playWorldCup, resolveWcFinal, isContinentalYear, playContinental, playingTimeFactor, setSeasonObjective,
+    objectiveMet, headlineFor, grantAward, rollSeasonAwards, rollBallon,
+    playSeason, resolveSeasonMoment, advanceYear, marketValue, salaryFor,
+    buildOffer, offersFor, loanOffersFor, applyLoan, transferWindow,
+    applyTransfer, renewContract, totalAwards, careerRating, computeCareerScore, visibilityOf,
+    careerTitle, pickHighlights, buildNarrative, buildUntakenPath,
+    newRival, rivalSeason, rivalNewsLine, compareVerdict,
+    BALANCE_REF: BALANCE,
+  };
+
+  if (typeof module !== "undefined" && module.exports) module.exports = Engine;
+  else window.Engine = Engine;
+})();
