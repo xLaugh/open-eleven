@@ -798,6 +798,8 @@
       if (t.worldCup) bits.push(`🏆×${t.worldCup}`);
       if (t.ballon) bits.push(`⭐×${t.ballon}`);
       if (t.continental) bits.push(`🥇×${t.continental}`);
+      if (t.continental2) bits.push(`🥈×${t.continental2}`);
+      if (t.continental3) bits.push(`🥉×${t.continental3}`);
       if (t.league) bits.push(`🎖️×${t.league}`);
       if (t.goldenBoot) bits.push(`👟×${t.goldenBoot}`);
       const card = document.createElement("div");
@@ -991,7 +993,7 @@
       case "q_samba": return G.nationality.id === "br" && t.ballon >= 1;
       case "q_goleador": return G.totals.goals >= 300;
       case "q_awards5": return E.totalAwards(G) >= 5;
-      case "q_cl": return t.continental >= 1;
+      case "q_cl": return t.continental >= 1 || (t.continental2 || 0) >= 1 || (t.continental3 || 0) >= 1;
       case "q_continental_nt": return (t.contInt || 0) >= 1;
       case "q_double": return G.seasons.some((se) => se.trophies.includes("league") && se.trophies.includes("cup"));
       case "q_derby3": return G.derbyWins >= 3;
@@ -1014,7 +1016,7 @@
         return contClubs.some((cn) => G.seasons.some((se) => se.clubName === cn && se.level === "regional"));
       }
       case "l_squadra": return G.nationality.id === "it" && t.worldCup >= 1;
-      case "l_from_dust": return G.seasons[0] && G.seasons[0].level === "regional" && t.continental >= 1;
+      case "l_from_dust": return G.seasons[0] && G.seasons[0].level === "regional" && (t.continental >= 1 || (t.continental2 || 0) >= 1 || (t.continental3 || 0) >= 1);
       case "l_samba_rey": return G.nationality.id === "br" && t.ballon >= 1 && t.worldCup >= 1;
       case "l_kaiser": return G.nationality.id === "de" && G.natTeam.caps >= 100 && t.ballon >= 1;
       case "l_grand_chelem": {
@@ -1389,7 +1391,7 @@
     return {
       n: s.name, nat: s.nationality.id, pos: s.position.id, ori: s.origin.id,
       ovr: s.peakOvr, rep: s.rep, mon: Math.round(s.money), end: s.careerEnded ? 1 : 0,
-      tr: [t.worldCup, t.ballon, t.continental, t.league, t.cup, t.goldenBoot],
+      tr: [t.worldCup, t.ballon, t.continental, t.league, t.cup, t.goldenBoot, t.continental2 || 0, t.continental3 || 0],
       g: s.totals.goals, m: s.totals.matches, a: s.totals.assists, cs: s.totals.cleanSheets,
       caps: s.natTeam.caps, aw: E.totalAwards(s),
     };
@@ -1418,6 +1420,7 @@
       trophies: {
         worldCup: num(tr[0], 10), ballon: num(tr[1], 20), continental: num(tr[2], 30),
         league: num(tr[3], 40), cup: num(tr[4], 40), goldenBoot: num(tr[5], 20),
+        continental2: num(tr[6], 40), continental3: num(tr[7], 40), // vieux liens (6 elts) → 0
       },
       totals: { goals: num(c.g, 2000), matches: num(c.m, 1200), assists: num(c.a, 2000), cleanSheets: num(c.cs, 1200) },
       natTeam: { caps: num(c.caps, 400), active: false, retired: true, goals: 0 },
@@ -2119,6 +2122,8 @@
         ? [statRowHtml(`⭐ Meilleur classement Ballon d'Or`, `${G.bestBallonRank}ᵉ`, G.bestBallonRank <= 10)]
         : []),
       ...contRows,
+      statRowHtml(`${COMPETITIONS.continental2.icon} ${COMPETITIONS.continental2.name}`, t.continental2 || 0, (t.continental2 || 0) > 0),
+      statRowHtml(`${COMPETITIONS.continental3.icon} ${COMPETITIONS.continental3.name}`, t.continental3 || 0, (t.continental3 || 0) > 0),
       ...leagueRows,
       statRowHtml(`${COMPETITIONS.cup.icon} ${COMPETITIONS.cup.name}`, t.cup, t.cup > 0),
       statRowHtml(`${COMPETITIONS.goldenBoot.icon} ${COMPETITIONS.goldenBoot.name}`, t.goldenBoot, t.goldenBoot > 0),
@@ -2628,6 +2633,9 @@
       [`🏆 ${COMPETITIONS.worldCup.name}`, t.worldCup],
       [`⭐ ${COMPETITIONS.ballon.name}`, t.ballon],
       ...canvasContRows,
+      // C2/C3 : n'apparaissent QUE si remportées (évite d'allonger la carte partageable)
+      ...((t.continental2 || 0) > 0 ? [[`🥈 ${COMPETITIONS.continental2.name}`, t.continental2]] : []),
+      ...((t.continental3 || 0) > 0 ? [[`🥉 ${COMPETITIONS.continental3.name}`, t.continental3]] : []),
       [`🎖️ ${COMPETITIONS.league.name}`, t.league],
       [`🏵️ ${COMPETITIONS.cup.name}`, t.cup],
       [`👟 ${COMPETITIONS.goldenBoot.name}`, t.goldenBoot],
@@ -2734,6 +2742,8 @@
     if (t.ballon) bits.push(`${t.ballon}× Ballon d'Or`);
     if (t.worldCup) bits.push(`${t.worldCup}× Coupe du Monde`);
     if (t.continental) bits.push(`${t.continental}× Coupe des Champions`);
+    if (t.continental2) bits.push(`${t.continental2}× ${COMPETITIONS.continental2.name}`);
+    if (t.continental3) bits.push(`${t.continental3}× ${COMPETITIONS.continental3.name}`);
     if (t.league) bits.push(`${t.league}× Champion`);
     const isGk = G.position.id === "gk";
     const perf = isGk ? `${G.totals.cleanSheets} clean sheets` : `${G.totals.goals} buts`;

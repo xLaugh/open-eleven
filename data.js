@@ -716,6 +716,8 @@ const COMPETITIONS = {
   worldCup: { name: "Coupe du Monde", icon: "🏆" },
   ballon: { name: "Ballon d'Or", icon: "⭐" },
   goldenBoot: { name: "Soulier d'Or européen", icon: "👟" },
+  continental2: { name: "Trophée d'Europe", icon: "🥈" },
+  continental3: { name: "Bouclier d'Europe", icon: "🥉" },
 };
 
 // --- Récompenses individuelles de saison --------------------------------------
@@ -4290,7 +4292,19 @@ const BALANCE = {
   // conteste donc sa Coupe des Champions comme l'élite européenne conteste la sienne.
   continentalReach: {
     eu: { elite: 0.17, d1: 0.03, d2: 0, regional: 0 },
-    other: { elite: 0.17, d1: 0.15, d2: 0.03, regional: 0 },
+    other: { elite: 0.17, d1: 0.15, d2: 0, regional: 0 },
+  },
+  // Coupes d'Europe secondaires (clubs). C2 = Trophée d'Europe (vainqueur de
+  // Coupe Nationale, TOUTES divisions) ; C3 = Bouclier d'Europe (D1 européenne
+  // par défaut). Uniquement en Europe. Portée d'ATTEINDRE la finale (× teamBoost).
+  euroReach: {
+    c2: { elite: 0.22, d1: 0.16, d2: 0.08, regional: 0.04 },
+    c3: { d1: 0.15 },
+  },
+  // Récompenses C2/C3 (le C1 garde son barème codé en dur, ternaire eu/hors-eu).
+  euroReward: {
+    2: { money: 0.6, rep: 4, moral: 9, impact: 11, ballon: 0.7 },
+    3: { money: 0.35, rep: 3, moral: 8, impact: 8, ballon: 0 },
   },
   // Salaire annuel de base en M€ (modulé par OVR, réputation, pays)
   salaryBase: { regional: 0.03, d2: 0.09, d1: 0.9, elite: 5.0 },
@@ -4357,11 +4371,11 @@ const BALANCE = {
    les événements changent sensiblement.
    ============================================================ */
 const SCORE_PERCENTILES = [
-  63, 70, 90, 95, 97, 99, 101, 103, 104, 106, 107, 109, 110, 111, 112, 114, 115, 116, 118, 119,
-  121, 122, 123, 125, 126, 127, 129, 130, 131, 133, 134, 135, 136, 138, 139, 140, 141, 143, 144, 145,
-  146, 148, 149, 150, 151, 152, 153, 155, 156, 157, 158, 159, 161, 162, 163, 164, 165, 166, 167, 168,
-  170, 171, 172, 173, 174, 175, 177, 178, 179, 180, 181, 183, 184, 185, 186, 188, 189, 191, 192, 193,
-  195, 196, 198, 200, 202, 203, 205, 208, 210, 212, 215, 218, 221, 225, 229, 234, 241, 250, 268
+  63, 71, 91, 95, 98, 100, 102, 104, 105, 107, 108, 110, 111, 112, 114, 115, 117, 118, 119, 121,
+  122, 123, 125, 126, 127, 129, 130, 131, 133, 134, 136, 137, 138, 139, 141, 142, 143, 145, 146, 147,
+  148, 149, 151, 152, 153, 154, 155, 156, 157, 158, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169,
+  171, 172, 173, 174, 175, 176, 177, 178, 179, 181, 182, 183, 184, 185, 186, 188, 189, 191, 192, 194,
+  195, 197, 198, 200, 201, 203, 205, 207, 210, 212, 215, 218, 221, 225, 229, 234, 241, 251, 267
 ];
 
 /* ============================================================

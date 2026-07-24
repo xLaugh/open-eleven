@@ -245,13 +245,14 @@
       archetype: null,
       leagueTitlesDetail: [], // titres de champion : { countryId, level, clubId, year }
       continentalDetail: [], // coupes continentales : { continent, year }
+      euroCupTicket: false, // vainqueur de Coupe Nationale (club EU) → qualifié C2 la saison suivante
       momentWins: 0,
       derbyWins: 0,
       bestBallonRank: null,
       prevClub: null, // club quitté au dernier transfert (retrouvailles)
       natTeam: { active: false, retired: false, caps: 0, goals: 0 },
       totals: { matches: 0, goals: 0, assists: 0, cleanSheets: 0 },
-      trophies: { league: 0, cup: 0, continental: 0, worldCup: 0, contInt: 0, ballon: 0, goldenBoot: 0 },
+      trophies: { league: 0, cup: 0, continental: 0, continental2: 0, continental3: 0, worldCup: 0, contInt: 0, ballon: 0, goldenBoot: 0 },
       seasons: [],
       transferHistory: [],
       history: [],
@@ -907,6 +908,7 @@
     // Points de saison (communs au sacre et au classement)
     let pts = (report.rating - 7) * 2.2 + (extraPts || 0);
     if (report.trophies.includes("continental")) pts += report.continentalContinent === "eu" ? 2.2 : 0.8;
+    if (report.trophies.includes("continental2")) pts += 0.7; // Trophée d'Europe (C3 : aucun poids Ballon)
     if (report.trophies.includes("worldCup") && !extraPts) pts += 3;
     if (report.trophies.includes("league")) pts += 1.2;
     if (report.trophies.includes("cup")) pts += 0.4;
@@ -1023,10 +1025,18 @@
     // Trophées collectifs & destin du club (titre, montée, barrage, relégation)
     const isTopFlight = lvl === "elite" || lvl === "d1";
     const teamBoost = 1 + (rating - 6.6) * 0.12;
+    // Ticket "vainqueur de Coupe Nationale la saison PASSÉE" → C2 européen ; on
+    // le lit et le vide AVANT tout crédit de coupe de cette saison (sinon un
+    // sacre de coupe cette année ouvrirait l'Europe la même année). Aucun rng.
+    const euroTicket = !!s.euroCupTicket;
+    s.euroCupTicket = false;
     const evTrophies = s.seasonTrophies.splice(0);
     for (const tr of evTrophies) {
       if (tr === "league") s.trophies.league += 1;
-      if (tr === "cup") s.trophies.cup += 1;
+      if (tr === "cup") {
+        s.trophies.cup += 1;
+        if (((countryOf(s.club.countryId) || {}).continent) === "eu") s.euroCupTicket = true; // arme le ticket pour N+1
+      }
       if (tr === "continental") {
         s.trophies.continental += 1;
         const cont = (countryOf(s.club.countryId) || {}).continent || "eu";
@@ -1082,18 +1092,30 @@
     // Coupe continentale de club : ATTEINDRE la finale se joue ici, la GAGNER se
     // joue dans un moment décisif interactif (continental_final). Hors d'Europe,
     // la D1 est le sommet (pas de clubs "élite") → elle conteste sa Coupe des Champions.
-    if (!evTrophies.includes("continental")) {
+    // 3 tiers en Europe : élite → C1 (Coupe des Champions) ; vainqueur de Coupe
+    // Nationale (ticket) → C2 (Trophée d'Europe), TOUTES divisions ; D1 → C3
+    // (Bouclier d'Europe). Hors d'Europe : la Coupe des Champions du continent,
+    // inchangée. UN SEUL engagement/saison. Tier décidé SANS hasard ; le rng() de
+    // portée reste l'unique tirage, à sa place (même pour tier 0 : rng consommé).
+    if (!evTrophies.includes("continental") && !evTrophies.includes("continental2") && !evTrophies.includes("continental3")) {
       const continent = (countryOf(s.club.countryId) || {}).continent || "eu";
-      const reachTable = continent === "eu" ? BALANCE.continentalReach.eu : BALANCE.continentalReach.other;
-      if (rng() < (reachTable[lvl] || 0) * teamBoost) {
-        const cup = CONTINENTAL_CUPS[continent] || CONTINENTAL_CUPS.eu;
+      let tier = 0, reachP = 0, cup = null;
+      if (continent === "eu") {
+        if (lvl === "elite") { tier = 1; reachP = BALANCE.continentalReach.eu.elite || 0; cup = CONTINENTAL_CUPS.eu; }
+        else if (euroTicket) { tier = 2; reachP = BALANCE.euroReach.c2[lvl] || 0; cup = COMPETITIONS.continental2; }
+        else if (lvl === "d1") { tier = 3; reachP = BALANCE.euroReach.c3.d1 || 0; cup = COMPETITIONS.continental3; }
+      } else {
+        tier = 1; reachP = BALANCE.continentalReach.other[lvl] || 0; cup = CONTINENTAL_CUPS[continent] || CONTINENTAL_CUPS.eu;
+      }
+      if (rng() < reachP * teamBoost) {
         report.pendingMoments.push({
           type: "continental_final",
+          tier,
+          continent: tier === 1 ? continent : "eu",
           label: `Finale · ${cup.name}`,
-          winLabel: "SACRE CONTINENTAL !",
-          failLabel: "Finale continentale perdue",
+          winLabel: tier === 3 ? "BOUCLIER D'EUROPE REMPORTÉ !" : tier === 2 ? "TROPHÉE D'EUROPE REMPORTÉ !" : "SACRE CONTINENTAL !",
+          failLabel: tier === 1 ? "Finale continentale perdue" : "Finale européenne perdue",
           moment: keyMomentFor(s, "continental_final"),
-          continent,
         });
       }
     }
@@ -1277,29 +1299,57 @@
         s.moral = clamp(s.moral + 8, 5, 100);
         s.history.push({ age: s.age, text: `Vainqueur de la ${COMPETITIONS.cup.name} ${s.year} avec ${s.club.name}.`, impact: 9 });
         recheckObjective(s, report);
+        // Vainqueur de coupe (club européen) → qualifié pour une coupe d'Europe
+        // la saison prochaine (C2, ou C1 si le club est/passe élite). Aucun rng.
+        if (((countryOf(s.club.countryId) || {}).continent) === "eu") {
+          s.euroCupTicket = true;
+          if (lvlOf(s, s.club) !== "elite") report.lines.push({ text: `🇪🇺 Sacre en Coupe Nationale : vous voilà qualifié pour une coupe d'Europe la saison prochaine !`, impact: 5 });
+        }
       } else {
         s.moral = clamp(s.moral - 5, 5, 100);
         s.history.push({ age: s.age, text: `Finale de ${COMPETITIONS.cup.name} perdue en ${s.year}.`, impact: -4 });
       }
     } else if (entry.type === "continental_final") {
-      const continent = entry.continent || "eu";
-      const cup = CONTINENTAL_CUPS[continent] || CONTINENTAL_CUPS.eu;
-      if (res.success) {
-        s.trophies.continental += 1;
-        report.trophies.push("continental");
-        report.continentalContinent = continent;
-        s.continentalDetail.push({ continent, year: s.year });
-        s.money += continent === "eu" ? 1.2 : 0.6;
-        s.rep = clamp(s.rep + (continent === "eu" ? 6 : 4), 0, 100);
-        s.moral = clamp(s.moral + 10, 5, 100);
-        s.history.push({ age: s.age, text: `Vainqueur de la ${cup.name} avec ${s.club.name} (${s.year}) !`, impact: continent === "eu" ? 15 : 11 });
-        recheckObjective(s, report);
-        // Le sacre continental rebat les cartes du Ballon d'Or (comme le Mondial).
-        if (!report.awards.includes("ballon_won")) rollBallon(s, report, 0);
+      const tier = entry.tier || 1;
+      if (tier === 1) {
+        const continent = entry.continent || "eu";
+        const cup = CONTINENTAL_CUPS[continent] || CONTINENTAL_CUPS.eu;
+        if (res.success) {
+          s.trophies.continental += 1;
+          report.trophies.push("continental");
+          report.continentalContinent = continent;
+          s.continentalDetail.push({ continent, year: s.year });
+          s.money += continent === "eu" ? 1.2 : 0.6;
+          s.rep = clamp(s.rep + (continent === "eu" ? 6 : 4), 0, 100);
+          s.moral = clamp(s.moral + 10, 5, 100);
+          s.history.push({ age: s.age, text: `Vainqueur de la ${cup.name} avec ${s.club.name} (${s.year}) !`, impact: continent === "eu" ? 15 : 11 });
+          recheckObjective(s, report);
+          // Le sacre continental rebat les cartes du Ballon d'Or (comme le Mondial).
+          if (!report.awards.includes("ballon_won")) rollBallon(s, report, 0);
+        } else {
+          s.rep = clamp(s.rep + 2, 0, 100);
+          s.moral = clamp(s.moral - 6, 5, 100);
+          s.history.push({ age: s.age, text: `Finale de ${cup.name} perdue en ${s.year} — si près du toit du continent.`, impact: -5 });
+        }
       } else {
-        s.rep = clamp(s.rep + 2, 0, 100);
-        s.moral = clamp(s.moral - 6, 5, 100);
-        s.history.push({ age: s.age, text: `Finale de ${cup.name} perdue en ${s.year} — si près du toit du continent.`, impact: -5 });
+        // C2 (Trophée d'Europe) / C3 (Bouclier d'Europe) — coupes d'Europe secondaires
+        const key = tier === 2 ? "continental2" : "continental3";
+        const cup = COMPETITIONS[key];
+        const rw = BALANCE.euroReward[tier];
+        if (res.success) {
+          s.trophies[key] = (s.trophies[key] || 0) + 1; // guardé : vieilles saves sans ce compteur
+          report.trophies.push(key);
+          s.money += rw.money;
+          s.rep = clamp(s.rep + rw.rep, 0, 100);
+          s.moral = clamp(s.moral + rw.moral, 5, 100);
+          s.history.push({ age: s.age, text: `Vainqueur de la ${cup.name} avec ${s.club.name} (${s.year}) !`, impact: rw.impact });
+          recheckObjective(s, report);
+          if (rw.ballon && !report.awards.includes("ballon_won")) rollBallon(s, report, 0);
+        } else {
+          s.rep = clamp(s.rep + 1, 0, 100);
+          s.moral = clamp(s.moral - (tier === 2 ? 5 : 4), 5, 100);
+          s.history.push({ age: s.age, text: `Finale de ${cup.name} perdue en ${s.year}.`, impact: tier === 2 ? -4 : -3 });
+        }
       }
     } else if (entry.type === "derby") {
       if (res.success) {
@@ -1709,6 +1759,7 @@
   function careerRating(s) {
     const t = s.trophies;
     let bonus = t.ballon * 2 + t.worldCup * 2 + Math.min(3, t.continental) +
+      Math.min(1.5, (t.continental2 || 0) * 0.5 + (t.continental3 || 0) * 0.25) +
       Math.min(2, (t.contInt || 0) * 0.7) +
       Math.min(2, t.league * 0.4) + Math.min(1.5, totalAwards(s) * 0.15) +
       (s.natTeam.caps >= 100 ? 1 : 0) + (s.totals.matches >= 700 ? 0.5 : 0) +
@@ -1721,6 +1772,7 @@
     return Math.round(
       s.peakOvr * 1.0 + s.rep * 0.45 +
       t.worldCup * 20 + t.ballon * 18 + t.continental * 9 + (t.contInt || 0) * 11 +
+      (t.continental2 || 0) * 5 + (t.continental3 || 0) * 2 +
       t.league * 4 + t.cup * 2 + t.goldenBoot * 5 +
       Math.min(12, totalAwards(s) * 1.2) +
       Math.min(20, s.natTeam.caps / 6) + Math.min(15, s.totals.goals / 30) +
