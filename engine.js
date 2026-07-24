@@ -231,7 +231,10 @@
       flags: {},
       usedEvents: [],
       scheduled: [],
-      injuryWeeks: 0,
+      injuryWeeks: 0,          // indispo TOTALE de la saison (blessure + suspension + dette) → matchs
+      seasonInjuryWeeks: 0,    // semaines de BLESSURE seule de la saison (hors suspension) → conséquences blessure
+      chronicWeeks: 0,         // dette de récupération : déborde sur la/les saison(s) suivante(s)
+      injuryHistory: 0,        // nombre de grosses blessures subies (fragilité acquise)
       seasonTrophies: [],
       seasonAwards: [],
       loan: null,
@@ -381,11 +384,14 @@
       chips.push({ label: `⛔ ${fx.ban} semaines hors du groupe`, kind: "bad" });
     }
     if (fx.inj) {
-      let weeks = fx.inj;
-      if (hasTrait(s, "ironman")) weeks = Math.round(weeks * 0.6);
-      if (hasTrait(s, "glass")) weeks = Math.round(weeks * 1.5);
-      s.injuryWeeks += weeks;
+      const weeks = applyInjury(s, fx.inj); // modulation traits + répartition saison/chronique + fragilité
       chips.push({ label: `🩹 ${weeks} semaines d'absence`, kind: "bad" });
+    }
+    if (fx.chronic) {
+      let w = fx.chronic;
+      if (hasTrait(s, "ironman")) w = Math.round(w * 0.6);
+      else if (hasTrait(s, "glass")) w = Math.round(w * 1.5);
+      s.chronicWeeks = (s.chronicWeeks || 0) + Math.max(1, w);
     }
     if (fx.pot) s.potCap = clamp(s.potCap + fx.pot, 68, 99);
     if (fx.clubBoost) {
@@ -959,6 +965,52 @@
     return false;
   }
 
+  // --- Blessures --------------------------------------------------------------
+  // Applique une blessure : modulation traits, répartition saison / dette
+  // chronique, drapeaux de fragilité. AUCUN rng. Retourne les semaines modulées.
+  function applyInjury(s, rawWeeks, forceBig) {
+    let weeks = rawWeeks;
+    if (hasTrait(s, "ironman")) weeks = Math.round(weeks * 0.6);
+    else if (hasTrait(s, "glass")) weeks = Math.round(weeks * 1.5);
+    weeks = Math.max(1, weeks);
+    const cap = BALANCE.injury.seasonCap;
+    const thisSeason = Math.min(weeks, cap);
+    s.injuryWeeks += thisSeason;
+    s.seasonInjuryWeeks = (s.seasonInjuryWeeks || 0) + thisSeason;
+    if (weeks > cap) s.chronicWeeks = (s.chronicWeeks || 0) + (weeks - cap);
+    const big = forceBig != null ? forceBig : weeks >= BALANCE.injury.severeThreshold;
+    if (big) { s.flags.big_injury = true; s.injuryHistory = (s.injuryHistory || 0) + 1; }
+    return weeks;
+  }
+  // Tirage de blessure de la saison. rng : occurrence TOUJOURS ; si touché,
+  // gravité (weightedRandom) + durée (randInt). Renvoie {tier, weeks} ou null.
+  function rollInjury(s, pt) {
+    const B = BALANCE.injury;
+    let p = B.baseChance;
+    if (s.age > 29) p += (s.age - 29) * B.ageStep;
+    if (s.age <= 20) p -= B.youthReduce;
+    p += Math.max(0, pt - 0.5) * B.minutesCoef;
+    if (s.discipline < 40) p += B.hygieneAdd;
+    p += (s.injuryHistory || 0) * B.historyAdd;
+    if (hasTrait(s, "glass")) p += B.glassAdd;
+    else if (hasTrait(s, "ironman")) p += B.ironmanAdd;
+    p = clamp(p, B.minChance, B.maxChance);
+    if (rng() >= p) return null;
+    const bias = clamp(Math.max(0, s.age - 30) * B.severityBiasAge + (s.injuryHistory || 0) * B.severityBiasHistory + (hasTrait(s, "glass") ? B.severityBiasGlass : 0), 0, 1);
+    const tier = weightedRandom(B.tiers, (t) => (t.up ? t.w * (1 + bias * 2) : t.w / (1 + bias)));
+    return { tier, weeks: randInt(tier.min, tier.max) };
+  }
+  function injuryTier(id) { return BALANCE.injury.tiers.find((t) => t.id === id); }
+  // Probabilité de fin de carrière (rarissime) d'une grave/catastrophe. AUCUN rng.
+  function injuryEndChance(s, tier) {
+    const B = BALANCE.injury;
+    if (!tier || !tier.endChance) return 0;
+    let p = tier.endChance + Math.max(0, s.age - 30) * B.endAgeStep + (s.injuryHistory || 0) * B.endHistory;
+    if (hasTrait(s, "glass")) p *= B.endGlass;
+    else if (hasTrait(s, "ironman")) p *= B.endIronman;
+    return clamp(p, 0, B.endCap);
+  }
+
   // --- Simulation d'une saison ----------------------------------------------
   function playSeason(s) {
     const lvl = lvlOf(s, s.club);
@@ -994,6 +1046,33 @@
     // Temps de jeu et matchs
     const pt = playingTimeFactor(s);
     report.pt = pt;
+
+    // --- Blessures : dette chronique reversée, puis tirage de saison -----------
+    // (avant injuryFactor : une blessure ampute les matchs de cette saison)
+    if ((s.chronicWeeks || 0) > 0) {
+      const carry = Math.min(s.chronicWeeks, BALANCE.injury.carryCap);
+      s.injuryWeeks += carry;
+      s.seasonInjuryWeeks = (s.seasonInjuryWeeks || 0) + carry;
+      s.chronicWeeks -= carry;
+      report.carryInjury = carry;
+    }
+    const seasonInj = rollInjury(s, pt);
+    if (seasonInj) {
+      applyInjury(s, seasonInj.weeks, seasonInj.tier.big);
+      s.moral = clamp(s.moral - seasonInj.tier.mor, 5, 100);
+      s.form = clamp(s.form - seasonInj.tier.form, 5, 100);
+      report.seasonInjury = { tier: seasonInj.tier.id, weeks: seasonInj.weeks };
+      s.history.push({ age: s.age, text: `${BALANCE.injury.labels[seasonInj.tier.id]} (${seasonInj.weeks} sem.) en ${s.year}.`, impact: -(seasonInj.tier.mor + 4) });
+      // Grosse blessure → carte interactive « chemin du retour »
+      if (seasonInj.tier.interactive) {
+        report.pendingMoments.push({
+          type: "injury", label: "Coup dur",
+          winLabel: "De retour, plus fort", failLabel: "Convalescence prolongée",
+          moment: keyMomentFor(s, "injury"),
+        });
+      }
+    }
+
     const [mMin, mMax] = BALANCE.matchesByLevel[lvl];
     const injuryFactor = clamp(1 - s.injuryWeeks / 42, 0.05, 1);
     const matches = Math.round(rand(mMin, mMax) * pt * injuryFactor);
@@ -1182,7 +1261,10 @@
       // caps encore à 0 → c'est la toute première convocation en A (robuste au
       // rechargement d'une sauvegarde : aucun nouveau champ d'état requis).
       const firstCap = s.natTeam.caps === 0;
-      const caps = randInt(4, 9);
+      // Une saison amputée par la blessure réduit les sélections ; une longue
+      // absence fait carrément manquer le grand tournoi de l'année.
+      const heavyInjury = (s.seasonInjuryWeeks || 0) >= BALANCE.injury.tournamentSkip;
+      const caps = Math.max(0, Math.round(randInt(4, 9) * clamp(injuryFactor + 0.1, 0.1, 1)));
       s.natTeam.caps += caps;
       const natGoals = Math.round(caps * s.position.goalRate * perf * rand(0.5, 1.2));
       s.natTeam.goals += natGoals;
@@ -1191,7 +1273,8 @@
       report.firstCap = firstCap;
       // Les matchs & buts d'un grand tournoi comptent dans le bilan sélection de
       // la saison (affiché au récap), en plus de leur propre carte dédiée.
-      if (isWorldCupYear(s.year)) { report.wc = playWorldCup(s); report.caps += report.wc.games; report.natGoals += report.wc.goals; }
+      if (heavyInjury && (isWorldCupYear(s.year) || isContinentalYear(s.year))) report.tournamentMissed = true;
+      else if (isWorldCupYear(s.year)) { report.wc = playWorldCup(s); report.caps += report.wc.games; report.natGoals += report.wc.goals; }
       else if (isContinentalYear(s.year)) { report.cont = playContinental(s, report); report.caps += report.cont.games; report.natGoals += report.cont.goals; }
     }
 
@@ -1223,6 +1306,22 @@
     if (prize) s.money += prize;
 
     if (report.trophies.includes("league")) s.history.push({ age: s.age, text: `Champion national ${s.year} avec ${s.club.name}.`, impact: 10 });
+
+    // Fin de carrière par blessure : RARISSIME, à tout âge, issue extrême d'une
+    // grave/catastrophe. Évaluée en FIN de saison (la saison diminuée a été jouée
+    // entièrement → pas de « blessé qui gagne le Mondial puis tombe »). Le rng
+    // n'est consommé que pour une grave/catastrophe (pEnd>0). careerEnded est
+    // routé vers l'écran de fin côté UI (renderRecap → renderCareerEndInjury).
+    if (report.seasonInjury && !s.careerEnded) {
+      const tier = injuryTier(report.seasonInjury.tier);
+      const pEnd = injuryEndChance(s, tier);
+      if (pEnd > 0 && rng() < pEnd) {
+        s.careerEnded = true;
+        s.careerEndReason = "injury";
+        report.careerEndInjury = { age: s.age, tier: tier.id };
+        s.history.push({ age: s.age, text: `${BALANCE.injury.labels[tier.id]} : votre carrière s'arrête net en ${s.year}.`, impact: -90 });
+      }
+    }
 
     // Totaux carrière
     s.totals.matches += matches;
@@ -1351,6 +1450,20 @@
           s.history.push({ age: s.age, text: `Finale de ${cup.name} perdue en ${s.year}.`, impact: tier === 2 ? -4 : -3 });
         }
       }
+    } else if (entry.type === "injury") {
+      // Chemin du retour : le choix module la dette de récupération (chronicWeeks)
+      // qui déborde sur la saison suivante. Aucun rng ajouté (valeurs de l'option).
+      const opt = res.option;
+      if (res.success) {
+        s.chronicWeeks = Math.max(0, (s.chronicWeeks || 0) - (opt.recover || 8));
+        s.moral = clamp(s.moral + 6, 5, 100);
+        s.form = clamp(s.form + 6, 5, 100);
+        s.history.push({ age: s.age, text: `Retour de blessure réussi en ${s.year} — le pire est derrière vous.`, impact: 6 });
+      } else {
+        s.chronicWeeks = (s.chronicWeeks || 0) + (opt.setback || 10);
+        s.moral = clamp(s.moral - 6, 5, 100);
+        s.history.push({ age: s.age, text: `Rechute en ${s.year} : la convalescence s'éternise.`, impact: -8 });
+      }
     } else if (entry.type === "derby") {
       if (res.success) {
         s.moral = clamp(s.moral + 6, 5, 100);
@@ -1366,12 +1479,18 @@
 
   // --- Vieillissement, vie du club & intersaison ------------------------------
   function advanceYear(s) {
+    // Semaines de BLESSURE de la saison écoulée (hors suspension), capturées AVANT
+    // le reset (plus bas) : servent au frein de croissance et à la pression de
+    // retraite. La perte est RÉCUPÉRABLE (on freine la progression de l'année, on
+    // n'érode pas définitivement les stats — une pépite n'est jamais condamnée).
+    const seasonInj = s.seasonInjuryWeeks || 0;
     const pt = playingTimeFactor(s);
     const infra = BALANCE.growthInfra[lvlOf(s, s.club)];
     const gap = s.potCap - ovr(s);
     let potDamp = gap <= 0 ? 0.15 : gap <= 4 ? 0.45 : 1;
     if (s.flags.prodigy && s.age <= 20) potDamp = Math.max(potDamp, 0.85); // un prodige ne freine pas jeune
-    const g = (s.flags.lateBloomer ? 1.15 : 1) * infra * potDamp * trajGrowthMult(s);
+    const injDamp = clamp(1 - seasonInj / BALANCE.injury.growthDamp, 0.55, 1);
+    const g = (s.flags.lateBloomer ? 1.15 : 1) * infra * potDamp * trajGrowthMult(s) * injDamp;
 
     if (s.age <= 21) {
       s.stats.t = clamp(s.stats.t + Math.round(rand(2, 4) * pt * g * (hasTrait(s, "genius") ? 1.4 : 1)), 1, 99);
@@ -1515,6 +1634,7 @@
     }
 
     s.injuryWeeks = 0;
+    s.seasonInjuryWeeks = 0; // la dette chronique (chronicWeeks) N'est PAS remise à 0 : elle déborde
     s.age += 1;
     s.year += 1;
     s.contract.years -= 1;
@@ -1522,7 +1642,7 @@
     // Sélection : possible dès 17 ans pour un crack, de plus en plus
     // accessible entre 21 et 23 ans ; la visibilité du niveau compte,
     // et un passage par les Espoirs ouvre des portes.
-    if (!s.natTeam.active && !s.natTeam.retired && s.age >= 17) {
+    if (!s.natTeam.active && !s.natTeam.retired && s.age >= 17 && seasonInj < 20) {
       const rank = levelRank(lvlOf(s, s.club));
       let ovrNeed, repNeed;
       if (s.age <= 18) { ovrNeed = 81; repNeed = 58; }
@@ -1551,7 +1671,10 @@
       const pt = playingTimeFactor(s);
       if (pt < 0.4) p += 0.20;          // relégué sur le banc : le signal de partir
       if (s.form < 45) p += 0.10;
-      if (s.injuryWeeks > 20) p += 0.10;
+      // Corps qui lâche : une saison très blessée OU une dette chronique en cours
+      // pousse (doucement) vers la sortie. Lit seasonInj capturé AVANT le reset
+      // (l'ancien test s.injuryWeeks>20 était mort : injuryWeeks vaut 0 ici).
+      if (seasonInj > 20 || (s.chronicWeeks || 0) > 0) p += 0.10;
       if (s.moral > 70) p -= 0.08;      // l'envie, encore intacte, fait tenir
       if (hasTrait(s, "loyal")) p -= 0.05;
       if (rng() < clamp(p, 0, 0.95)) s.flags.retire_pending = true;
@@ -1782,9 +1905,19 @@
 
   function careerTitle(s) {
     if (s.careerEnded && s.careerEndReason) {
-      return s.careerEndReason === "medical"
-        ? { title: "Carrière jamais commencée", story: "Un diagnostic médical implacable a mis fin à vos espoirs avant même vos débuts professionnels. Une histoire qui aurait pu être si différente." }
-        : { title: "Carrière brisée", story: "Une blessure sévère a stoppé net votre progression, alors que tout semblait encore possible. Le destin en a décidé autrement." };
+      if (s.careerEndReason === "medical") {
+        return { title: "Carrière jamais commencée", story: "Un diagnostic médical implacable a mis fin à vos espoirs avant même vos débuts professionnels. Une histoire qui aurait pu être si différente." };
+      }
+      // Fin sur blessure : le récit s'adapte à l'âge et au palmarès accompli — un
+      // vétéran au vrai vécu n'est pas un « espoir fauché ».
+      const sc = computeCareerScore(s);
+      if (s.age >= 30 || sc >= 130) {
+        return { title: "Carrière écourtée par la blessure", story: "Une blessure de trop a refermé le rideau plus tôt que vous ne l'auriez voulu. Mais le chemin parcouru, lui, personne ne pourra vous l'enlever." };
+      }
+      if (s.age >= 24) {
+        return { title: "Carrière fauchée en plein vol", story: "En pleine ascension, une blessure implacable a tout arrêté net. On ne saura jamais jusqu'où vous seriez allé — et c'est peut-être ça, le plus cruel." };
+      }
+      return { title: "Carrière brisée", story: "Une blessure sévère a stoppé net votre progression, alors que tout semblait encore possible. Le destin en a décidé autrement." };
     }
     const score = computeCareerScore(s);
     const t = s.trophies;
@@ -1855,6 +1988,7 @@
     const report = playSeason(r);
     if (report.wc && report.wc.finalPending) resolveWcFinal(r, report, null);
     while (report.pendingMoments.length) resolveSeasonMoment(r, report, report.pendingMoments.shift(), null);
+    if (r.careerEnded) return report; // blessure fatale en cours de saison : le rival ne transfère/vieillit plus
     const window = transferWindow(r, report);
     if (window) {
       if (window.offers.length && rng() < 0.6) applyTransfer(r, pick(window.offers));

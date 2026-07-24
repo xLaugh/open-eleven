@@ -746,6 +746,23 @@ const AWARDS = {
    repWin/repFail : réputation en jeu au-delà du résultat.
    ============================================================ */
 const KEY_MOMENTS = {
+  // Chemin du retour après une grosse blessure. Le choix module la dette de
+  // récupération (chronicWeeks) : prudence = moins de rechute, retour forcé =
+  // pari risqué. recover = semaines de dette effacées si succès ; setback =
+  // semaines ajoutées si échec.
+  injury: {
+    any: [{
+      title: "LE CHEMIN DU RETOUR",
+      text: "Le diagnostic est tombé, la saison est brisée. Sur la table de rééducation, tout se rejoue : votre corps, votre carrière, votre mental. Comment revenez-vous ?",
+      options: [
+        { id: "cautious", label: "Rééducation prudente, respecter chaque étape", hint: "Sûr", base: 0.86, recover: 14, setback: 4 },
+        { id: "protocol", label: "Protocole médical de pointe", hint: "Coûteux", base: 0.72, recover: 10, setback: 8, repWin: 2 },
+        { id: "rush", label: "Revenir au plus vite, coûte que coûte", hint: "Risqué", base: 0.5, recover: 6, setback: 16, repWin: 4, repFail: -4 },
+      ],
+      winText: "Le retour est réussi : les jambes répondent, la tête aussi. Vous revoilà sur les terrains, plus déterminé que jamais.",
+      failText: "Rechute cruelle : le corps lâche encore. Le chemin du retour s'allonge, et le doute s'installe.",
+    }],
+  },
   wc_final: {
     field: [{
       title: "FINALE DE LA COUPE DU MONDE",
@@ -4306,6 +4323,39 @@ const BALANCE = {
     2: { money: 0.6, rep: 4, moral: 9, impact: 11, ballon: 0.7 },
     3: { money: 0.35, rep: 3, moral: 8, impact: 8, ballon: 0 },
   },
+  // --- Blessures (système « Corps & Carrière ») -------------------------------
+  // Un tirage de blessure par saison (dans playSeason). Gravité graduée, durées
+  // en semaines (l'échelle du jeu : injuryFactor = 1 - injuryWeeks/42). Les
+  // grosses (grave/catastrophe) débordent sur la/les saison(s) suivante(s) via
+  // s.chronicWeeks, et peuvent — TRÈS rarement — mettre fin à la carrière.
+  injury: {
+    baseChance: 0.09,      // occurrence de base par saison
+    ageStep: 0.006,        // + par an après 29 ans (usure)
+    youthReduce: 0.03,     // - risque avant 21 ans
+    minutesCoef: 0.05,     // exposition : (pt - 0.5) * coef (plus on joue, plus on s'expose)
+    hygieneAdd: 0.05,      // discipline < 40
+    historyAdd: 0.025,     // + par grosse blessure passée (fragilité acquise)
+    glassAdd: 0.06, ironmanAdd: -0.05,
+    minChance: 0.03, maxChance: 0.45,
+    seasonCap: 40,         // au-delà : le surplus part en dette chronique
+    carryCap: 24,          // semaines de dette reversées par saison suivante
+    severeThreshold: 22,   // >= : grosse blessure (flag big_injury + injuryHistory++)
+    // Paliers (poids = fréquence relative QUAND une blessure survient) ; mor/form
+    // = choc immédiat ; interactive = carte « chemin du retour » ; endChance = base
+    // de fin de carrière (grave/catastrophe uniquement).
+    tiers: [
+      { id: "knock",        w: 52,  min: 2,  max: 5,  mor: 2,  form: 3,  big: false },
+      { id: "strain",       w: 30,  min: 6,  max: 12, mor: 4,  form: 6,  big: false },
+      { id: "serious",      w: 13,  min: 14, max: 24, mor: 8,  form: 10, big: true, up: true, interactive: true },
+      { id: "severe",       w: 4.5, min: 28, max: 45, mor: 12, form: 14, big: true, up: true, interactive: true, endChance: 0.035 },
+      { id: "catastrophic", w: 0.5, min: 46, max: 70, mor: 16, form: 18, big: true, up: true, interactive: true, endChance: 0.12 },
+    ],
+    severityBiasAge: 0.05, severityBiasHistory: 0.08, severityBiasGlass: 0.20, // décale vers le grave
+    endAgeStep: 0.004, endHistory: 0.010, endGlass: 1.5, endIronman: 0.4, endCap: 0.10,
+    labels: { knock: "Petit pépin", strain: "Blessure musculaire", serious: "Blessure sérieuse", severe: "Grave blessure", catastrophic: "Blessure catastrophique" },
+    growthDamp: 60,        // g *= clamp(1 - seasonInj/growthDamp, 0.55, 1) (croissance freinée, récupérable)
+    tournamentSkip: 28,    // seasonInj >= : rate la CDM / coupe continentale de la saison
+  },
   // Salaire annuel de base en M€ (modulé par OVR, réputation, pays)
   salaryBase: { regional: 0.03, d2: 0.09, d1: 0.9, elite: 5.0 },
   // Indemnités que le niveau peut aligner
@@ -4371,11 +4421,11 @@ const BALANCE = {
    les événements changent sensiblement.
    ============================================================ */
 const SCORE_PERCENTILES = [
-  63, 71, 91, 95, 98, 100, 102, 104, 105, 107, 108, 110, 111, 112, 114, 115, 117, 118, 119, 121,
-  122, 123, 125, 126, 127, 129, 130, 131, 133, 134, 136, 137, 138, 139, 141, 142, 143, 145, 146, 147,
-  148, 149, 151, 152, 153, 154, 155, 156, 157, 158, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169,
-  171, 172, 173, 174, 175, 176, 177, 178, 179, 181, 182, 183, 184, 185, 186, 188, 189, 191, 192, 194,
-  195, 197, 198, 200, 201, 203, 205, 207, 210, 212, 215, 218, 221, 225, 229, 234, 241, 251, 267
+  63, 70, 88, 93, 96, 98, 100, 102, 103, 105, 106, 107, 109, 110, 111, 113, 114, 115, 116, 118,
+  119, 120, 121, 123, 124, 125, 127, 128, 129, 131, 132, 133, 134, 136, 137, 138, 140, 141, 142, 143,
+  145, 146, 147, 148, 149, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 162, 163, 164, 165, 166,
+  167, 168, 170, 171, 172, 173, 174, 175, 176, 178, 179, 180, 181, 183, 184, 185, 187, 188, 190, 191,
+  193, 194, 196, 198, 199, 201, 203, 205, 207, 210, 212, 215, 219, 222, 227, 232, 239, 249, 265
 ];
 
 /* ============================================================

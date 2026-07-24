@@ -722,7 +722,9 @@
       ${awardsHtml}
       ${objHtml}
       ${report.benched ? `<p class="recap-warn">⚠️ Cruellement court en temps de jeu : votre moral en souffre.</p>` : ""}
-      ${report.injuryWeeks ? `<p class="recap-warn">🩹 ${report.injuryWeeks} semaines d'infirmerie cette saison.</p>` : ""}
+      ${report.seasonInjury ? `<p class="recap-warn">🚑 ${esc((E.BALANCE_REF.injury.labels || {})[report.seasonInjury.tier] || "Blessure")} : ${report.seasonInjury.weeks} semaines sur la touche.</p>` : (report.injuryWeeks ? `<p class="recap-warn">🩹 ${report.injuryWeeks} semaines d'infirmerie cette saison.</p>` : "")}
+      ${report.carryInjury ? `<p class="recap-warn">🩼 Toujours en reconstruction : ${report.carryInjury} semaines de retard traînées de la saison passée.</p>` : ""}
+      ${report.tournamentMissed ? `<p class="recap-warn">😔 Blessé, vous manquez le grand tournoi de votre sélection cette saison.</p>` : ""}
       <p class="recap-money">💰 +${E.fmtMoney(report.income)} (salaire & sponsors)</p>
       ${microHtml}
       ${newsLine ? `<p class="recap-news">${esc(newsLine)}</p>` : ""}
@@ -732,10 +734,31 @@
   }
 
   function offseason() {
+    if (G.careerEnded) { renderCareerEndInjury(lastReport); return; }
     if (G.retiring || G.age >= E.BALANCE_REF.ageMax) { finalize(); return; }
     const window = E.transferWindow(G, lastReport);
     if (window) { renderTransferChoice(window.offers, window); return; }
     nextSeason();
+  }
+
+  // Fin de carrière sur blessure (déclenchée en fin de saison par le moteur) :
+  // carte dédiée, ton adapté à l'âge, puis écran final (qui reste digne pour un
+  // vétéran / joueur au palmarès, cf. dignifiedInjuryEnd).
+  function renderCareerEndInjury(report) {
+    const info = (report && report.careerEndInjury) || {};
+    const age = info.age || G.age;
+    const labels = (E.BALANCE_REF.injury && E.BALANCE_REF.injury.labels) || {};
+    const label = labels[info.tier] || "Blessure grave";
+    let text;
+    if (age >= 30) text = "Le corps a fini par dire stop. Après tout ce que vous avez accompli, une dernière blessure referme le rideau — vous quittez les terrains la tête haute.";
+    else if (age >= 24) text = "En pleine force de l'âge, le verdict médical est sans appel : vous ne rejouerez plus au haut niveau. Une carrière fauchée en plein vol.";
+    else text = "Le diagnostic est tombé, implacable : votre carrière s'arrête avant d'avoir vraiment éclos. Le sport est parfois d'une cruauté inouïe.";
+    showCard(`
+      <div class="card-tag"><span class="card-icon">🚑</span> ${esc(label)}</div>
+      <p class="result-text">${esc(text)}</p>
+      <button class="btn btn-secondary" id="btn-next">Continuer</button>
+    `, "terrible");
+    $("btn-next").addEventListener("click", finalize);
   }
 
   function nextSeason() {
@@ -1474,6 +1497,7 @@
         const opt = report.wc.moment.options[next()];
         E.resolveWcFinal(s, report, opt ? opt.id : null);
       }
+      if (s.careerEnded) break; // blessure fatale en fin de saison : miroir exact du chemin interactif (offseason → finalize)
       if (s.retiring || s.age >= E.BALANCE_REF.ageMax) break;
       const window = E.transferWindow(s, report);
       if (window) {
@@ -1995,8 +2019,14 @@
     { id: "bronze", min: -Infinity, label: "C'EST QUI ?" },
   ];
 
+  // Fin DIGNE : une blessure qui stoppe un vétéran ou un joueur au vrai palmarès
+  // mérite sa fiche complète (club, classement, tier), pas le bronze anonyme
+  // réservé aux espoirs fauchés très tôt.
+  function dignifiedInjuryEnd() {
+    return G.careerEnded && G.careerEndReason === "injury" && (G.age >= 30 || E.computeCareerScore(G) >= 130);
+  }
   function cardTierFor() {
-    if (G.careerEnded) return CARD_TIERS[4];
+    if (G.careerEnded && !dignifiedInjuryEnd()) return CARD_TIERS[4];
     const rating = E.careerRating(G);
     return CARD_TIERS.find((tier) => rating >= tier.min);
   }
@@ -2042,7 +2072,7 @@
     $("final-card").className = `player-card tier-${tier.id}`;
     $("final-tier").textContent = tier.label;
     $("final-flag").innerHTML = `${flagHtml(G.nationality)} ${esc(G.name)}`;
-    $("final-age").textContent = G.careerEnded ? "Carrière interrompue" : `Retraite à ${G.age} ans`;
+    $("final-age").textContent = !G.careerEnded ? `Retraite à ${G.age} ans` : dignifiedInjuryEnd() ? `Carrière écourtée à ${G.age} ans` : "Carrière interrompue";
     $("final-title").textContent = narrative.title;
     $("final-ovr").textContent = rating;
     $("final-pos").textContent = POS_SHORT[G.position.id] || G.position.icon;
@@ -2056,14 +2086,14 @@
     const nickname = nicknameFor();
     $("final-nickname").textContent = nickname || "";
     const country = E.countryOf(G.club.countryId);
-    $("final-club").textContent = G.careerEnded ? "" : `Dernier club : ${G.club.name} (${country ? country.name : ""})`;
+    $("final-club").textContent = (!G.careerEnded || dignifiedInjuryEnd()) ? `Dernier club : ${G.club.name} (${country ? country.name : ""})` : "";
     $("final-trajectory").textContent = `${G.trajectory.label}${G.archetype ? ` · ${G.archetype.icon} ${G.archetype.name}` : ""} — ${G.trajectory.desc}`;
 
     // Percentile mondial : où se situe cette carrière parmi tous les destins
     // possibles (distribution simulée). Masqué si carrière brisée ou table absente.
     const pctEl = $("final-percentile");
     if (pctEl) {
-      if (!G.careerEnded && SCORE_PERCENTILES.length) {
+      if ((!G.careerEnded || dignifiedInjuryEnd()) && SCORE_PERCENTILES.length) {
         const p = percentileForScore(E.computeCareerScore(G));
         pctEl.textContent = `🌍 Meilleure carrière que ${p} % des destins simulés`;
         pctEl.style.display = "";
