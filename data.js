@@ -4363,6 +4363,18 @@ const BALANCE = {
   // plus ? » ; le pivot recule avec la longévité (gardien, Increvable, discipline).
   retireFloor: 33,
   retireBaseAge: 34, // âge-pivot de la pression, avant modulation par la longévité
+  // Reconduction en sélection : à partir de intlRetainAge, un international n'est
+  // gardé que s'il tient encore le niveau. La barre d'OVR MONTE avec l'âge
+  // (intlRetainOvr + (âge - intlRetainAge) * intlRetainStep) : seuls les tout
+  // meilleurs jouent encore à 37-40 ans ; les autres sont remerciés.
+  intlRetainAge: 32,
+  intlRetainOvr: 74,
+  intlRetainStep: 1.5,
+  intlRetainRating: 6.6, // note de la dernière saison en-dessous de laquelle un vétéran n'est plus reconduit
+  // Longévité par poste : un gardien ou un défenseur reste sélectionnable bien
+  // plus vieux qu'un attaquant (moins dépendant de l'explosivité). La valeur
+  // ABAISSE la barre d'OVR requise (≈ années de sélection gagnées).
+  intlRetainPos: { gk: 8, def: 4, mil: 1, att: 0 },
   // OVR attendu d'un titulaire (plus c'est haut, plus la concurrence est rude)
   expectedLevel: { regional: 46, d2: 55, d1: 67, elite: 80 },
   matchesByLevel: { regional: [30, 38], d2: [36, 44], d1: [40, 48], elite: [44, 54] },
@@ -4486,11 +4498,11 @@ const BALANCE = {
    les événements changent sensiblement.
    ============================================================ */
 const SCORE_PERCENTILES = [
-  63, 72, 88, 94, 97, 100, 102, 104, 105, 107, 108, 110, 111, 113, 114, 116, 117, 119, 120, 122,
-  123, 124, 126, 127, 129, 130, 132, 133, 135, 136, 137, 139, 140, 141, 143, 144, 145, 147, 148, 149,
-  150, 152, 153, 154, 155, 157, 158, 159, 160, 161, 162, 163, 164, 165, 167, 168, 169, 170, 171, 172,
-  173, 174, 176, 177, 178, 179, 180, 182, 183, 184, 185, 186, 188, 189, 190, 192, 193, 194, 196, 197,
-  199, 201, 202, 204, 206, 208, 210, 212, 214, 217, 219, 222, 226, 229, 234, 239, 246, 255, 271
+  64, 73, 89, 94, 98, 100, 102, 104, 105, 107, 108, 110, 111, 113, 114, 115, 116, 118, 119, 120,
+  122, 123, 124, 126, 127, 128, 129, 131, 132, 133, 134, 135, 136, 137, 139, 140, 141, 142, 143, 144,
+  145, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 159, 160, 161, 162, 163, 164, 165, 167,
+  168, 169, 170, 171, 172, 174, 175, 176, 177, 178, 180, 181, 182, 184, 185, 187, 188, 189, 191, 193,
+  194, 196, 198, 200, 201, 203, 206, 208, 210, 213, 216, 219, 223, 227, 231, 237, 244, 253, 270
 ];
 
 /* ============================================================
@@ -4518,6 +4530,16 @@ const HEADLINES = {
   benched: [
     "« {name}, l'homme invisible de {club} »",
     "« Banc, tribunes, doutes : l'hiver sans fin de {name} »",
+  ],
+  // Jeunes joueurs : la presse ne les enterre pas, elle les couve. On parle
+  // d'avenir, de pépite en devenir, jamais d'« hiver sans fin ».
+  prospect: [
+    "« {name}, futur prodige : le talent brut ne demande qu'à éclore »",
+    "« On murmure déjà son nom : {name}, la pépite que {club} couve »",
+    "« Déjà dans la cour des grands à son âge : {name}, c'est rare »",
+    "« Diamant brut : {name} prépare son heure, patience »",
+    "« Le futur a un nom à {club}, et c'est {name} »",
+    "« {name}, la promesse dont tout le monde parle déjà »",
   ],
   injury: [
     "« L'infirmerie, seule adversaire que {name} n'a pas su dribbler »",

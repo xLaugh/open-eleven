@@ -865,8 +865,13 @@
     // aux statistiques affichées, pas à la seule note.
     const productive = report.matches >= 10 &&
       (report.goals + report.assists) >= report.matches * 0.33;
+    // Un jeune (≤ 20 ans) n'est jamais « fini » : au lieu du banc ou du flop, la
+    // presse le voit en pépite / futur prodige. On garde trophées & saison
+    // exceptionnelle (ces unes-là restent méritées à tout âge).
+    const young = s.age <= 20;
     let pool = null;
     if (report.injuryWeeks >= 12) pool = HEADLINES.injury;
+    else if (young && (report.benched || report.rating <= 5.3)) pool = HEADLINES.prospect;
     else if (report.benched) pool = HEADLINES.benched;
     else if (report.trophies.length > 0) pool = HEADLINES.trophy;
     else if (report.rating >= 7.8) pool = HEADLINES.wonder;
@@ -1673,6 +1678,25 @@
         if (s.age <= 18) s.flags.early_cap = true;
         if (s.age <= 20) s.flags.young_int = true;
         s.history.push({ age: s.age, text: `Première convocation avec ${s.nationality.name}${s.age <= 19 ? ` — à seulement ${s.age} ans !` : ""}.`, impact: 8 });
+      }
+    }
+
+    // Reconduction en sélection : un international vieillissant n'est rappelé QUE
+    // s'il tient encore le niveau. La barre d'OVR monte avec l'âge (seuls les
+    // meilleurs jouent à 37-40 ans) ; une note récente correcte et un vrai temps
+    // de jeu sont aussi exigés. Sinon, la sélection tourne la page (retraite
+    // internationale de fait, définitive). Aucun hasard : dépend des perfs réelles.
+    // Guard caps>0 : on ne remercie pas un joueur tout juste convoqué le même tour.
+    if (s.natTeam.active && !s.natTeam.retired && s.natTeam.caps > 0 && s.age >= BALANCE.intlRetainAge) {
+      const last = s.seasons[s.seasons.length - 1];
+      const recentRating = last ? last.rating : 7;
+      const posBonus = BALANCE.intlRetainPos[s.position.id] || 0; // gardien/défenseur : barre abaissée, sélectionnés plus vieux
+      const ovrNeed = BALANCE.intlRetainOvr + (s.age - BALANCE.intlRetainAge) * BALANCE.intlRetainStep - posBonus;
+      const stillGood = ovr(s) >= ovrNeed && recentRating >= BALANCE.intlRetainRating && playingTimeFactor(s) >= 0.35;
+      if (!stillGood) {
+        s.natTeam.active = false;
+        s.natTeam.retired = true;
+        s.history.push({ age: s.age, text: `Fin de l'aventure en sélection avec ${s.nationality.name} : place à la nouvelle génération.`, impact: -4 });
       }
     }
 
