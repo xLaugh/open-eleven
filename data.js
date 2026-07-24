@@ -87,6 +87,7 @@ const NATIONALITIES = [
   { id: "au", name: "Australie", flag: "🇦🇺", img: "src/img/flag/Flag_of_Australia.png", weight: 0.4, wcWeight: 0.12, homeCountryId: "au" },
   { id: "nz", name: "Nouvelle-Zélande", flag: "🇳🇿", img: "src/img/flag/Flag_of_New_Zealand.png", weight: 0.22, wcWeight: 0.05, homeCountryId: "nz" },
   { id: "pg", name: "Papouasie-Nouvelle-Guinée", flag: "🇵🇬", img: "src/img/flag/Flag_of_Papua_New_Guinea.png", weight: 0.12, wcWeight: 0.02, homeCountryId: "pg" },
+  { id: "us", name: "États-Unis", flag: "🇺🇸", img: "src/img/flag/Flag_of_the_United_States.png", weight: 0.5, wcWeight: 0.18, homeCountryId: "us" },
   { id: "cd", name: "RDC", flag: "🇨🇩", img: "src/img/flag/Flag_of_RDC.png", weight: 0.28, wcWeight: 0.08, homeCountryId: "cd" },
   { id: "gn", name: "Guinée", flag: "🇬🇳", img: "src/img/flag/Flag_of_Guinea.png", weight: 0.25, wcWeight: 0.07, homeCountryId: "gn" },
   { id: "bj", name: "Bénin", flag: "🇧🇯", img: "src/img/flag/Flag_of_Benin.png", weight: 0.2, wcWeight: 0.05, homeCountryId: "bj" },
@@ -124,6 +125,7 @@ const NAME_POOLS = {
   au: { first: ["Jack", "Liam", "Noah", "Oliver", "William", "Cooper", "Lachlan", "Ethan"], last: ["Smith", "Jones", "Williams", "Brown", "Wilson", "Taylor", "White", "Ryan"] },
   nz: { first: ["James", "Ben", "Riley", "Cody", "Kane", "Tama", "Nikau", "Ari"], last: ["Walker", "Thompson", "Baker", "Ngata", "Wright", "Reid", "Harris", "Rewiti"] },
   pg: { first: ["David", "John", "Peter", "Samuel", "Raymond", "Nigel", "Tau", "Kolu"], last: ["Kila", "Wai", "Aria", "Bai", "Gau", "Namu", "Lohia", "Vada"] },
+  us: { first: ["James", "Michael", "David", "Chris", "Tyler", "Brandon", "Kevin", "Jordan"], last: ["Smith", "Johnson", "Williams", "Brown", "Miller", "Davis", "Garcia", "Martinez"] },
   mx: { first: ["José", "Juan", "Luis", "Carlos", "Miguel", "Diego", "Fernando", "Ángel"], last: ["Hernández", "García", "Martínez", "López", "González", "Pérez", "Sánchez", "Ramírez"] },
   co: { first: ["Andrés", "Camilo", "Julián", "Santiago", "Sebastián", "Mateo", "Felipe", "Juan"], last: ["Rodríguez", "Gómez", "González", "Martínez", "García", "López", "Ramírez", "Muñoz"] },
   bj: { first: ["Kévin", "Rodrigue", "Cédric", "Marcel", "David", "Sylvain", "Roland", "Gaël"], last: ["Hounkpatin", "Dossou", "Gbaguidi", "Tossou", "Agbessi", "Aholou", "Houngbédji", "Adjovi"] },
@@ -253,7 +255,7 @@ const COUNTRIES = [
   { id: "gn", name: "Guinée", flag: "🇬🇳", img: "src/img/flag/Flag_of_Guinea.png", of: "de Guinée", salaryMult: 0.35, growthMult: 0.74, mediaMult: 0.55, continent: "af" },
   { id: "bj", name: "Bénin", flag: "🇧🇯", img: "src/img/flag/Flag_of_Benin.png", of: "du Bénin", salaryMult: 0.33, growthMult: 0.73, mediaMult: 0.53, continent: "af" },
   { id: "sa", name: "Golfe", flag: "🏜️", img: "src/img/flag/Flag_of_Golfe.png", of: "du Golfe", salaryMult: 5, exotic: true, continent: "as" },
-  { id: "us", name: "Amérique", flag: "🗽", img: "src/img/flag/Flag_of_Amerique.png", of: "d'Amérique", salaryMult: 1.6, exotic: true, continent: "am" },
+  { id: "us", name: "États-Unis", flag: "🇺🇸", img: "src/img/flag/Flag_of_the_United_States.png", of: "des États-Unis", salaryMult: 0.85, growthMult: 0.85, mediaMult: 0.72, continent: "am" },
   { id: "jp", name: "Japon", flag: "🇯🇵", img: "src/img/flag/Flag_of_Japan.png", of: "du Japon", salaryMult: 0.7, growthMult: 0.9, mediaMult: 0.7, continent: "as" },
 ];
 
@@ -659,10 +661,23 @@ const CLUBS = [
   { id: "sa_dubai", name: "Dubai", level: "d1", countryId: "sa", colors: "🔴" },
   { id: "sa_jeddah", name: "Jeddah", level: "d2", countryId: "sa", colors: "⚫🟡" },
   { id: "sa_aboudabi", name: "Abou Dabi", level: "d2", countryId: "sa" },
-  { id: "us_miami", name: "Miami", level: "d1", countryId: "us", colors: "🩷⚫" },
+  { id: "us_losangeles", name: "Los Angeles", level: "elite", countryId: "us", colors: "🔵🟡" },
+  { id: "us_seattle", name: "Seattle", level: "elite", countryId: "us", colors: "🔵🟢" },
+  { id: "us_miami", name: "Miami", level: "elite", countryId: "us", colors: "🩷⚫" },
+  { id: "us_atlanta", name: "Atlanta", level: "elite", countryId: "us", colors: "🔴⚫" },
   { id: "us_newyork", name: "New York", level: "d1", countryId: "us", colors: "🔵🟠" },
-  { id: "us_seattle", name: "Seattle", level: "d1", countryId: "us", colors: "🔵🟢" },
-  { id: "us_losangeles", name: "Los Angeles", level: "d1", countryId: "us", colors: "🔵🟡" },
+  { id: "us_portland", name: "Portland", level: "d1", countryId: "us", colors: "🟢⚫" },
+  { id: "us_cincinnati", name: "Cincinnati", level: "d1", countryId: "us", colors: "🔵🟠" },
+  { id: "us_austin", name: "Austin", level: "d1", countryId: "us", colors: "🟢⚫" },
+  { id: "us_nashville", name: "Nashville", level: "d1", countryId: "us", colors: "🟡🔵" },
+  { id: "us_sacramento", name: "Sacramento", level: "d2", countryId: "us", colors: "🟣⚪" },
+  { id: "us_sanantonio", name: "San Antonio", level: "d2", countryId: "us", colors: "🔵⚪" },
+  { id: "us_louisville", name: "Louisville", level: "d2", countryId: "us", colors: "🟣⚪" },
+  { id: "us_tampa", name: "Tampa Bay", level: "d2", countryId: "us", colors: "🔴🟡" },
+  { id: "us_detroit", name: "Detroit", level: "regional", countryId: "us", colors: "🔴⚪" },
+  { id: "us_oakland", name: "Oakland", level: "regional", countryId: "us", colors: "🟢⚫" },
+  { id: "us_phoenix", name: "Phoenix", level: "regional", countryId: "us", colors: "🔴⚫" },
+  { id: "us_chattanooga", name: "Chattanooga", level: "regional", countryId: "us", colors: "🔵⚪" },
   { id: "jp_tokyo", name: "Tokyo", level: "d1", countryId: "jp", colors: "🔵" },
   { id: "jp_fukushima", name: "Fukushima", level: "d1", countryId: "jp" },
   { id: "jp_sendai", name: "Sendai", level: "d1", countryId: "jp", colors: "🟡🔵" },
@@ -4326,11 +4341,11 @@ const BALANCE = {
    les événements changent sensiblement.
    ============================================================ */
 const SCORE_PERCENTILES = [
-  63, 70, 89, 94, 97, 99, 101, 103, 104, 106, 107, 108, 110, 111, 112, 114, 115, 116, 117, 119,
-  120, 121, 123, 124, 125, 126, 128, 129, 130, 132, 133, 134, 135, 137, 138, 139, 141, 142, 143, 144,
-  145, 146, 148, 149, 150, 151, 152, 153, 155, 156, 157, 158, 159, 160, 161, 162, 164, 165, 166, 167,
-  168, 169, 171, 172, 173, 174, 175, 176, 177, 179, 180, 181, 182, 183, 185, 186, 187, 189, 190, 192,
-  193, 195, 197, 198, 200, 202, 204, 206, 209, 211, 214, 217, 220, 224, 229, 234, 242, 252, 269
+  63, 70, 90, 95, 97, 99, 101, 103, 104, 106, 107, 109, 110, 111, 112, 114, 115, 116, 118, 119,
+  121, 122, 123, 125, 126, 127, 129, 130, 131, 133, 134, 135, 136, 138, 139, 140, 141, 143, 144, 145,
+  146, 148, 149, 150, 151, 152, 153, 155, 156, 157, 158, 159, 161, 162, 163, 164, 165, 166, 167, 168,
+  170, 171, 172, 173, 174, 175, 177, 178, 179, 180, 181, 183, 184, 185, 186, 188, 189, 191, 192, 193,
+  195, 196, 198, 200, 202, 203, 205, 208, 210, 212, 215, 218, 221, 225, 229, 234, 241, 250, 268
 ];
 
 /* ============================================================
