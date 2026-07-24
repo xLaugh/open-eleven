@@ -64,6 +64,17 @@
     return (s.clubLevels && s.clubLevels[club.id]) || club.level;
   }
 
+  // Élision française : « de/le » deviennent « d'/l' » devant une voyelle (ou
+  // voyelle accentuée). Évite « le Aigle de Osaka » → « L'Aigle d'Osaka ».
+  function frElide(w) { return /^[aàâäeéèêëiîïoôöuùûüyAÀÂÄEÉÈÊËIÎÏOÔÖUÙÛÜY]/.test(String(w || "")); }
+  function deOf(w) {
+    w = String(w || "");
+    if (/^Les /.test(w)) return "des " + w.slice(4); // « de Les Corts » → « des Corts »
+    if (/^Le /.test(w)) return "du " + w.slice(3);   // « de Le Caire » → « du Caire »
+    return (frElide(w) ? "d'" : "de ") + w;           // « de Paris » / « d'Amiens »
+  }
+  function leOf(w) { return (frElide(w) ? "L'" : "Le ") + w; } // « Le Balayeur » / « L'Aigle »
+
   // Visibilité médiatique effective : les championnats exotiques paient
   // très cher mais exposent deux fois moins (gains de réputation réduits,
   // Ballon d'Or hors de portée — cf. rollBallon).
@@ -308,6 +319,11 @@
     const country = countryOf(s.club.countryId);
     const contCup = (CONTINENTAL_CUPS[(country || {}).continent] || CONTINENTAL_CUPS.eu).name;
     let out = text
+      // Élision : « de {club/nat/country/name} » → « d'Osaka », « d'Angleterre »…
+      .replace(/\bde \{club\}/g, deOf(s.club.name))
+      .replace(/\bde \{nat\}/g, deOf(s.nationality.name))
+      .replace(/\bde \{country\}/g, deOf(country ? country.name : ""))
+      .replace(/\bde \{name\}/g, deOf(s.name))
       .replace(/\{club\}/g, s.club.name)
       .replace(/\{coach\}/g, s.coach)
       .replace(/\{country\}/g, country ? country.name : "")
@@ -1139,7 +1155,7 @@
       s.leagueTitlesDetail.push({ countryId: s.club.countryId, level: lvl, clubId: s.club.id, year: s.year });
       s.rep = clamp(s.rep + Math.round(4 * visibilityOf(s)), 0, 100);
       s.moral = clamp(s.moral + 6, 5, 100);
-      s.history.push({ age: s.age, text: `Champion de ${LEVELS[lvl].short} ${s.year} avec ${s.club.name} — la montée !`, impact: 9 });
+      s.history.push({ age: s.age, text: `Champion ${deOf(LEVELS[lvl].short)} ${s.year} avec ${s.club.name} — la montée !`, impact: 9 });
     } else if (!isTopFlight && rating >= 6.4 && rng() < (BALANCE.playoffChance[lvl] || 0) * teamBoost) {
       // Saison solide sans titre : la montée se joue en barrage (moment décisif)
       report.playoffRun = true;
@@ -1157,7 +1173,7 @@
         rng() < relegBase * clamp(1 - (rating - 6.3) * 0.35, 0.2, 1.6)) {
       report.relegated = true;
       s.moral = clamp(s.moral - 8, 5, 100);
-      s.history.push({ age: s.age, text: `Relégation de ${s.club.name} en ${s.year} — une saison noire.`, impact: -10 });
+      s.history.push({ age: s.age, text: `Relégation ${deOf(s.club.name)} en ${s.year} — une saison noire.`, impact: -10 });
     }
     // La coupe nationale : atteindre la finale se joue ici, la gagner se
     // joue dans un moment décisif
@@ -1248,8 +1264,8 @@
         s.age >= 17 && s.age <= 20 && ovr(s) >= 71 && s.rep >= 35) {
       s.flags.youth_int = true;
       s.rep = clamp(s.rep + 2, 0, 100);
-      report.lines.push({ text: `Première convocation avec les Espoirs de ${s.nationality.name} — l'antichambre des A.`, impact: 5 });
-      s.history.push({ age: s.age, text: `Sélectionné avec les Espoirs de ${s.nationality.name}.`, impact: 5 });
+      report.lines.push({ text: `Première convocation avec les Espoirs ${deOf(s.nationality.name)} — l'antichambre des A.`, impact: 5 });
+      s.history.push({ age: s.age, text: `Sélectionné avec les Espoirs ${deOf(s.nationality.name)}.`, impact: 5 });
     }
 
     // Mode Histoire : la finale mondiale scénarisée impose la sélection cette
@@ -1804,10 +1820,10 @@
       reason = "Votre contrat expire : il faut trancher.";
       spec = { d: report && report.rating >= 7.2 ? 1 : 0 };
     } else if (report && report.promoted) {
-      reason = `La montée de ${s.club.name} fait de vous une cible : rester pour l'aventure, ou viser encore plus haut ?`;
+      reason = `La montée ${deOf(s.club.name)} fait de vous une cible : rester pour l'aventure, ou viser encore plus haut ?`;
       spec = { d: 1 };
     } else if (report && report.relegated) {
-      reason = `La relégation de ${s.club.name} ouvre votre bon de sortie.`;
+      reason = `La relégation ${deOf(s.club.name)} ouvre votre bon de sortie.`;
       spec = { d: 0 };
     } else if (report && report.benched) {
       if (rng() < 0.65) { reason = "Votre temps de jeu famélique alerte tout le marché."; spec = { d: -1 }; }
@@ -2026,6 +2042,7 @@
   const Engine = {
     rng, setSeed, clearSeed, getSeedState, setSeedState,
     clamp, rand, randInt, pick, weightedRandom, countryOf, levelRank, lvlOf,
+    deOf, leOf,
     fmtMoney, rollPotential, potStars, prodigyChance, pickTrajectory, academyOffers,
     generateName, newCareer, ovr, hasTrait, renderText, applyFx,
     eventEligible, pickEvent, optionEligible, resolveOption, netImpact, toneOf,

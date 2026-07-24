@@ -701,7 +701,7 @@
       ? `<p class="recap-trophies">🎖️ ${awardIds.map((id) => `${AWARDS[id].icon} ${AWARDS[id].name}`).join(" · ")}</p>`
       : "";
     let leagueLine;
-    if (report.leaguePos === 1) leagueLine = report.divisionTitle ? `🥇 Champion de ${LEVELS[report.level].short} !` : "🥇 Champion !";
+    if (report.leaguePos === 1) leagueLine = report.divisionTitle ? `🥇 Champion ${E.deOf(LEVELS[report.level].short)} !` : "🥇 Champion !";
     else if (report.promoted) leagueLine = `${report.leaguePos}ᵉ — 🚀 montée arrachée en barrage !`;
     else if (report.playoffRun) leagueLine = `${report.leaguePos}ᵉ — barrage de montée perdu`;
     else if (report.relegated) leagueLine = `${report.leaguePos}ᵉ — 📉 RELÉGATION`;
@@ -2047,7 +2047,7 @@
     G.seasons.forEach((se) => { counts[se.clubName] = (counts[se.clubName] || 0) + 1; });
     const topClub = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
     if (!topClub) return null;
-    return `« Le ${ARCH_NICKS[G.archetype.id] || G.archetype.name} de ${topClub[0]} »`;
+    return `« ${E.leOf(ARCH_NICKS[G.archetype.id] || G.archetype.name)} ${E.deOf(topClub[0])} »`;
   }
 
   // Percentile du score sur la distribution simulée (SCORE_PERCENTILES,
