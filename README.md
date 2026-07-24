@@ -22,7 +22,7 @@ Tout commence par la **création de votre joueur** : nationalité, poste, origin
 
 Ce qui vous attend au fil des saisons :
 
-- 🌍 **30 pays**, **325 clubs**, **27 nationalités** jouables, sur 4 divisions (Régional · D2 · D1 · Élite)
+- 🌍 **48 pays**, **428 clubs**, **47 nationalités** jouables des cinq continents, sur 4 divisions (Régional · D2 · D1 · Élite)
 - ⚡ Des événements à choix qui font et défont votre carrière
 - 🎯 Des moments décisifs interactifs : penalty de finale, barrage de montée, derby…
 - 💸 Transferts, prêts, blessures, sélection nationale
@@ -33,10 +33,10 @@ Ce qui vous attend au fil des saisons :
 
 En club comme en sélection, tout se joue :
 
-- 🎖️ **Championnat** et **Coupe Nationale**
-- 👑 **Coupe des Champions** (Europe, Amérique, Afrique, Asie)
+- 🎖️ **Championnat** et **Coupe Nationale** (la gagner, même en D2, ouvre les portes de l'Europe)
+- 👑 **Coupe des Champions** (Europe, Amérique, Afrique, Asie, Océanie), plus les coupes d'Europe secondaires : **Trophée d'Europe** et **Bouclier d'Europe**
 - 🏆 **Coupe du Monde**
-- 🌍 Le championnat continental de votre nation : **Euro**, **Coupe d'Amérique**, **Coupe d'Afrique des Nations**
+- 🌍 Le championnat continental de votre nation : **Euro**, **Coupe d'Amérique**, **Coupe d'Afrique des Nations**, **Coupe d'Asie**, **Coupe d'Océanie**
 - ⭐ Le **Ballon d'Or**, pour les plus grands
 - 👟 Le **Soulier d'Or**, pour les serial buteurs
 
