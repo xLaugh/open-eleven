@@ -217,6 +217,7 @@ const ORIGINS = [
   { id: "quartier", name: "Quartier populaire", desc: "Tout appris dans la rue et sur des terrains vagues, à la dure.", startStats: { t: 60, p: 52, m: 58, c: 45, rep: 10 } },
   { id: "futsal", name: "Prodige du futsal", desc: "Des pieds en or forgés en salle. Le grand terrain reste à apprivoiser.", startStats: { t: 64, p: 42, m: 48, c: 46, rep: 14 } },
   { id: "tardif", name: "Révélé sur le tard", desc: "Personne ne croyait en vous. Le physique et la rage comme seuls bagages.", startStats: { t: 47, p: 60, m: 62, c: 38, rep: 5 } },
+  { id: "prodige", name: "Prodige du foot", desc: "Un talent hors norme repéré très jeune : un cran au-dessus des autres dès le départ, mais l'attente qui pèse sur vos épaules est immense.", startStats: { t: 62, p: 56, m: 56, c: 50, rep: 26 } },
 ];
 
 // --- Pays de club ---------------------------------------------------------
@@ -4405,7 +4406,7 @@ const BALANCE = {
   // Tirage caché à la création : chance de base + bonus selon les choix
   // (origine, hygiène, entourage), plafonnée. Le meilleur profil approche 5 %.
   prodigyBase: 0.012,
-  prodigyOrigin: { futsal: 0.016, quartier: 0.011, sportif: 0.009, formation: 0.006, tardif: 0 },
+  prodigyOrigin: { prodige: 0.02, futsal: 0.016, quartier: 0.011, sportif: 0.009, formation: 0.006, tardif: 0 },
   prodigyLifestyle: { pro: 0.011, balance: 0.003, street: -0.004 },
   prodigyEntourage: { shark: 0.011, family: 0.007, crew: -0.002 },
   prodigyChanceCap: 0.05, // plafond de probabilité (meilleur profil possible)
@@ -4421,11 +4422,11 @@ const BALANCE = {
    les événements changent sensiblement.
    ============================================================ */
 const SCORE_PERCENTILES = [
-  63, 70, 88, 93, 96, 98, 100, 102, 103, 105, 106, 107, 109, 110, 111, 113, 114, 115, 116, 118,
-  119, 120, 121, 123, 124, 125, 127, 128, 129, 131, 132, 133, 134, 136, 137, 138, 140, 141, 142, 143,
-  145, 146, 147, 148, 149, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 162, 163, 164, 165, 166,
-  167, 168, 170, 171, 172, 173, 174, 175, 176, 178, 179, 180, 181, 183, 184, 185, 187, 188, 190, 191,
-  193, 194, 196, 198, 199, 201, 203, 205, 207, 210, 212, 215, 219, 222, 227, 232, 239, 249, 265
+  63, 72, 88, 94, 97, 100, 102, 104, 105, 107, 108, 110, 111, 113, 114, 116, 117, 119, 120, 122,
+  123, 124, 126, 127, 129, 130, 132, 133, 135, 136, 137, 139, 140, 141, 143, 144, 145, 147, 148, 149,
+  150, 152, 153, 154, 155, 157, 158, 159, 160, 161, 162, 163, 164, 165, 167, 168, 169, 170, 171, 172,
+  173, 174, 176, 177, 178, 179, 180, 182, 183, 184, 185, 186, 188, 189, 190, 192, 193, 194, 196, 197,
+  199, 201, 202, 204, 206, 208, 210, 212, 214, 217, 219, 222, 226, 229, 234, 239, 246, 255, 271
 ];
 
 /* ============================================================
