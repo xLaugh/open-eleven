@@ -4257,6 +4257,482 @@ const EVENTS = [
       }
     ]
   },
+
+  // ══════════════ FOURNÉE : nouveaux systèmes, catégories vides, classiques ══════════════
+  {
+    id: "ev_intl_fight", cat: "Sélection", icon: "🎽", w: 9,
+    cond: { aMin: 32, nat: true, minRep: 60 },
+    text: "Le sélectionneur vous convoque en tête-à-tête : un jeune pousse fort, votre place n'est plus garantie. « Montrez-moi que vous la méritez encore. »",
+    options: [
+      { label: "Tout donner physiquement pour rester", hint: "Va-tout", outcomes: [
+        { weight: 55, text: "Vous écœurez tout le monde à l'entraînement : votre place est sauvée, et le respect avec.", fx: { rep: 5, mor: 6, form: 5 } },
+        { weight: 45, text: "À vouloir trop prouver, un muscle lâche. Le message est brouillé.", fx: { inj: 8, rep: 2, mor: -4 } },
+      ] },
+      { label: "Miser sur l'expérience et le leadership", hint: "Sagesse", outcomes: [
+        { weight: 60, text: "Le sélectionneur salue votre maturité : vous restez, en patron du groupe.", fx: { rep: 3, m: 3, mor: 4 } },
+        { weight: 40, text: "Pas assez tranchant à ses yeux. La nouvelle génération passe devant, définitivement.", fx: { mor: -8, rep: -3, natRetire: true } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_injury_niggle", cat: "Blessure", icon: "🩹", w: 10,
+    cond: { flag: "big_injury", aMin: 24 },
+    text: "La cicatrice de votre grosse blessure vous lance à l'échauffement. Le staff conseille le repos, mais un match décisif approche.",
+    options: [
+      { label: "Serrer les dents et jouer", hint: "Risqué", outcomes: [
+        { weight: 45, text: "Vous tenez le choc et sortez un match héroïque. Le corps a suivi, cette fois.", fx: { rep: 4, mor: 5, form: -3 } },
+        { weight: 55, text: "La gêne vire à la rechute en plein match. La convalescence repart de plus loin.", fx: { inj: 10, chronic: 8, mor: -6 } },
+      ] },
+      { label: "Écouter le corps, faire l'impasse", hint: "Prudent", outcomes: [
+        { weight: 100, text: "Repos préventif : vous manquez le match, mais vous coupez court à la rechute.", fx: { inj: 3, mor: -3, form: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_prodigy_pressure", cat: "Médias", icon: "📸", w: 10,
+    cond: { origin: "prodige", aMax: 22 },
+    text: "« Le nouveau phénomène », titrent-ils déjà. À votre âge, chaque geste est disséqué, chaque erreur amplifiée. La hype menace de vous écraser.",
+    options: [
+      { label: "Assumer, nourrir la lumière", hint: "Ambition", outcomes: [
+        { weight: 55, text: "Vous surfez sur la vague : les projecteurs vous rendent plus fort.", fx: { rep: 6, c: 3, mor: 4 } },
+        { weight: 45, text: "La pression vous paralyse par séquences. Le talent s'enraye.", fx: { form: -6, mor: -5 } },
+      ] },
+      { label: "Se couper du bruit, bosser dans l'ombre", hint: "Sagesse", outcomes: [
+        { weight: 100, text: "Tête baissée, travail acharné : la maturité paiera sur la durée.", fx: { m: 4, form: 3, mor: 2, rep: -1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_club_record", cat: "Records", icon: "📈", w: 9,
+    cond: { minOvr: 76, aMin: 25, minClubSeasons: 3, minForm: 55 },
+    text: "Vous n'êtes plus qu'à quelques buts du record historique de votre club. Toute la ville retient son souffle à chaque ballon que vous touchez.",
+    options: [
+      { label: "Foncer, chasser le record", hint: "Perso", outcomes: [
+        { weight: 55, text: "RECORD BATTU ! Votre nom est gravé pour toujours dans l'histoire du club.", fx: { rep: 7, mor: 8, c: 3 } },
+        { weight: 45, text: "L'obsession du chiffre grippe votre jeu et agace le vestiaire.", fx: { rep: -2, team: -4, mor: -4 } },
+      ] },
+      { label: "Jouer collectif, le record viendra", hint: "Équipe", outcomes: [
+        { weight: 100, text: "Vous faites passer l'équipe d'abord : le vestiaire vous vénère, le record attendra son heure.", fx: { team: 6, mor: 4, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_wonder_goal", cat: "Insolite", icon: "🎥", w: 8,
+    cond: { minForm: 50, chance: 0.5 },
+    text: "En plein match, une reprise acrobatique venue d'ailleurs se loge dans la lucarne. En quelques minutes, la vidéo enflamme la planète entière.",
+    options: [
+      { label: "Savourer le moment culte", hint: "Star", outcomes: [
+        { weight: 100, text: "Des millions de vues, un maillot qui s'arrache : vous entrez dans la légende des plus beaux buts.", fx: { rep: 6, c: 5, mor: 6 } },
+      ] },
+      { label: "Rester humble, minimiser", hint: "Discret", outcomes: [
+        { weight: 100, text: "« J'ai eu de la réussite. » Les puristes saluent la modestie autant que le geste.", fx: { rep: 3, m: 3, mor: 3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_club_takeover", cat: "Club", icon: "💰", w: 9,
+    cond: { levels: ["d1", "d2", "regional"], aMin: 20 },
+    text: "Un fonds d'investissement rachète le club. Réunion sous les lambris : « Dans trois ans, on joue les premiers rôles. » Le vestiaire oscille entre rêve et méfiance.",
+    options: [
+      { label: "Croire au projet, s'engager à fond", hint: "Ambition", outcomes: [
+        { weight: 50, text: "Les moyens débarquent, les recrues suivent : le club franchit un cap, et vous avec.", fx: { clubBoost: 1, mor: 6, rep: 2 } },
+        { weight: 50, text: "Beaucoup de promesses en conférence, peu de concret sur la pelouse pour l'instant.", fx: { mor: -3, coach: -3 } },
+      ] },
+      { label: "Rester prudent, attendre de voir", hint: "Méfiance", outcomes: [
+        { weight: 100, text: "Vous gardez la tête froide au milieu de l'euphorie. Sage : le temps dira qui avait raison.", fx: { m: 3, mor: 1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_newborn", cat: "Vie perso", icon: "👶", w: 9,
+    cond: { aMin: 23 },
+    text: "Vous devenez parent. Le monde bascule : les nuits sont courtes, mais un moteur tout neuf s'allume au fond de vous.",
+    options: [
+      { label: "Puiser une force nouvelle", hint: "Motivé", outcomes: [
+        { weight: 70, text: "Vous jouez pour deux désormais : une sérénité nouvelle se lit dans votre jeu.", fx: { mor: 8, m: 3, form: 2 } },
+        { weight: 30, text: "Les nuits blanches finissent par peser sur les jambes.", fx: { form: -4, mor: 3 } },
+      ] },
+      { label: "Organiser l'équilibre vie-carrière", hint: "Sagesse", outcomes: [
+        { weight: 100, text: "Vous réglez tout au millimètre : l'équilibre trouvé vous rend plus solide.", fx: { mor: 5, dis: 3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_matchfix", cat: "Crise", icon: "💵", w: 8,
+    cond: { aMin: 24, maxOvr: 82 },
+    text: "Un intermédiaire au regard fuyant vous glisse une enveloppe épaisse : « Un match sans forcer, personne ne saura jamais. » Il attend votre réponse.",
+    options: [
+      { label: "Prendre l'argent", hint: "Danger", outcomes: [
+        { weight: 55, text: "Personne n'a rien vu… cette fois-ci. Mais l'argent sale brûle les doigts.", fx: { money: 2, rep: -4, dis: -6, flag: "traitor" } },
+        { weight: 45, text: "La fédération enquête. Suspension retentissante et honte publique.", fx: { money: 1, rep: -15, ban: 16, mor: -12 } },
+      ] },
+      { label: "Refuser net et signaler", hint: "Intègre", outcomes: [
+        { weight: 100, text: "Vous dénoncez la tentative : tout un sport salue votre probité.", fx: { rep: 6, mor: 5, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_captaincy", cat: "Vestiaire", icon: "🫡", w: 10,
+    cond: { aMin: 27, minRep: 55, minTeam: 55, minClubSeasons: 2 },
+    text: "Le coach vous tend le brassard de capitaine. Le vestiaire vous observe : saurez-vous porter tout un groupe sur vos épaules ?",
+    options: [
+      { label: "Accepter, devenir un leader", hint: "Patron", outcomes: [
+        { weight: 65, text: "Vous fédérez le groupe et haussez le ton au bon moment : un vrai patron est né.", fx: { rep: 5, m: 4, team: 6, mor: 5 } },
+        { weight: 35, text: "La responsabilité pèse plus lourd que prévu sur votre propre jeu.", fx: { form: -3, mor: -3, team: 2 } },
+      ] },
+      { label: "Refuser, rester concentré sur soi", hint: "Discret", outcomes: [
+        { weight: 100, text: "Vous préférez montrer l'exemple sans le brassard. Un choix qu'on respecte.", fx: { m: 2, mor: 1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_investment", cat: "Finance", icon: "📊", w: 9,
+    cond: { minMoney: 5, aMin: 25 },
+    text: "Un proche vous propose un placement juteux : un projet capable de tripler la mise… ou de tout engloutir. Votre conseiller, lui, prêche la prudence.",
+    options: [
+      { label: "Tenter le gros coup", hint: "Risqué", outcomes: [
+        { weight: 45, text: "Jackpot : le placement explose, votre fortune double d'un coup.", fx: { money: 8, mor: 5 } },
+        { weight: 55, text: "Le projet coule corps et biens, une partie de vos économies s'envole.", fx: { money: -4, mor: -6 } },
+      ] },
+      { label: "Placer sereinement, sans risque", hint: "Prudent", outcomes: [
+        { weight: 100, text: "Rendement modeste mais garanti : votre patrimoine grossit tranquillement.", fx: { money: 2, m: 1 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ FOURNÉE 2 : Golfe/sélection, Physique, Réseaux, classiques, après-carrière ══════════════
+  {
+    id: "ev_gulf_young", cat: "Mercato", icon: "💸", w: 9,
+    cond: { aMin: 22, aMax: 29, minRep: 58 },
+    text: "En pleine ascension, une offre venue d'Arabie Saoudite tombe : un salaire indécent, tout de suite. Mais partir maintenant, c'est peut-être quitter la lumière trop tôt.",
+    options: [
+      { label: "Prendre l'or maintenant", hint: "Jackpot", outcomes: [
+        { weight: 100, text: "Contrat signé, compte en banque stratosphérique. L'Europe, elle, continuera sans vous parler.", fx: { money: 9, rep: -6, mor: 3, transfer: { d: -1, gulf: true }, trait: "mercenary" } },
+      ] },
+      { label: "Refuser : la carrière avant l'argent", hint: "Ambition", outcomes: [
+        { weight: 65, text: "Vous misez sur votre valeur sportive. Le monde du foot respecte le choix.", fx: { rep: 5, mor: 4, m: 2 } },
+        { weight: 35, text: "Un an plus tard, l'offre s'est envolée et le niveau a baissé. Le doute s'installe.", fx: { mor: -5, rep: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_intl_farewell", cat: "Sélection", icon: "🎬", w: 9,
+    cond: { aMin: 34, nat: true, minRep: 55 },
+    text: "La fédération vous propose un dernier match en sélection, un hommage devant votre public. Le crépuscule international est là.",
+    options: [
+      { label: "Tirer sa révérence en beauté", hint: "Émotion", outcomes: [
+        { weight: 100, text: "Standing ovation, brassard, larmes : vous quittez la sélection par la grande porte, à jamais gravé dans les mémoires.", fx: { rep: 6, mor: 8, natRetire: true } },
+      ] },
+      { label: "Refuser l'adieu : encore un tour", hint: "Fierté", outcomes: [
+        { weight: 55, text: "Vous vous accrochez, et prouvez que les jambes suivent encore un peu.", fx: { rep: 2, mor: 3, form: 2 } },
+        { weight: 45, text: "L'entêtement de trop : le sélectionneur tranche à votre place.", fx: { mor: -6, natRetire: true } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_new_trainer", cat: "Physique", icon: "🏋️", w: 9,
+    cond: { aMin: 23 },
+    text: "Un préparateur physique de renom débarque avec des méthodes radicales : « On va tout casser pour tout reconstruire. » Le programme fait peur.",
+    options: [
+      { label: "Se donner à fond dans le programme", hint: "Intense", outcomes: [
+        { weight: 60, text: "Métamorphose athlétique : vous n'avez jamais été aussi affûté.", fx: { p: 3, form: 5, mor: 3 } },
+        { weight: 40, text: "Le corps ne suit pas la surcharge : une alerte musculaire.", fx: { inj: 6, p: 1, mor: -3 } },
+      ] },
+      { label: "Doser, garder ses habitudes", hint: "Prudent", outcomes: [
+        { weight: 100, text: "Vous adaptez le programme à votre corps : gains modestes mais sans casse.", fx: { p: 1, form: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_pace_wall", cat: "Physique", icon: "🧱", w: 9,
+    cond: { aMin: 31 },
+    text: "La vitesse n'est plus tout à fait là. Les jeunes vous prennent dans le dos, et le miroir ne ment pas : le physique décline.",
+    options: [
+      { label: "Réinventer son jeu, jouer plus malin", hint: "Intelligence", outcomes: [
+        { weight: 100, text: "Vous compensez par le placement et la lecture : le cerveau remplace les jambes.", fx: { m: 5, form: 3, mor: 3 } },
+      ] },
+      { label: "Se battre pour garder l'explosivité", hint: "Orgueil", outcomes: [
+        { weight: 45, text: "Travail acharné : vous grattez encore quelques mètres de vitesse.", fx: { p: 2, form: 2 } },
+        { weight: 55, text: "Le corps refuse de revenir en arrière. Frustration et petites douleurs.", fx: { p: -1, inj: 4, mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_bad_tweet", cat: "Réseaux", icon: "📱", w: 9,
+    cond: { aMin: 19 },
+    text: "Un message posté tard dans la nuit, mal tourné, met le feu aux réseaux au réveil. Captures d'écran partout, polémique lancée.",
+    options: [
+      { label: "Assumer et en rajouter", hint: "Cash", outcomes: [
+        { weight: 45, text: "Votre franc-parler séduit une partie du public : icône rebelle.", fx: { c: 4, rep: 2, mor: 2 } },
+        { weight: 55, text: "L'incendie devient ingérable. Le club vous recadre publiquement.", fx: { rep: -6, mor: -5, coach: -4 } },
+      ] },
+      { label: "Supprimer et présenter des excuses", hint: "Sagesse", outcomes: [
+        { weight: 100, text: "Excuses sobres, communication maîtrisée : la tempête retombe vite.", fx: { rep: 1, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_influencer_deal", cat: "Réseaux", icon: "🤳", w: 9,
+    cond: { aMin: 21, minRep: 52 },
+    text: "Une marque vous déroule le tapis rouge : contenu sponsorisé, millions d'abonnés, gros chèque. Mais votre image se monnaie, et le vestiaire jase.",
+    options: [
+      { label: "Signer et bâtir sa marque", hint: "Business", outcomes: [
+        { weight: 60, text: "Votre popularité explose et les revenus tombent. Une star hors du terrain.", fx: { money: 3, c: 4, rep: 2 } },
+        { weight: 40, text: "Trop de business, pas assez de foot : le coach s'agace, le vestiaire lève les yeux.", fx: { money: 3, coach: -4, team: -3 } },
+      ] },
+      { label: "Décliner, rester focus sur le terrain", hint: "Discret", outcomes: [
+        { weight: 100, text: "Vous préférez laisser parler les crampons. Le respect du milieu est intact.", fx: { m: 2, rep: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_foundation", cat: "Hommage", icon: "🎗️", w: 8,
+    cond: { aMin: 28, minRep: 55, minMoney: 8 },
+    text: "Au sommet de votre notoriété, l'envie de rendre : et si vous montiez une fondation pour les gamins des quartiers d'où vous venez ?",
+    options: [
+      { label: "Lancer la fondation, s'y investir", hint: "Cœur", outcomes: [
+        { weight: 100, text: "Des terrains, des bourses, des sourires : votre nom rime désormais avec bien commun. Une autre forme de légende.", fx: { rep: 6, mor: 6, money: -3 } },
+      ] },
+      { label: "Donner dans l'ombre, sans caméra", hint: "Pudeur", outcomes: [
+        { weight: 100, text: "Vous aidez discrètement, loin des projecteurs. Ceux qui savent vous respectent d'autant plus.", fx: { mor: 4, money: -2, m: 1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_bereavement", cat: "Vie perso", icon: "🕯️", w: 8,
+    cond: { aMin: 22 },
+    text: "Un proche qui a toujours cru en vous s'en est allé. Le chagrin est immense. Sur le terrain, chaque ballon a soudain un autre poids.",
+    options: [
+      { label: "Jouer pour sa mémoire", hint: "Hommage", outcomes: [
+        { weight: 70, text: "Chaque geste lui est dédié. La douleur se change en force : une saison portée par un ange.", fx: { mor: 6, rep: 3, m: 2 } },
+        { weight: 30, text: "L'émotion vous submerge par vagues, le corps suit mal.", fx: { form: -4, mor: 2 } },
+      ] },
+      { label: "Prendre du recul, faire son deuil", hint: "Humain", outcomes: [
+        { weight: 100, text: "Vous vous accordez le temps de guérir. Le foot attendra, et c'est très bien ainsi.", fx: { mor: 3, form: -1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_homecoming", cat: "Mercato", icon: "🏡", w: 8,
+    cond: { notAtOriginClub: true, aMin: 29, minRep: 55 },
+    text: "Le club qui vous a tout appris vous rappelle : « Reviens à la maison, écris la dernière page ici. » Le cœur parle fort.",
+    options: [
+      { label: "Rentrer au bercail", hint: "Cœur", outcomes: [
+        { weight: 100, text: "Retour aux sources sous les acclamations : l'enfant du club revient au bercail.", fx: { mor: 8, rep: 3, transfer: { origin: true }, trait: "loyal" } },
+      ] },
+      { label: "Rester où l'ambition est plus grande", hint: "Raison", outcomes: [
+        { weight: 65, text: "La tête l'emporte sur le cœur : vous visez encore plus haut, ailleurs.", fx: { rep: 2, m: 2 } },
+        { weight: 35, text: "Le club formateur retire son offre, un brin déçu. Occasion manquée.", fx: { mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_failed_medical", cat: "Mercato", icon: "🩺", w: 8,
+    cond: { aMin: 25, minRep: 58 },
+    text: "Un transfert de rêve était bouclé… mais la visite médicale coince sur un détail. Le club acheteur se retire à la dernière seconde.",
+    options: [
+      { label: "Encaisser et se remobiliser", hint: "Mental", outcomes: [
+        { weight: 60, text: "Vous transformez la déception en rage de prouver. Le doute rend plus fort.", fx: { m: 4, mor: -2, form: 3 } },
+        { weight: 40, text: "Le coup est dur à digérer : la saison démarre la tête ailleurs.", fx: { mor: -6, form: -3 } },
+      ] },
+      { label: "Ruminer et réclamer des comptes", hint: "Rancune", outcomes: [
+        { weight: 100, text: "Vous en voulez au monde entier. L'ambiance en pâtit, mais votre orgueil est sauf.", fx: { rep: -2, mor: -3, team: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_documentary", cat: "Médias", icon: "🎦", w: 8,
+    cond: { aMin: 26, minRep: 68 },
+    text: "Une plateforme de streaming veut un documentaire sur votre carrière : caméras dans le vestiaire, la famille, l'intimité. L'exposition serait totale.",
+    options: [
+      { label: "Ouvrir grand les portes", hint: "Star", outcomes: [
+        { weight: 60, text: "Le doc cartonne : votre légende déborde du terrain, votre image explose.", fx: { rep: 6, c: 4, mor: 3 } },
+        { weight: 40, text: "Trop d'intimité dévoilée : certaines séquences se retournent contre vous.", fx: { rep: -3, mor: -4 } },
+      ] },
+      { label: "Garder sa vie privée fermée", hint: "Discret", outcomes: [
+        { weight: 100, text: "Vous préservez votre jardin secret. Le mystère nourrit la fascination.", fx: { m: 2, rep: 1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_shady_sponsor", cat: "Finance", icon: "🧾", w: 8,
+    cond: { aMin: 22, minRep: 58 },
+    text: "Un sponsor à l'éthique très discutable pose un pont d'or pour associer votre image à sa marque. L'argent est réel, la réputation en jeu.",
+    options: [
+      { label: "Prendre le chèque", hint: "Cynique", outcomes: [
+        { weight: 100, text: "Le compte se remplit, mais quelques titres écornent votre image d'icône.", fx: { money: 5, rep: -5, mor: 1 } },
+      ] },
+      { label: "Refuser par principe", hint: "Intègre", outcomes: [
+        { weight: 100, text: "Vous déclinez sans hésiter. L'opinion salue un footballeur qui a des valeurs.", fx: { rep: 5, mor: 3, m: 1 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ FOURNÉE 3 : reconversion, hommages, rivalité, supporters, crise, retour ══════════════
+  {
+    id: "ev_punditry", cat: "Reconversion", icon: "🎙️", w: 8,
+    cond: { aMin: 33, minRep: 60 },
+    text: "Une grande chaîne vous courtise : consultant vedette dès votre retraite. Préparer l'après, ou refuser d'y penser tant que vous jouez ?",
+    options: [
+      { label: "Se former au métier de consultant", hint: "Anticiper", outcomes: [
+        { weight: 100, text: "Vous apprenez le commentaire en coulisses : l'après-carrière prend forme, la tête plus légère.", fx: { m: 3, rep: 2, mor: 3 } },
+      ] },
+      { label: "Refuser d'y penser, rester joueur à 100%", hint: "Présent", outcomes: [
+        { weight: 100, text: "Une seule chose compte : le terrain, ici et maintenant. L'après attendra son heure.", fx: { form: 2, mor: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_coach_badges", cat: "Reconversion", icon: "📋", w: 8,
+    cond: { aMin: 32, minRep: 50 },
+    text: "Le vestiaire vous voit déjà en meneur d'hommes. On vous propose de passer vos diplômes d'entraîneur en parallèle.",
+    options: [
+      { label: "Se lancer dans les diplômes", hint: "Vision", outcomes: [
+        { weight: 100, text: "Vous décryptez le jeu autrement : votre lecture tactique grimpe d'un cran.", fx: { m: 4, mor: 2 } },
+      ] },
+      { label: "Une chose à la fois", hint: "Focus", outcomes: [
+        { weight: 100, text: "Vous préférez rester pleinement joueur. Chaque chose en son temps.", fx: { form: 2, mor: 1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_milestone_match", cat: "Records", icon: "🎖️", w: 8,
+    cond: { aMin: 30, minClubSeasons: 3 },
+    text: "Vous approchez d'un cap symbolique de matchs sous ce maillot. Le club prépare une petite cérémonie en votre honneur.",
+    options: [
+      { label: "Honorer le cap par une grande perf", hint: "Fierté", outcomes: [
+        { weight: 60, text: "Match de gala pour l'occasion : le public se lève, l'émotion est totale.", fx: { rep: 4, mor: 6, form: 3 } },
+        { weight: 40, text: "La pression de bien faire le jour J vous crispe un peu.", fx: { form: -3, mor: 2 } },
+      ] },
+      { label: "Rester simple, un match comme un autre", hint: "Humilité", outcomes: [
+        { weight: 100, text: "« Juste un match de plus. » La sobriété force le respect.", fx: { mor: 3, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_jersey_retired", cat: "Hommage", icon: "👕", w: 7,
+    cond: { aMin: 32, minRep: 66, minClubSeasons: 4 },
+    text: "Geste rarissime : le club envisage de retirer votre numéro, pour que plus personne ne le porte après vous. La légende faite maillot.",
+    options: [
+      { label: "Accepter l'honneur suprême", hint: "Légende", outcomes: [
+        { weight: 100, text: "Votre numéro monte au firmament du club, à jamais. Une poignée de joueurs seulement connaissent ça.", fx: { rep: 7, mor: 8 } },
+      ] },
+      { label: "Décliner par humilité", hint: "Modeste", outcomes: [
+        { weight: 100, text: "Vous refusez, gêné par tant d'honneurs. Le club vous en admire davantage.", fx: { rep: 4, mor: 4, m: 1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_superstition", cat: "Insolite", icon: "🧦", w: 8,
+    cond: { aMin: 20 },
+    text: "Vous ne marquez que quand vous enfilez la chaussette gauche en premier. Le rituel vire doucement à l'obsession.",
+    options: [
+      { label: "Entretenir le rituel, sans complexe", hint: "Rituel", outcomes: [
+        { weight: 60, text: "Le rituel vous met en confiance : la mécanique tourne.", fx: { form: 4, mor: 3 } },
+        { weight: 40, text: "Le jour où le rituel foire, la tête s'emballe pour rien.", fx: { form: -3, mor: -2 } },
+      ] },
+      { label: "S'en libérer, rester rationnel", hint: "Raison", outcomes: [
+        { weight: 100, text: "Vous cassez la superstition : votre jeu ne dépend que de vous. Sain.", fx: { m: 3, mor: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_nemesis", cat: "Rivalité", icon: "⚔️", w: 9,
+    cond: { aMin: 24, minRep: 52 },
+    text: "Le duel de toute une génération : face à vous, votre rival de toujours. La presse ne parle que de ce mano a mano.",
+    options: [
+      { label: "Écraser le rival, établir la hiérarchie", hint: "Ego", outcomes: [
+        { weight: 50, text: "Vous le surclassez sous les yeux du monde : la hiérarchie est posée.", fx: { rep: 6, mor: 6, c: 3 } },
+        { weight: 50, text: "Il vous domine ce soir-là. La comparaison fait mal.", fx: { rep: -3, mor: -5 } },
+      ] },
+      { label: "Ignorer le cirque, jouer collectif", hint: "Équipe", outcomes: [
+        { weight: 100, text: "Vous refusez le duel d'ego et faites gagner l'équipe. La vraie classe.", fx: { team: 5, m: 3, mor: 3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_ultras_love", cat: "Supporters", icon: "📣", w: 9,
+    cond: { aMin: 22, minClubSeasons: 2 },
+    text: "Les ultras déploient un tifo géant à votre effigie : vous voilà idole du virage. Un lien rare se noue avec la tribune.",
+    options: [
+      { label: "Communier avec le virage", hint: "Fusion", outcomes: [
+        { weight: 100, text: "Chaque but célébré sous leur tribune : une histoire d'amour qui décuple vos forces.", fx: { mor: 7, rep: 3, form: 2 } },
+      ] },
+      { label: "Garder de la distance, rester pro", hint: "Réserve", outcomes: [
+        { weight: 100, text: "Reconnaissant mais mesuré, vous gardez la tête froide. Respectable.", fx: { mor: 3, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_academy", cat: "Reconversion", icon: "🏫", w: 7,
+    cond: { aMin: 34, minRep: 60, minMoney: 10 },
+    text: "Et si vous ouvriez une académie pour révéler les talents de demain ? Un projet ambitieux, coûteux, mais qui vous survivra.",
+    options: [
+      { label: "Fonder l'académie", hint: "Héritage", outcomes: [
+        { weight: 100, text: "Des dizaines de gamins formés à votre image : vous plantez un arbre dont d'autres profiteront de l'ombre. Magnifique.", fx: { rep: 5, mor: 6, money: -4 } },
+      ] },
+      { label: "Attendre la fin de carrière", hint: "Patience", outcomes: [
+        { weight: 100, text: "Le projet mûrit dans un tiroir : d'abord finir en beauté sur le terrain.", fx: { mor: 2, m: 1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_red_card_storm", cat: "Terrain", icon: "🟥", w: 9,
+    cond: { aMin: 20 },
+    text: "Carton rouge sévère à un moment clé, et la polémique enfle : geste d'humeur ou décision injuste de l'arbitre ? Les caméras tournent en boucle.",
+    options: [
+      { label: "Contester haut et fort", hint: "Colère", outcomes: [
+        { weight: 40, text: "Votre coup de gueule fait mouche : la sanction est allégée, l'opinion vous suit.", fx: { rep: 2, ban: 2, mor: 1 } },
+        { weight: 60, text: "La fédération n'apprécie pas la sortie : suspension alourdie pour contestation.", fx: { ban: 8, rep: -3, mor: -4 } },
+      ] },
+      { label: "Assumer et s'excuser", hint: "Humilité", outcomes: [
+        { weight: 100, text: "Mea culpa sobre : vous prenez la sanction et coupez court à la polémique.", fx: { ban: 4, m: 2, mor: -1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_relegation_fight", cat: "Crise", icon: "🆘", w: 9,
+    cond: { levels: ["d1", "d2"], aMin: 22 },
+    text: "Le club est englué dans la lutte pour le maintien. Le vestiaire vacille, et tous les regards se tournent vers vous pour sortir la tête de l'eau.",
+    options: [
+      { label: "Prendre l'équipe sur son dos", hint: "Leader", outcomes: [
+        { weight: 55, text: "Vous tirez le groupe vers le haut : un vrai leader dans la tempête.", fx: { rep: 6, mor: 6, form: 3, team: 4 } },
+        { weight: 45, text: "Vous vous épuisez à tout porter, au bord de la rupture.", fx: { mor: -8, form: -3, rep: 1 } },
+      ] },
+      { label: "Faire son job sans surjouer", hint: "Sobre", outcomes: [
+        { weight: 60, text: "Régulier et solide, vous tenez votre rang dans la bourrasque.", fx: { mor: 3, m: 2 } },
+        { weight: 40, text: "Trop discret quand il fallait des leaders : on vous le fait remarquer.", fx: { mor: -5, rep: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_greedy_agent", cat: "Entourage", icon: "🤝", w: 8,
+    cond: { aMin: 23, minRep: 50 },
+    text: "Votre agent pousse fort pour un transfert qui l'arrange, lui et sa commission, plus que votre carrière. Le malaise grandit.",
+    options: [
+      { label: "Suivre l'agent, encaisser la prime", hint: "Facilité", outcomes: [
+        { weight: 50, text: "Le move rapporte gros à court terme, mais laisse un goût amer.", fx: { money: 4, mor: -3, rep: -2 } },
+        { weight: 50, text: "Mauvais choix sportif dicté par l'argent : votre cote en pâtit.", fx: { money: 3, rep: -4, mor: -4 } },
+      ] },
+      { label: "Reprendre la main sur sa carrière", hint: "Autonomie", outcomes: [
+        { weight: 100, text: "Vous recadrez votre agent : désormais, c'est vous qui décidez. Sain.", fx: { m: 3, mor: 3, rep: 1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_comeback_goal", cat: "Blessure", icon: "🔥", w: 9,
+    cond: { flag: "big_injury", aMin: 22 },
+    text: "Premier match après votre grosse blessure. 90e minute, un ballon qui traîne dans la surface, et soudain tout un stade retient son souffle.",
+    options: [
+      { label: "Tenter le geste du retour", hint: "Panache", outcomes: [
+        { weight: 55, text: "BUT DU RETOUR ! Le stade explose, les larmes coulent : le revenant est de retour, plus fort qu'avant.", fx: { rep: 6, mor: 10, form: 5 } },
+        { weight: 45, text: "Le geste manque de justesse, la rouille est là. Mais le simple fait d'y être vaut de l'or.", fx: { mor: 4, form: 2 } },
+      ] },
+      { label: "Jouer simple, savourer d'être là", hint: "Sagesse", outcomes: [
+        { weight: 100, text: "Pas de folie : vous retrouvez vos sensations pas à pas. Le plus dur est derrière vous.", fx: { mor: 6, form: 3, m: 1 } },
+      ] },
+    ],
+  },
 ];
 
 /* ============================================================
