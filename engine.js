@@ -502,7 +502,7 @@
     if (c.loan === false && s.loan) return false;
     if (c.abroad === true && s.club.countryId === s.nationality.homeCountryId) return false;
     if (c.abroad === false && s.club.countryId !== s.nationality.homeCountryId) return false;
-    if (c.exoticClub === false && countryOf(s.club.countryId).exotic) return false;
+    if (c.exoticClub === false && (countryOf(s.club.countryId) || {}).gulf) return false; // déjà au Golfe → pas d'offre "or du désert"
     // Continent d'origine du joueur (nationalité) : événements de sélection
     // propres à un continent, ex. la Coupe d'Afrique (homeContinent: "af").
     if (c.homeContinent) {
@@ -1765,8 +1765,9 @@
       // Retour aux sources : uniquement le club formateur (aucun repli)
       const originPool = CLUBS.filter((c) => c.id === s.clubsPlayed[0] && c.id !== s.club.id);
       return originPool.map((club) => buildOffer(s, club));
-    } else if (spec && spec.exotic && !minorLock) {
-      pool = CLUBS.filter((c) => { const co = countryOf(c.countryId); return co.exotic && c.id !== s.club.id; });
+    } else if (spec && (spec.exotic || spec.gulf) && !minorLock) {
+      // « Or du désert » : un club du Golfe (Arabie Saoudite / Qatar) vient vous chercher.
+      pool = CLUBS.filter((c) => { const co = countryOf(c.countryId) || {}; return (spec.gulf ? co.gulf : co.exotic) && c.id !== s.club.id; });
     } else {
       pool = CLUBS_BY_LEVEL[targetLevel].filter((c) => {
         const co = countryOf(c.countryId);
@@ -1867,8 +1868,8 @@
 
     let offers = rng() < BALANCE.noOfferChance && !contractUp ? [] : offersFor(s, spec);
     if (spec.exoticExtra) {
-      const exotic = offersFor(s, { exotic: true });
-      if (exotic.length) offers = offers.concat(exotic.slice(0, 1));
+      const gulf = offersFor(s, { gulf: true }); // offre "or du désert" (Arabie Saoudite / Qatar) pour un vétéran coté
+      if (gulf.length) offers = offers.concat(gulf.slice(0, 1));
     }
     return { reason, offers, contractUp, renewSalary: salaryFor(s, s.club) };
   }
@@ -1898,7 +1899,7 @@
     const newCountry = countryOf(offer.club.countryId);
     if (newCountry) {
       if (!s.continentsPlayed.includes(newCountry.continent)) s.continentsPlayed.push(newCountry.continent);
-      if (newCountry.exotic) {
+      if (newCountry.gulf) { // championnats du Golfe (Arabie Saoudite / Qatar) : l'or du désert
         s.flags.played_exotic = true;
         if (s.age >= 33) s.flags.exotic_late = true;
       }

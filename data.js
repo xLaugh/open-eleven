@@ -98,6 +98,8 @@ const NATIONALITIES = [
   { id: "ao", name: "Angola", flag: "🇦🇴", img: "src/img/flag/Flag_of_Angola.png", weight: 0.28, wcWeight: 0.06, homeCountryId: "ao" },
   { id: "mg", name: "Madagascar", flag: "🇲🇬", img: "src/img/flag/Flag_of_Madagascar.png", weight: 0.22, wcWeight: 0.04, homeCountryId: "mg" },
   { id: "ng", name: "Nigeria", flag: "🇳🇬", img: "src/img/flag/Flag_of_Nigeria.png", weight: 0.55, wcWeight: 0.2, homeCountryId: "ng" },
+  { id: "sa", name: "Arabie Saoudite", flag: "🇸🇦", img: "src/img/flag/Flag_of_Saudi_Arabia.png", weight: 0.3, wcWeight: 0.08, homeCountryId: "sa" },
+  { id: "qa", name: "Qatar", flag: "🇶🇦", img: "src/img/flag/Flag_of_Qatar.png", weight: 0.2, wcWeight: 0.05, homeCountryId: "qa" },
   { id: "cd", name: "RDC", flag: "🇨🇩", img: "src/img/flag/Flag_of_RDC.png", weight: 0.28, wcWeight: 0.08, homeCountryId: "cd" },
   { id: "gn", name: "Guinée", flag: "🇬🇳", img: "src/img/flag/Flag_of_Guinea.png", weight: 0.25, wcWeight: 0.07, homeCountryId: "gn" },
   { id: "bj", name: "Bénin", flag: "🇧🇯", img: "src/img/flag/Flag_of_Benin.png", weight: 0.2, wcWeight: 0.05, homeCountryId: "bj" },
@@ -146,6 +148,8 @@ const NAME_POOLS = {
   ao: { first: ["João", "Manuel", "Alberto", "Domingos", "Carlos", "Nuno", "Gilberto", "Anísio"], last: ["dos Santos", "Fernandes", "Mateus", "Kiala", "Bento", "Neto", "Lunga", "Cambinda"] },
   mg: { first: ["Tafita", "Andry", "Tojo", "Miora", "Rado", "Nirina", "Faniry", "Tsiory"], last: ["Rakoto", "Rabe", "Randria", "Ratsimba", "Razafy", "Andrianina", "Rasoa", "Andriama"] },
   ng: { first: ["Chidi", "Emeka", "Tunde", "Ifeanyi", "Segun", "Kelechi", "Musa", "Uche"], last: ["Okafor", "Eze", "Adeyemi", "Okonkwo", "Nwosu", "Bello", "Okoro", "Balogun"] },
+  sa: { first: ["Mohammed", "Abdullah", "Fahad", "Salman", "Turki", "Nawaf", "Salem", "Yasser"], last: ["Al-Harbi", "Al-Dossari", "Al-Shehri", "Al-Ghamdi", "Al-Qahtani", "Al-Otaibi", "Al-Zahrani", "Al-Malki"] },
+  qa: { first: ["Akram", "Hassan", "Karim", "Yusuf", "Tariq", "Jassim", "Nasser", "Khalid"], last: ["Al-Thani", "Al-Kuwari", "Al-Mannai", "Al-Sulaiti", "Al-Naimi", "Al-Emadi", "Al-Ansari", "Al-Marri"] },
   mx: { first: ["José", "Juan", "Luis", "Carlos", "Miguel", "Diego", "Fernando", "Ángel"], last: ["Hernández", "García", "Martínez", "López", "González", "Pérez", "Sánchez", "Ramírez"] },
   co: { first: ["Andrés", "Camilo", "Julián", "Santiago", "Sebastián", "Mateo", "Felipe", "Juan"], last: ["Rodríguez", "Gómez", "González", "Martínez", "García", "López", "Ramírez", "Muñoz"] },
   bj: { first: ["Kévin", "Rodrigue", "Cédric", "Marcel", "David", "Sylvain", "Roland", "Gaël"], last: ["Hounkpatin", "Dossou", "Gbaguidi", "Tossou", "Agbessi", "Aholou", "Houngbédji", "Adjovi"] },
@@ -275,7 +279,8 @@ const COUNTRIES = [
   { id: "cd", name: "RDC", flag: "🇨🇩", img: "src/img/flag/Flag_of_RDC.png", of: "de RDC", salaryMult: 0.35, growthMult: 0.74, mediaMult: 0.55, continent: "af" },
   { id: "gn", name: "Guinée", flag: "🇬🇳", img: "src/img/flag/Flag_of_Guinea.png", of: "de Guinée", salaryMult: 0.35, growthMult: 0.74, mediaMult: 0.55, continent: "af" },
   { id: "bj", name: "Bénin", flag: "🇧🇯", img: "src/img/flag/Flag_of_Benin.png", of: "du Bénin", salaryMult: 0.33, growthMult: 0.73, mediaMult: 0.53, continent: "af" },
-  { id: "sa", name: "Golfe", flag: "🏜️", img: "src/img/flag/Flag_of_Golfe.png", of: "du Golfe", salaryMult: 5, exotic: true, continent: "as" },
+  { id: "sa", name: "Arabie Saoudite", flag: "🇸🇦", img: "src/img/flag/Flag_of_Saudi_Arabia.png", of: "d'Arabie Saoudite", salaryMult: 1.6, growthMult: 0.78, mediaMult: 0.5, continent: "as", gulf: true },
+  { id: "qa", name: "Qatar", flag: "🇶🇦", img: "src/img/flag/Flag_of_Qatar.png", of: "du Qatar", salaryMult: 1.15, growthMult: 0.78, mediaMult: 0.5, continent: "as", gulf: true },
   { id: "us", name: "États-Unis", flag: "🇺🇸", img: "src/img/flag/Flag_of_the_United_States.png", of: "des États-Unis", salaryMult: 0.85, growthMult: 0.85, mediaMult: 0.72, continent: "am" },
   { id: "eg", name: "Égypte", flag: "🇪🇬", img: "src/img/flag/Flag_of_Egypt.png", of: "d'Égypte", salaryMult: 0.42, growthMult: 0.82, mediaMult: 0.55, continent: "af" },
   { id: "za", name: "Afrique du Sud", flag: "🇿🇦", img: "src/img/flag/Flag_of_South_Africa.png", of: "d'Afrique du Sud", salaryMult: 0.45, growthMult: 0.82, mediaMult: 0.58, continent: "af" },
@@ -688,10 +693,15 @@ const CLUBS = [
   { id: "tr_gaziantep", name: "Gaziantep", level: "regional", countryId: "tr", colors: "🔴⚫" },
   { id: "tr_rizespor", name: "Rizespor", level: "regional", countryId: "tr", colors: "🟢🔵" },
   { id: "sa_riyad", name: "Riyad", level: "d1", countryId: "sa", colors: "🔵" },
-  { id: "sa_doha", name: "Doha", level: "d1", countryId: "sa", colors: "⚫⚪" },
-  { id: "sa_dubai", name: "Dubai", level: "d1", countryId: "sa", colors: "🔴" },
-  { id: "sa_jeddah", name: "Jeddah", level: "d2", countryId: "sa", colors: "⚫🟡" },
-  { id: "sa_aboudabi", name: "Abou Dabi", level: "d2", countryId: "sa" },
+  { id: "sa_jeddah", name: "Djeddah", level: "d1", countryId: "sa", colors: "⚫🟡" },
+  { id: "sa_dammam", name: "Dammam", level: "d1", countryId: "sa", colors: "🟢⚪" },
+  { id: "sa_mecque", name: "La Mecque", level: "d1", countryId: "sa", colors: "🔴⚪" },
+  { id: "sa_medine", name: "Médine", level: "d1", countryId: "sa", colors: "🟡🟢" },
+  { id: "qa_doha", name: "Doha", level: "d1", countryId: "qa", colors: "🟤⚪" },
+  { id: "qa_rayyan", name: "Al-Rayyan", level: "d1", countryId: "qa", colors: "🔴⚫" },
+  { id: "qa_wakrah", name: "Al-Wakrah", level: "d1", countryId: "qa", colors: "🔵⚪" },
+  { id: "qa_lusail", name: "Lusail", level: "d1", countryId: "qa", colors: "🟡⚫" },
+  { id: "qa_khor", name: "Al-Khor", level: "d1", countryId: "qa", colors: "🟢⚪" },
   { id: "us_losangeles", name: "Los Angeles", level: "elite", countryId: "us", colors: "🔵🟡" },
   { id: "us_seattle", name: "Seattle", level: "elite", countryId: "us", colors: "🔵🟢" },
   { id: "us_miami", name: "Miami", level: "elite", countryId: "us", colors: "🩷⚫" },
@@ -2015,8 +2025,8 @@ const EVENTS = [
     text: "Un émissaire du Golfe pose une offre irréelle sur la table : le triple de votre salaire, un palace, un rôle d'icône. Le sportif, lui…",
     options: [
       { label: "Prendre l'or du désert", hint: "Jackpot", outcomes: [
-        { weight: 50, text: "Accueil pharaonique. Votre compte en banque ne connaîtra plus jamais l'inquiétude.", fx: { money: 8, rep: -4, transfer: { d: -1, exotic: true }, trait: "mercenary" } },
-        { weight: 50, text: "L'argent coule, mais le niveau vous manque. L'Europe continue sans vous.", fx: { money: 8, rep: -6, mor: -5, transfer: { d: -1, exotic: true } } },
+        { weight: 50, text: "Accueil pharaonique. Votre compte en banque ne connaîtra plus jamais l'inquiétude.", fx: { money: 8, rep: -4, transfer: { d: -1, gulf: true }, trait: "mercenary" } },
+        { weight: 50, text: "L'argent coule, mais le niveau vous manque. L'Europe continue sans vous.", fx: { money: 8, rep: -6, mor: -5, transfer: { d: -1, gulf: true } } },
       ] },
       { label: "Refuser : la compétition avant tout", outcomes: [
         { weight: 60, text: "Le peuple du foot salue le choix du cœur. Votre légende sportive s'épaissit.", fx: { rep: 5, mor: 5 } },
@@ -4498,11 +4508,11 @@ const BALANCE = {
    les événements changent sensiblement.
    ============================================================ */
 const SCORE_PERCENTILES = [
-  64, 73, 89, 94, 98, 100, 102, 104, 105, 107, 108, 110, 111, 113, 114, 115, 116, 118, 119, 120,
-  122, 123, 124, 126, 127, 128, 129, 131, 132, 133, 134, 135, 136, 137, 139, 140, 141, 142, 143, 144,
-  145, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 159, 160, 161, 162, 163, 164, 165, 167,
-  168, 169, 170, 171, 172, 174, 175, 176, 177, 178, 180, 181, 182, 184, 185, 187, 188, 189, 191, 193,
-  194, 196, 198, 200, 201, 203, 206, 208, 210, 213, 216, 219, 223, 227, 231, 237, 244, 253, 270
+  64, 72, 88, 94, 97, 99, 101, 103, 105, 106, 108, 109, 111, 112, 114, 115, 116, 118, 119, 120,
+  122, 123, 124, 125, 127, 128, 129, 130, 131, 133, 134, 135, 136, 137, 139, 140, 141, 142, 143, 144,
+  146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 158, 159, 160, 161, 162, 163, 164, 165, 166,
+  168, 169, 170, 171, 172, 173, 174, 176, 177, 178, 179, 180, 182, 183, 185, 186, 188, 189, 191, 192,
+  194, 195, 197, 199, 201, 203, 205, 207, 210, 212, 215, 219, 222, 226, 230, 236, 243, 252, 269
 ];
 
 /* ============================================================
@@ -4581,7 +4591,7 @@ const UNTAKEN_PATH_TEMPLATES = [
 const DAILY_QUESTS = [
   // --- Palier 1 · Facile (10 pts) ------------------------------------------
   { id: "q_defensive", tier: 1, pts: 10, icon: "🧤", name: "Côté obscur", desc: "Terminer une carrière de défenseur ou de gardien." },
-  { id: "q_exotic", tier: 1, pts: 10, icon: "🏜️", name: "L'or du désert", desc: "Signer dans un championnat exotique." },
+  { id: "q_exotic", tier: 1, pts: 10, icon: "🏜️", name: "L'or du désert", desc: "Signer dans un club du Golfe (Arabie Saoudite ou Qatar)." },
   { id: "q_low_title", tier: 1, pts: 10, icon: "🌾", name: "Gloire de l'ombre", desc: "Être champion de D2 ou de division régionale." },
   { id: "q_fr_career", tier: 1, pts: 10, icon: "🇫🇷", name: "Cocorico", desc: "Terminer une carrière complète avec un joueur français." },
   { id: "q_cup", tier: 1, pts: 10, icon: "🏵️", name: "Coupe de feu", desc: "Remporter une coupe nationale." },
@@ -4615,7 +4625,7 @@ const WEEKLY_CHALLENGES = [
   { id: "w_prodige", pts: 60, icon: "🚀", name: "La carrière du prodige", desc: "Atteindre 85 de général avant 23 ans." },
   { id: "w_patron", pts: 60, icon: "👑", name: "Le patron du vestiaire", desc: "Décrocher le trait Leader né ET un titre de champion." },
   { id: "w_remontada", pts: 60, icon: "🏔️", name: "La remontada", desc: "Partir d'un club régional et gagner un titre de première division." },
-  { id: "w_last_contract", pts: 60, icon: "🌇", name: "Le dernier contrat", desc: "Jouer dans un championnat exotique après 33 ans." },
+  { id: "w_last_contract", pts: 60, icon: "🌇", name: "Le dernier contrat", desc: "Signer en Arabie Saoudite ou au Qatar après 33 ans." },
   { id: "w_double_ballon", pts: 60, icon: "🌟", name: "La dynastie", desc: "Remporter 2 Ballons d'Or dans une même carrière." },
   { id: "w_five_clubs", pts: 60, icon: "🧳", name: "L'aventurier", desc: "Porter les couleurs d'au moins 5 clubs différents." },
   { id: "w_goals400", pts: 60, icon: "💣", name: "L'artificier", desc: "Marquer 400 buts en carrière." },
