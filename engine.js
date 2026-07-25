@@ -844,6 +844,7 @@
     if (lvl === "elite") return { type: "trophy", label: "Ramener un trophée majeur" };
     if (lvl === "d1") return { type: "top", n: 6, label: "Accrocher le top 6" };
     if (lvl === "d2") return { type: "top", n: 5, label: "Jouer la montée (top 5)" };
+    if (lvl === "d3") return { type: "top", n: 6, label: "Jouer la montée (top 6)" };
     return { type: "top", n: 8, label: "Viser le haut de tableau (top 8)" };
   }
 
@@ -1594,10 +1595,10 @@
       const stayed = seasonClub && s.club.id === ls.clubId && !s.loan;
       if (seasonClub) {
         const lvl = lvlOf(s, seasonClub);
-        if (ls.promoted && (lvl === "regional" || lvl === "d2")) {
+        if (ls.promoted && (lvl === "regional" || lvl === "d3" || lvl === "d2")) {
           const newLvl = shiftClubLevel(s, seasonClub, 1);
           if (stayed) s.history.push({ age: s.age, text: `${seasonClub.name} évolue désormais en ${LEVELS[newLvl].short} — l'ascension continue.`, impact: 6 });
-        } else if (ls.relegated && (lvl === "d1" || lvl === "d2")) {
+        } else if (ls.relegated && (lvl === "d1" || lvl === "d2" || lvl === "d3")) {
           shiftClubLevel(s, seasonClub, -1);
         } else if (stayed && lvl === "d1") {
           s.clubMomentum = ls.leaguePos <= 2 ? s.clubMomentum + 1 : 0;
