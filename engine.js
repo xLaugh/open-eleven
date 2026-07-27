@@ -266,7 +266,7 @@
       prevClub: null, // club quitté au dernier transfert (retrouvailles)
       natTeam: { active: false, retired: false, caps: 0, goals: 0 },
       totals: { matches: 0, goals: 0, assists: 0, cleanSheets: 0 },
-      trophies: { league: 0, cup: 0, continental: 0, continental2: 0, continental3: 0, worldCup: 0, contInt: 0, ballon: 0, goldenBoot: 0 },
+      trophies: { league: 0, cup: 0, continental: 0, continental2: 0, continental3: 0, worldCup: 0, contInt: 0, natLeague: 0, ballon: 0, goldenBoot: 0 },
       seasons: [],
       transferHistory: [],
       history: [],
@@ -764,6 +764,54 @@
       s.moral = clamp(s.moral - 2, 5, 100);
     }
     return cont;
+  }
+
+  // Ligue des Sélections : compétition EUROPÉENNE de sélections jouée les années
+  // libres (ni Mondial ni Euro). Trophée secondaire, récompenses moindres qu'un Euro.
+  function isNationsLeagueYear(year) { return year % 4 === 1; }
+
+  function playNationsLeague(s, report) {
+    const cup = NATIONS_LEAGUE;
+    const natW = s.nationality.weight;
+    const playerBoost = 0.6 + (ovr(s) / 100) * 0.8 + (hasTrait(s, "clutch") ? 0.15 : 0);
+    const stage = weightedRandom(NL_STAGES, (st) => {
+      if (st.id === "champion") return st.baseW * (0.6 + natW * playerBoost * BALANCE.contBaseChampion);
+      if (st.id === "final") return st.baseW * (0.5 + natW * playerBoost * 0.6);
+      if (st.id === "final_four") return st.baseW * (0.5 + natW * playerBoost * 0.5);
+      return st.baseW;
+    });
+    const games = stage.games;
+    s.natTeam.caps += games;
+    const goals = Math.round(games * s.position.goalRate * (0.4 + s.stats.t / 150) * rand(0.5, 1.4));
+    s.natTeam.goals += goals;
+    const nl = {
+      year: s.year, cupName: cup.name, cupShort: cup.short, icon: cup.icon,
+      stage: stage.id, label: stage.label, text: stage.text, games, goals, champion: stage.id === "champion",
+    };
+    if (stage.id === "champion") {
+      s.trophies.natLeague += 1;
+      s.natLeagueDetail = s.natLeagueDetail || [];
+      s.natLeagueDetail.push({ year: s.year });
+      nl.label = `VAINQUEUR ${cup.of.toUpperCase()}`;
+      nl.text = cup.championText;
+      s.rep = clamp(s.rep + 3, 0, 100);
+      s.moral = clamp(s.moral + 7, 5, 100);
+      s.money += 0.4;
+      s.history.push({ age: s.age, text: `Vainqueur ${cup.of} ${s.year} avec ${s.nationality.name} !`, impact: 12 });
+      if (!report.awards.includes("ballon_won")) rollBallon(s, report, 0.6); // léger coup de pouce (moindre que l'Euro)
+      recheckObjective(s, report);
+    } else if (stage.id === "final") {
+      nl.label = "Finaliste";
+      s.rep = clamp(s.rep + 2, 0, 100);
+      s.moral = clamp(s.moral - 3, 5, 100);
+      s.history.push({ age: s.age, text: `Finaliste ${cup.of} ${s.year}.`, impact: 6 });
+    } else if (stage.id === "final_four") {
+      s.rep = clamp(s.rep + 1, 0, 100);
+      s.history.push({ age: s.age, text: `Dernier carré ${cup.of} ${s.year}.`, impact: 4 });
+    } else {
+      s.moral = clamp(s.moral - 1, 5, 100);
+    }
+    return nl;
   }
 
   // Renvoie le moment de finale scénarisée si le joueur suit une histoire dont
@@ -1322,9 +1370,12 @@
       }
       // Les matchs & buts d'un grand tournoi comptent dans le bilan sélection de
       // la saison (affiché au récap), en plus de leur propre carte dédiée.
-      if (heavyInjury && (isWorldCupYear(s.year) || isContinentalYear(s.year))) report.tournamentMissed = true;
+      const euNation = ((countryOf(s.nationality.homeCountryId) || {}).continent) === "eu";
+      const nlYear = isNationsLeagueYear(s.year) && euNation; // Ligue des Sélections : Europe uniquement
+      if (heavyInjury && (isWorldCupYear(s.year) || isContinentalYear(s.year) || nlYear)) report.tournamentMissed = true;
       else if (isWorldCupYear(s.year)) { report.wc = playWorldCup(s); report.caps += report.wc.games; report.natGoals += report.wc.goals; }
       else if (isContinentalYear(s.year)) { report.cont = playContinental(s, report); report.caps += report.cont.games; report.natGoals += report.cont.goals; }
+      else if (nlYear) { report.natl = playNationsLeague(s, report); report.caps += report.natl.games; report.natGoals += report.natl.goals; }
     }
 
     // Distinctions promises par les événements, puis celles de la saison, puis Ballon d'Or
@@ -2002,7 +2053,7 @@
     return Math.round(
       s.peakOvr * 1.0 + s.rep * 0.45 +
       t.worldCup * 20 + t.ballon * 18 + t.continental * 9 + (t.contInt || 0) * 11 +
-      (t.continental2 || 0) * 5 + (t.continental3 || 0) * 2 +
+      (t.natLeague || 0) * 5 + (t.continental2 || 0) * 5 + (t.continental3 || 0) * 2 +
       t.league * 4 + t.cup * 2 + t.goldenBoot * 5 +
       Math.min(12, totalAwards(s) * 1.2) +
       Math.min(20, s.natTeam.caps / 6) + Math.min(15, s.totals.goals / 30) +
@@ -2138,7 +2189,7 @@
     generateName, newCareer, ovr, hasTrait, renderText, applyFx,
     eventEligible, pickEvent, optionEligible, resolveOption, netImpact, toneOf,
     keyMomentFor, keyMomentSuccess, playKeyMoment, isWorldCupYear,
-    playWorldCup, resolveWcFinal, isContinentalYear, playContinental, playingTimeFactor, setSeasonObjective,
+    playWorldCup, resolveWcFinal, isContinentalYear, playContinental, isNationsLeagueYear, playNationsLeague, playingTimeFactor, setSeasonObjective,
     objectiveMet, headlineFor, grantAward, rollSeasonAwards, rollBallon,
     playSeason, resolveSeasonMoment, advanceYear, marketValue, salaryFor,
     buildOffer, offersFor, loanOffersFor, applyLoan, transferWindow,

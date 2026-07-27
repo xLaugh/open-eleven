@@ -504,6 +504,7 @@
       if (lastReport.firstCap && !lastReport.firstCapShown) { lastReport.firstCapShown = true; renderFirstCap(lastReport); }
       else if (lastReport.wc) renderWorldCup(lastReport);
       else if (lastReport.cont) renderContinental(lastReport);
+      else if (lastReport.natl) renderNationsLeague(lastReport);
       else renderRecap(lastReport);
       return;
     }
@@ -681,6 +682,26 @@
     });
   }
 
+  function renderNationsLeague(report) {
+    const c = report.natl;
+    const tone = c.champion ? "great" : (c.stage === "final" || c.stage === "final_four") ? "good" : "bad";
+    showCard(`
+      <div class="card-tag"><span class="card-icon">${c.icon}</span> ${esc(c.cupName)} ${c.year}</div>
+      <p class="event-text">${flagHtml(G.nationality)} ${esc(G.nationality.name)} dispute la Ligue des Sélections européenne, et vous en êtes.</p>
+      <button class="btn btn-secondary" id="btn-natl">Vivre la campagne</button>
+    `);
+    $("btn-natl").addEventListener("click", () => {
+      showCard(`
+        <div class="card-tag"><span class="card-icon">${c.icon}</span> ${esc(c.cupName)} ${c.year}</div>
+        <p class="wc-stage ${c.champion ? "wc-champion" : ""}">${esc(c.label)}</p>
+        <p class="result-text">${esc(c.text)}</p>
+        <p class="wc-stats">${c.games} matchs · ${c.goals} but${c.goals > 1 ? "s" : ""} dans le tournoi</p>
+        <button class="btn btn-secondary" id="btn-next">Continuer</button>
+      `, tone);
+      $("btn-next").addEventListener("click", () => renderRecap(report));
+    });
+  }
+
 
   function renderRecap(report) {
     const rivalReport = G.duel ? null : E.rivalSeason(R); // en duel : rival figé, pas de sim
@@ -820,7 +841,7 @@
   function pantheonMajorCount(t) {
     t = t || {};
     return (t.worldCup || 0) + (t.ballon || 0) + (t.continental || 0) + (t.continental2 || 0) +
-      (t.continental3 || 0) + (t.league || 0) + (t.goldenBoot || 0) + (t.cup || 0);
+      (t.continental3 || 0) + (t.natLeague || 0) + (t.league || 0) + (t.goldenBoot || 0) + (t.cup || 0);
   }
   // Renvoie une copie triée des entrées (index = ordre d'insertion, pour "recent").
   function sortedPantheon(p) {
@@ -869,6 +890,7 @@
       if (t.continental) bits.push(`🥇×${t.continental}`);
       if (t.continental2) bits.push(`🥈×${t.continental2}`);
       if (t.continental3) bits.push(`🥉×${t.continental3}`);
+      if (t.natLeague) bits.push(`🛡️×${t.natLeague}`);
       if (t.league) bits.push(`🎖️×${t.league}`);
       if (t.goldenBoot) bits.push(`👟×${t.goldenBoot}`);
       const card = document.createElement("div");
@@ -2189,10 +2211,15 @@
     const playerCont = (E.countryOf(G.nationality.homeCountryId) || {}).continent;
     const ntCup = NATIONAL_CUPS[playerCont];
     const ntCupRow = ntCup ? [statRowHtml(`${ntCup.icon} ${ntCup.name}`, t.contInt || 0, (t.contInt || 0) > 0)] : [];
+    // Ligue des Sélections : n'a de sens (et n'est jouable) que pour les nations européennes
+    const nlRow = (playerCont === "eu" || (t.natLeague || 0) > 0)
+      ? [statRowHtml(`${NATIONS_LEAGUE.icon} ${NATIONS_LEAGUE.name}`, t.natLeague || 0, (t.natLeague || 0) > 0)]
+      : [];
 
     $("final-trophies").innerHTML = [
       statRowHtml(`${COMPETITIONS.worldCup.icon} ${COMPETITIONS.worldCup.name}`, t.worldCup, t.worldCup > 0),
       ...ntCupRow,
+      ...nlRow,
       statRowHtml(`${COMPETITIONS.ballon.icon} ${COMPETITIONS.ballon.name}`, t.ballon, t.ballon > 0),
       ...(t.ballon === 0 && G.bestBallonRank
         ? [statRowHtml(`⭐ Meilleur classement Ballon d'Or`, `${G.bestBallonRank}ᵉ`, G.bestBallonRank <= 10)]
@@ -2712,6 +2739,7 @@
       // C2/C3 : n'apparaissent QUE si remportées (évite d'allonger la carte partageable)
       ...((t.continental2 || 0) > 0 ? [[`🥈 ${COMPETITIONS.continental2.name}`, t.continental2]] : []),
       ...((t.continental3 || 0) > 0 ? [[`🥉 ${COMPETITIONS.continental3.name}`, t.continental3]] : []),
+      ...((t.natLeague || 0) > 0 ? [[`${NATIONS_LEAGUE.icon} ${NATIONS_LEAGUE.name}`, t.natLeague]] : []),
       [`🎖️ ${COMPETITIONS.league.name}`, t.league],
       [`🏵️ ${COMPETITIONS.cup.name}`, t.cup],
       [`👟 ${COMPETITIONS.goldenBoot.name}`, t.goldenBoot],

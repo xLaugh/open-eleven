@@ -363,6 +363,15 @@ const NATIONAL_CUPS = {
         championText: "Tout le Pacifique vous acclame : votre nation domine l'Océanie !" },
 };
 
+// Ligue des Sélections : compétition de sélections EUROPÉENNE supplémentaire,
+// disputée les années "libres" (ni Mondial ni Euro, cf. engine.isNationsLeagueYear),
+// au format phase de ligue + Final Four. Trophée secondaire, moins prestigieux
+// qu'un Euro. Réservée aux nationalités du continent "eu".
+const NATIONS_LEAGUE = {
+  name: "Ligue des Sélections", short: "Ligue des Sél.", of: "de la Ligue des Sélections", icon: "🛡️",
+  championText: "Au bout du Final Four, votre nation règne sur la Ligue des Sélections européenne !",
+};
+
 // --- Niveaux de clubs ----------------------------------------------------------
 // 4 échelons, du sommet européen au football régional. Chaque niveau a un
 // impact réel (cf. BALANCE) : budget, infrastructures, visibilité médiatique,
@@ -4935,6 +4944,15 @@ const WC_STAGES = [
   { id: "champion", label: "CHAMPION DU MONDE", baseW: 7, text: "AU BOUT DE LA NUIT ! Votre nation est sur le toit du monde, et vous au cœur de la légende !" },
 ];
 
+// Étapes de la Ligue des Sélections (phase de ligue → Final Four). Le nombre de
+// matchs est porté par l'étape (pas de poules/8es comme au Mondial).
+const NL_STAGES = [
+  { id: "group", label: "Phase de ligue", baseW: 34, games: 6, text: "Parcours honnête en phase de ligue, sans décrocher le Final Four." },
+  { id: "final_four", label: "Dernier carré", baseW: 12, games: 7, text: "Qualifié pour le Final Four, sorti en demie au terme d'un beau parcours." },
+  { id: "final", label: "Finaliste", baseW: 6, games: 8, text: "Finale perdue de justesse : l'argent, et le goût des regrets." },
+  { id: "champion", label: "VAINQUEUR", baseW: 5, games: 8, text: "Sacré au bout du Final Four : la Ligue des Sélections est à vous !" },
+];
+
 /* ============================================================
    CONFIG D'ÉQUILIBRAGE — tous les curseurs du moteur.
    Chaque niveau de club a un impact réel et cohérent :
@@ -5087,11 +5105,11 @@ const BALANCE = {
    les événements changent sensiblement.
    ============================================================ */
 const SCORE_PERCENTILES = [
-  63, 72, 88, 93, 96, 99, 101, 102, 104, 105, 107, 108, 109, 111, 112, 113, 114, 115, 116, 117,
-  119, 120, 121, 122, 123, 124, 125, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139,
-  140, 141, 142, 143, 144, 145, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 159, 160, 161,
-  162, 163, 164, 165, 166, 167, 169, 170, 171, 172, 174, 175, 176, 178, 179, 180, 182, 183, 185, 186,
-  188, 190, 192, 194, 196, 198, 200, 202, 205, 208, 211, 214, 218, 222, 227, 233, 241, 250, 266
+  63, 72, 89, 94, 97, 99, 102, 103, 105, 106, 107, 109, 110, 111, 113, 114, 115, 116, 117, 118,
+  120, 121, 122, 123, 124, 125, 126, 127, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 140, 141,
+  142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 155, 156, 157, 158, 159, 160, 161, 162,
+  163, 165, 166, 167, 168, 169, 170, 172, 173, 174, 175, 177, 178, 179, 181, 182, 183, 185, 186, 188,
+  190, 191, 193, 195, 197, 199, 201, 204, 207, 209, 212, 215, 219, 223, 227, 233, 240, 250, 267
 ];
 
 /* ============================================================
@@ -5408,7 +5426,7 @@ const COUNTRY_LANG = {
 if (typeof module !== "undefined" && module.exports) {
   const dataExports = {
     BRAND, NATIONALITIES, NAME_POOLS, LIFESTYLES, ENTOURAGES, TRAJECTORIES,
-    ARCHETYPES, POSITIONS, ORIGINS, COUNTRIES, CONTINENTAL_CUPS, NATIONAL_CUPS, LEVELS,
+    ARCHETYPES, POSITIONS, ORIGINS, COUNTRIES, CONTINENTAL_CUPS, NATIONAL_CUPS, NATIONS_LEAGUE, NL_STAGES, LEVELS,
     LEVEL_ORDER, CLUBS, CLUBS_BY_LEVEL, COMPETITIONS, COACH_NAMES, TRAITS,
     AWARDS, KEY_MOMENTS,
     EVENTS, MICRO_EVENTS, RIVAL_NEWS_GOOD, RIVAL_NEWS_BAD, RIVAL_NEWS_AHEAD,
