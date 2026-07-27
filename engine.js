@@ -1171,6 +1171,12 @@
     } else if (wonDivision) {
       report.divisionTitle = true;
       report.promoted = true;
+      // Un titre de division inférieure (Régional/D3/D2) EST un titre de champion :
+      // il compte dans le total (compteur « Titres », carte partageable, Panthéon),
+      // au même titre qu'un sacre en D1. Le détail par division reste distinct via
+      // leagueTitlesDetail ; les quêtes/badges « champion top-flight » filtrent par
+      // niveau et ne sont donc pas affectés.
+      s.trophies.league += 1;
       s.leagueTitlesDetail.push({ countryId: s.club.countryId, level: lvl, clubId: s.club.id, year: s.year });
       s.rep = clamp(s.rep + Math.round(4 * visibilityOf(s)), 0, 100);
       s.moral = clamp(s.moral + 6, 5, 100);
