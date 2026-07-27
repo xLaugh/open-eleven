@@ -1555,7 +1555,7 @@
     } else if (s.age <= 36) {
       s.stats.p = clamp(s.stats.p - Math.round(randInt(2, 4) * (hasTrait(s, "ironman") ? 0.6 : 1)), 1, 99);
       s.stats.t = clamp(s.stats.t - randInt(0, 2), 1, 99);
-    } else {
+    } else if (s.age <= 42) {
       // Crépuscule (37-42) : déclin physique plus marqué, adouci par la longévité
       // (Increvable, gardien, défenseur). Le physique baisse, mais la lecture du
       // jeu — le mental — peut encore progresser : c'est ce qui fait durer les vieux sages.
@@ -1564,6 +1564,15 @@
       s.stats.p = clamp(s.stats.p - Math.round(randInt(2, 5) * soft * posSoft), 1, 99);
       s.stats.t = clamp(s.stats.t - randInt(0, 2), 1, 99);
       if (rng() < 0.25) s.stats.m = clamp(s.stats.m + 1, 1, 99);
+    } else {
+      // Ultra-crépuscule (43+) : le corps lâche pour de bon. L'OVR chute vite —
+      // seuls des clubs de D3/Régional signent encore un vétéran de cet âge ; un
+      // gardien increvable peut, rarement, tenir plus haut. Le mental s'érode aussi.
+      const soft = hasTrait(s, "ironman") ? 0.7 : 1;
+      const posSoft = s.position.id === "gk" ? 0.5 : s.position.id === "def" ? 0.8 : 1;
+      s.stats.p = clamp(s.stats.p - Math.round(randInt(4, 7) * soft * posSoft), 1, 99);
+      s.stats.t = clamp(s.stats.t - randInt(1, 3), 1, 99);
+      if (rng() < 0.5) s.stats.m = clamp(s.stats.m - 1, 1, 99);
     }
     // Trajectoires : usure spécifique
     if (s.trajectory.id === "flash" && s.age >= 28) {
@@ -1840,6 +1849,29 @@
           renewSalary: salaryFor(s, s.club),
         };
       }
+    }
+
+    // Vétéran au-delà de 42 ans : l'élite ferme ses portes. Plus aucun cador ne
+    // prolonge — seuls des clubs modestes (D3/Régional le plus souvent, rarement
+    // D2/D1) veulent encore d'un joueur de cet âge. Un gardien, dont l'usure est
+    // moindre, tient un cran plus haut. Aucune prolongation possible : il faut
+    // rebondir plus bas, saison après saison, ou raccrocher.
+    if (s.age >= 42) {
+      const gk = s.position.id === "gk";
+      const r = rng();
+      let target = gk
+        ? (r < 0.15 ? "d1" : r < 0.55 ? "d2" : r < 0.9 ? "d3" : "regional")
+        : (r < 0.04 ? "d1" : r < 0.15 ? "d2" : r < 0.6 ? "d3" : "regional");
+      const curIdx = LEVEL_ORDER.indexOf(lvlOf(s, s.club));
+      if (LEVEL_ORDER.indexOf(target) > curIdx) target = LEVEL_ORDER[curIdx]; // ne remonte jamais
+      return {
+        reason: gk
+          ? "L'élite vous juge trop vieux, mais un gardien chevronné trouve toujours preneur, un ou deux crans plus bas."
+          : "Passé 42 ans, plus aucun cador ne mise sur vous : seuls des clubs modestes vous ouvrent encore leurs portes.",
+        offers: offersFor(s, { toLevel: target }),
+        contractUp: false, // pas de prolongation : le vétéran doit descendre pour continuer
+        renewSalary: salaryFor(s, s.club),
+      };
     }
 
     if (contractUp) {
