@@ -463,6 +463,16 @@
   }
 
   // --- Sélection d'événement --------------------------------------------
+  // Langue principale d'un pays (COUNTRY_LANG) ; un pays non listé parle sa
+  // langue propre (son id), donc étrangère à toutes les autres.
+  function langOf(countryId) {
+    return (typeof COUNTRY_LANG !== "undefined" && COUNTRY_LANG[countryId]) || countryId;
+  }
+  // Vrai si le pays du club actuel ne parle PAS la langue natale du joueur.
+  function foreignLangFor(s) {
+    return langOf(s.club.countryId) !== langOf(s.nationality.homeCountryId);
+  }
+
   function eventEligible(s, ev) {
     if (ev.scheduledOnly) return false;
     const c = ev.cond || {};
@@ -502,6 +512,9 @@
     if (c.loan === false && s.loan) return false;
     if (c.abroad === true && s.club.countryId === s.nationality.homeCountryId) return false;
     if (c.abroad === false && s.club.countryId !== s.nationality.homeCountryId) return false;
+    // Événements de choc linguistique : n'ont de sens que si le pays du club
+    // parle une autre langue que la langue natale (un Argentin en Espagne, non).
+    if (c.foreignLang === true && !foreignLangFor(s)) return false;
     if (c.exoticClub === false && (countryOf(s.club.countryId) || {}).gulf) return false; // déjà au Golfe → pas d'offre "or du désert"
     // Continent d'origine du joueur (nationalité) : événements de sélection
     // propres à un continent, ex. la Coupe d'Afrique (homeContinent: "af").
@@ -1042,7 +1055,7 @@
 
     // Brèves de saison
     if (rng() < BALANCE.microChance) {
-      const eligible = MICRO_EVENTS.filter((m) => s.age >= m.aMin && s.age <= m.aMax && (!m.pos || m.pos.includes(s.position.id)));
+      const eligible = MICRO_EVENTS.filter((m) => s.age >= m.aMin && s.age <= m.aMax && (!m.pos || m.pos.includes(s.position.id)) && (!m.foreignLang || foreignLangFor(s)));
       if (eligible.length) {
         const micro = weightedRandom(eligible, (m) => m.w);
         applyFx(s, micro.fx || {});
@@ -1293,6 +1306,14 @@
       report.caps = caps;
       report.natGoals = natGoals;
       report.firstCap = firstCap;
+      // Filet de sécurité : la toute première sélection A est ici horodatée à
+      // l'âge RÉEL où le joueur porte le maillot (et non à l'âge post-incrément
+      // d'advanceYear ou via une activation "Histoire"). Garantit le badge
+      // « Premier de cordée » et la quête « Pépite » quel que soit le chemin.
+      if (firstCap) {
+        if (s.age <= 20) s.flags.young_int = true;
+        if (s.age <= 18) s.flags.early_cap = true;
+      }
       // Les matchs & buts d'un grand tournoi comptent dans le bilan sélection de
       // la saison (affiché au récap), en plus de leur propre carte dédiée.
       if (heavyInjury && (isWorldCupYear(s.year) || isContinentalYear(s.year))) report.tournamentMissed = true;
@@ -1734,7 +1755,9 @@
   // --- Mercato -----------------------------------------------------------------
   function marketValue(s) {
     const ageF = s.age < 24 ? 1.35 : s.age <= 28 ? 1.1 : s.age <= 31 ? 0.65 : 0.3;
-    return Math.max(0.2, (ovr(s) - 50) * 1.5 * ageF * (1 + s.rep / 90));
+    // Coefficient revu à la baisse (0.85, était 1.5) pour des montants de
+    // transfert plus réalistes : les indemnités s'étaient envolées trop haut.
+    return Math.max(0.2, (ovr(s) - 50) * 0.85 * ageF * (1 + s.rep / 90));
   }
 
   function salaryFor(s, club) {
@@ -1742,7 +1765,11 @@
     // Les destinations exotiques paient sur une base "élite" quel que soit
     // le niveau réel du club : c'est tout leur argument.
     const levelBase = country && country.exotic ? BALANCE.salaryBase.elite : BALANCE.salaryBase[lvlOf(s, club)];
-    const base = levelBase * (country ? country.salaryMult : 1);
+    // Le salaire suit la carrière : un vétéran sur le déclin ne touche plus les
+    // émoluments de sa grande époque. Au-delà de 30 ans, la barre baisse par
+    // paliers (un club ne prolonge plus un trentenaire au même tarif qu'à 27 ans).
+    const ageSal = s.age <= 30 ? 1 : s.age <= 33 ? 0.82 : s.age <= 36 ? 0.6 : s.age <= 39 ? 0.42 : 0.3;
+    const base = levelBase * (country ? country.salaryMult : 1) * ageSal;
     return Math.max(0.02, Math.round(base * (0.4 + ovr(s) / 90 + s.rep / 160) * rand(0.85, 1.25) * 100) / 100);
   }
 

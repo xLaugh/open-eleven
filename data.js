@@ -3443,7 +3443,7 @@ const EVENTS = [
   // ══════════════ COHÉRENCE NARRATIVE (v4) ══════════════
   {
     id: "ev_homesick_abroad", cat: "Vie perso", icon: "🏠", w: 10,
-    cond: { aMin: 19, aMax: 31, abroad: true },
+    cond: { aMin: 19, aMax: 31, abroad: true, foreignLang: true },
     text: "L'expatriation pèse plus que prévu : la langue, la cuisine, les appels vidéo qui remplacent les dimanches en famille. Votre agent le sent : « Si tu veux rentrer au pays, dis-le maintenant. »",
     options: [
       { label: "Organiser le retour au pays", outcomes: [
@@ -4330,7 +4330,7 @@ const EVENTS = [
     cat: "Vie perso",
     icon: "🗣️",
     w: 9,
-    cond: { abroad: true, aMax: 32 },
+    cond: { abroad: true, aMax: 32, foreignLang: true },
     text: "Nouveau pays, nouvelle langue, un vestiaire où vous ne comprenez pas un mot. L'intégration se joue maintenant.",
     options: [
       {
@@ -4860,7 +4860,7 @@ const MICRO_EVENTS = [
   { id: "mi_bad_tackle", aMin: 16, aMax: 34, w: 2, text: "Un tacle assassin vous envoie de longues semaines à l'infirmerie.", fx: { inj: 12, p: -4, mor: -4, flag: "big_injury" } },
   { id: "mi_derby_win", aMin: 18, aMax: 35, w: 5, text: "Un derby remporté avec la manière : le public est conquis.", fx: { rep: 3, mor: 3 } },
   { id: "mi_transfer_rumor", aMin: 20, aMax: 33, w: 6, text: "Une folle rumeur de transfert agite les réseaux sans lendemain.", fx: { rep: 2, mor: -1 } },
-  { id: "mi_language", aMin: 18, aMax: 30, w: 4, text: "Vos progrès dans la langue locale font fondre les supporters.", fx: { c: 2, mor: 2 } },
+  { id: "mi_language", aMin: 18, aMax: 30, w: 4, foreignLang: true, text: "Vos progrès dans la langue locale font fondre les supporters.", fx: { c: 2, mor: 2 } },
   { id: "mi_nutritionist", aMin: 20, aMax: 34, w: 5, text: "Un nouveau protocole nutritionnel dope votre condition.", fx: { p: 3, form: 2 } },
   { id: "mi_confidence_dip", aMin: 18, aMax: 35, w: 6, text: "Une période de doute vous fait jouer petit bras.", fx: { form: -3, m: -1 } },
   { id: "mi_wonder_goal", aMin: 17, aMax: 35, w: 5, pos: ["att", "mil", "def"], text: "Un but venu d'ailleurs entre directement au panthéon du club.", fx: { rep: 4, mor: 3 } },
@@ -5087,11 +5087,11 @@ const BALANCE = {
    les événements changent sensiblement.
    ============================================================ */
 const SCORE_PERCENTILES = [
-  64, 72, 86, 91, 94, 97, 98, 100, 101, 102, 104, 105, 106, 107, 108, 110, 111, 112, 113, 114,
-  115, 116, 117, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 133, 134, 135, 136,
-  137, 138, 139, 140, 141, 142, 143, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 156, 157, 158,
-  159, 160, 161, 163, 164, 165, 166, 168, 169, 170, 171, 173, 174, 175, 177, 178, 180, 181, 183, 184,
-  186, 188, 190, 191, 193, 195, 198, 200, 203, 205, 208, 212, 216, 219, 224, 230, 238, 247, 264
+  63, 71, 86, 91, 94, 96, 98, 100, 101, 102, 104, 105, 106, 107, 108, 109, 111, 112, 113, 114,
+  115, 116, 117, 118, 119, 121, 122, 123, 124, 125, 126, 127, 128, 129, 131, 132, 133, 134, 135, 136,
+  137, 138, 139, 140, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 156, 157, 158,
+  159, 160, 161, 162, 164, 165, 166, 167, 168, 170, 171, 172, 174, 175, 176, 178, 180, 181, 183, 184,
+  186, 188, 190, 192, 194, 196, 198, 200, 203, 205, 209, 212, 216, 220, 225, 231, 238, 248, 265
 ];
 
 /* ============================================================
@@ -5385,6 +5385,26 @@ const STORIES = [
 ];
 
 // --- Export Node (engine.js / simulate.js) ---------------------------------
+// Langue principale par pays, pour les événements d'intégration/langue à
+// l'étranger. Un pays ABSENT de cette table parle "sa propre langue" (unique) :
+// s'y expatrier compte alors toujours comme un dépaysement linguistique. Seuls
+// les groupes multi-pays sont listés — ainsi un Argentin qui signe en Espagne
+// (tous deux "es") ne subit AUCUN choc de langue.
+const COUNTRY_LANG = {
+  // Espagnol
+  es: "es", ar: "es", mx: "es", uy: "es", cl: "es", co: "es", ve: "es", ec: "es", py: "es", sv: "es",
+  // Portugais
+  pt: "pt", br: "pt", ao: "pt",
+  // Anglais
+  en: "en", us: "en", sco: "en", nir: "en", wal: "en", ie: "en", ng: "en", za: "en", ca: "en", au: "en", nz: "en", pg: "en",
+  // Français
+  fr: "fr", be: "fr", ci: "fr", sn: "fr", cm: "fr", cd: "fr", gn: "fr", bj: "fr", mg: "fr",
+  // Allemand
+  de: "de", at: "de", ch: "de",
+  // Arabe
+  dz: "ar", ma: "ar", tn: "ar", eg: "ar", sa: "ar", qa: "ar",
+};
+
 if (typeof module !== "undefined" && module.exports) {
   const dataExports = {
     BRAND, NATIONALITIES, NAME_POOLS, LIFESTYLES, ENTOURAGES, TRAJECTORIES,
@@ -5394,7 +5414,7 @@ if (typeof module !== "undefined" && module.exports) {
     EVENTS, MICRO_EVENTS, RIVAL_NEWS_GOOD, RIVAL_NEWS_BAD, RIVAL_NEWS_AHEAD,
     RIVAL_NEWS_BEHIND, WORLD_NEWS, WC_STAGES, BALANCE, HEADLINES,
     UNTAKEN_PATH_TEMPLATES, DAILY_QUESTS, WEEKLY_CHALLENGES, LEGEND_QUESTS, BADGE_CATS, BADGES,
-    PERKS, PERK_SLOTS, STORIES, SCORE_PERCENTILES, STREAK_MILESTONES,
+    PERKS, PERK_SLOTS, STORIES, SCORE_PERCENTILES, STREAK_MILESTONES, COUNTRY_LANG,
   };
   Object.assign(global, dataExports);
   module.exports = dataExports;
