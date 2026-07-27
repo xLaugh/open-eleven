@@ -2183,7 +2183,10 @@
     const titleGroups = {};
     (G.leagueTitlesDetail || []).forEach((x) => {
       const c = E.countryOf(x.countryId);
-      const divLabel = E.divShort(x.level, x.countryId);
+      // Élite et D1 = même championnat national (le top-flight) : on les fusionne
+      // dans le palmarès (« Champion — Espagne · D1 »), sinon un titre gagné dans
+      // un club élite compterait à part d'un titre gagné dans un club D1.
+      const divLabel = E.divShort(x.level === "elite" ? "d1" : x.level, x.countryId);
       const key = `${c ? c.name : x.countryId} · ${divLabel}`;
       titleGroups[key] = (titleGroups[key] || 0) + 1;
     });
