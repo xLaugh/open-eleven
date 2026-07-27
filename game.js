@@ -1866,6 +1866,8 @@
       tryUnlock("survivor", !!G.flags.big_injury);
       tryUnlock("iron_man", G.totals.matches >= 800);
       tryUnlock("ageless", G.seasons.some((se) => se.age >= 40 && se.matches > 0));
+      tryUnlock("mathusalem", G.seasons.some((se) => se.age >= 45 && se.matches > 0));
+      tryUnlock("nations_league", (t.natLeague || 0) >= 1);
       tryUnlock("showtime", E.hasTrait(G, "showman") && G.rep >= 88);
 
       // Badges v4.2 : précocité, distinctions, championnats détaillés, moments
@@ -2175,6 +2177,7 @@
       statRowHtml("Matchs joués", G.totals.matches),
       statRowHtml(isGk ? "Clean sheets" : "Buts marqués", isGk ? G.totals.cleanSheets : G.totals.goals),
       statRowHtml("Passes décisives", G.totals.assists),
+      ...((G.captainMatches || 0) > 0 ? [statRowHtml("©️ Matchs comme capitaine", G.captainMatches)] : []),
       statRowHtml(`${flagHtml(G.nationality)} Sélections`, G.natTeam.caps),
       statRowHtml("💰 Fortune", E.fmtMoney(G.money)),
     ].join("");

@@ -289,6 +289,7 @@
       prevClub: null, // club quitté au dernier transfert (retrouvailles)
       natTeam: { active: false, retired: false, caps: 0, goals: 0 },
       totals: { matches: 0, goals: 0, assists: 0, cleanSheets: 0 },
+      captainMatches: 0, // matchs disputés avec le brassard de capitaine (bilan de fin)
       trophies: { league: 0, cup: 0, continental: 0, continental2: 0, continental3: 0, worldCup: 0, contInt: 0, natLeague: 0, ballon: 0, goldenBoot: 0 },
       seasons: [],
       transferHistory: [],
@@ -1184,6 +1185,19 @@
     const matches = Math.round(rand(mMin, mMax) * pt * injuryFactor);
     report.matches = matches;
     report.injuryWeeks = s.injuryWeeks;
+    // Capitanat : le brassard revient au patron du vestiaire — soit désigné par un
+    // événement (flag captain), soit un Leader né installé, soit un vétéran fidèle
+    // et respecté du club. Une fois acquis, le brassard reste. Les matchs joués
+    // capitaine sont cumulés pour le bilan final (les prêts n'en font pas partie).
+    // Aucun hasard : dépend uniquement de l'état, le déterminisme est préservé.
+    if (!s.loan && matches > 0) {
+      const seasonsHere = s.seasons.filter((se) => se.clubName === s.club.name).length;
+      if (!s.flags.captain && ((hasTrait(s, "leader") && s.age >= 26 && seasonsHere >= 2) ||
+          (seasonsHere >= 4 && s.age >= 30 && s.rep >= 62))) {
+        s.flags.captain = true;
+      }
+      if (s.flags.captain) { s.captainMatches += matches; report.captain = true; }
+    }
 
     // Performance individuelle (modulée par l'archétype de jeu)
     const arch = s.archetype ? s.archetype.mods : {};

@@ -5055,6 +5055,212 @@ const EVENTS = [
       ] },
     ],
   },
+
+  // ══════════════ LOT : records, club, insolite, médias, vie perso, capitanat ══════════════
+  {
+    id: "ev_goal_record", cat: "Records", icon: "🎯", w: 8,
+    cond: { aMin: 26, minRep: 45, pos: ["att", "mil"] },
+    text: "Vous approchez d'un cap symbolique de buts en carrière. La presse compte à rebours, la pression monte à chaque ballon.",
+    options: [
+      { label: "Chasser le record coûte que coûte", hint: "Faim", outcomes: [
+        { weight: 55, text: "Vous claquez le but du cap sous les projecteurs : votre nom entre dans les tablettes.", fx: { rep: 5, mor: 7, form: 3 } },
+        { weight: 45, text: "L'obsession du chiffre vous crispe devant le but pendant des semaines.", fx: { form: -4, mor: -2 } },
+      ] },
+      { label: "Laisser le record venir à vous", hint: "Sérénité", outcomes: [
+        { weight: 100, text: "Vous jouez pour l'équipe ; le record tombe tout seul, sans forcer. La classe.", fx: { rep: 3, mor: 4, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_club_elder", cat: "Records", icon: "🎖️", w: 7,
+    cond: { aMin: 32, minClubSeasons: 5 },
+    text: "Vous voilà le doyen du vestiaire, mémoire vivante du club. Les jeunes vous regardent comme une institution.",
+    options: [
+      { label: "Endosser le rôle de patron", hint: "Aura", outcomes: [
+        { weight: 100, text: "Vous transmettez, vous cadrez, vous rassurez : le club tourne autour de vous.", fx: { rep: 4, mor: 5, team: 5, c: 2 } },
+      ] },
+      { label: "Rester un joueur parmi les autres", hint: "Humilité", outcomes: [
+        { weight: 100, text: "Pas de discours, que l'exemple. Le respect n'en est que plus grand.", fx: { mor: 3, m: 2, team: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_fund_takeover", cat: "Club", icon: "💼", w: 9,
+    cond: { aMin: 20, notFlag: "fund_club" },
+    text: "Un fonds d'investissement rachète le club et promet des moyens colossaux. L'ambition explose… la pression aussi.",
+    options: [
+      { label: "Embrasser le projet ambitieux", hint: "Ambition", outcomes: [
+        { weight: 55, text: "Recrues de standing, objectifs relevés : le club change de dimension et vous porte.", fx: { rep: 4, mor: 4, clubBoost: 1, flag: "fund_club" } },
+        { weight: 45, text: "Les stars affluent et la concurrence à votre poste devient féroce.", fx: { rep: 3, mor: -3, flag: "fund_club" } },
+      ] },
+      { label: "Se méfier de l'argent roi", hint: "Prudence", outcomes: [
+        { weight: 100, text: "Vous gardez la tête froide face à l'euphorie : le foot d'abord, le reste suivra.", fx: { m: 3, mor: 1, flag: "fund_club" } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_admin_demotion", cat: "Crise", icon: "⚖️", w: 8,
+    cond: { levels: ["elite", "d1", "d2"], aMin: 23 },
+    text: "Sanction couperet : pour raisons financières, le club est menacé de rétrogradation administrative. Le vestiaire tremble.",
+    options: [
+      { label: "Rester par loyauté et se battre", hint: "Fidélité", outcomes: [
+        { weight: 60, text: "Vous refusez de fuir le navire : les supporters n'oublieront jamais.", fx: { rep: 5, mor: 4, team: 4 } },
+        { weight: 40, text: "Le club sombre malgré tout ; la saison vire au cauchemar sportif.", fx: { mor: -8, form: -3, rep: 2 } },
+      ] },
+      { label: "Activer son départ tant qu'il est temps", hint: "Raison", outcomes: [
+        { weight: 100, text: "Vous partez la tête haute avant la tempête : choix pro, un brin froid.", fx: { transfer: { d: 0 }, mor: -2, rep: -1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_stadium_opening", cat: "Club", icon: "🏟️", w: 8,
+    cond: { aMin: 22, minClubSeasons: 2 },
+    text: "Le club inaugure son nouveau stade flambant neuf. On vous confie le coup d'envoi de cette ère nouvelle.",
+    options: [
+      { label: "Marquer l'histoire du premier match", hint: "Symbole", outcomes: [
+        { weight: 55, text: "Premier but dans le nouvel écrin : votre nom sur la plaque inaugurale, à jamais.", fx: { rep: 5, mor: 6, form: 2 } },
+        { weight: 45, text: "L'émotion vous submerge, la soirée reste belle malgré un match discret.", fx: { mor: 3, rep: 1 } },
+      ] },
+      { label: "Savourer le moment sans pression", hint: "Instant", outcomes: [
+        { weight: 100, text: "Vous humez l'ambiance d'un nouveau chapitre : reconnaissant, apaisé.", fx: { mor: 4, m: 1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_pitch_invasion", cat: "Insolite", icon: "🚨", w: 8,
+    cond: { aMin: 19 },
+    text: "En plein match bouillant, des supporters envahissent la pelouse. La confusion est totale autour de vous.",
+    options: [
+      { label: "Protéger un coéquipier dans la cohue", hint: "Sang-froid", outcomes: [
+        { weight: 100, text: "Vous gardez la tête froide et mettez un jeune à l'abri : geste salué partout.", fx: { rep: 4, team: 4, mor: 2 } },
+      ] },
+      { label: "Filer aux vestiaires sans demander son reste", hint: "Sécurité", outcomes: [
+        { weight: 100, text: "Prudence avant tout : vous quittez la pelouse au pas de course.", fx: { mor: -1, m: 1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_floodlight_fail", cat: "Insolite", icon: "💡", w: 7,
+    cond: { aMin: 18 },
+    text: "Panne de projecteurs : le stade plonge dans le noir, le match est suspendu une heure. L'attente casse tous les rythmes.",
+    options: [
+      { label: "Garder le groupe concentré", hint: "Focus", outcomes: [
+        { weight: 60, text: "Vous remobilisez tout le monde ; à la reprise, l'équipe repart pied au plancher.", fx: { form: 3, team: 3, c: 1 } },
+        { weight: 40, text: "Impossible de se remettre dedans : la fin de match est décousue.", fx: { form: -3, mor: -1 } },
+      ] },
+      { label: "Décompresser en plaisantant", hint: "Détente", outcomes: [
+        { weight: 100, text: "Vous détendez le vestiaire pendant la coupure : l'ambiance reste légère.", fx: { mor: 2, team: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_heatwave_match", cat: "Physique", icon: "🥵", w: 8,
+    cond: { aMin: 18, aMax: 35 },
+    text: "Canicule écrasante, 40°C sur la pelouse. Chaque course coûte double, la déshydratation guette.",
+    options: [
+      { label: "Gérer l'effort intelligemment", hint: "Économie", outcomes: [
+        { weight: 100, text: "Vous dosez, vous choisissez vos courses : lucide quand les autres fondent.", fx: { m: 2, form: 2 } },
+      ] },
+      { label: "Tout donner malgré la fournaise", hint: "Bravoure", outcomes: [
+        { weight: 50, text: "Vous survolez la chaleur par pur mental : un exploit physique salué.", fx: { rep: 3, form: 3, p: 1 } },
+        { weight: 50, text: "Vous finissez au bord du malaise, cuit pour plusieurs jours.", fx: { form: -5, mor: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_decisive_og", cat: "Terrain", icon: "😱", w: 8,
+    cond: { aMin: 20, pos: ["def", "mil", "gk"] },
+    text: "Le pire scénario : un but contre votre camp au pire moment offre la victoire à l'adversaire. Le stade retient son souffle.",
+    options: [
+      { label: "Assumer devant tout le monde", hint: "Caractère", outcomes: [
+        { weight: 60, text: "Vous prenez la parole, endossez la faute : le vestiaire vous relève, grandi.", fx: { rep: 2, m: 3, team: 3, mor: -2 } },
+        { weight: 40, text: "La honte colle à la peau ; les nuits suivantes sont blanches.", fx: { mor: -7, form: -3 } },
+      ] },
+      { label: "Se réfugier dans le silence", hint: "Repli", outcomes: [
+        { weight: 100, text: "Vous encaissez seul, sans un mot. Le doute s'installe pour un temps.", fx: { mor: -5, form: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_viral_meme", cat: "Réseaux", icon: "😂", w: 8,
+    cond: { aMin: 19, minRep: 40 },
+    text: "Une de vos mimiques devient un mème viral vu par des millions de gens. Internet ne parle plus que de ça.",
+    options: [
+      { label: "Jouer le jeu avec autodérision", hint: "Second degré", outcomes: [
+        { weight: 100, text: "Vous surfez sur la blague avec malice : le public adore, votre cote grimpe.", fx: { rep: 5, mor: 3 } },
+      ] },
+      { label: "Ignorer le cirque numérique", hint: "Distance", outcomes: [
+        { weight: 100, text: "Vous restez concentré sur le terrain, loin du bruit. Sobre et pro.", fx: { m: 2, mor: 1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_videogame_cover", cat: "Médias", icon: "🎮", w: 8,
+    cond: { aMin: 22, minRep: 66 },
+    text: "Le jeu vidéo de foot numéro un veut VOTRE visage sur la jaquette de son édition mondiale. Consécration pop.",
+    options: [
+      { label: "Accepter la jaquette planétaire", hint: "Icône", outcomes: [
+        { weight: 100, text: "Votre visage dans des millions de foyers : star bien au-delà des stades.", fx: { rep: 7, money: 3, mor: 4 } },
+      ] },
+      { label: "Décliner, gêné par l'exposition", hint: "Réserve", outcomes: [
+        { weight: 100, text: "Vous préférez la discrétion à la lumière : rare, et respecté pour ça.", fx: { m: 2, mor: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_biopic_offer", cat: "Médias", icon: "🎬", w: 7,
+    cond: { aMin: 30, minRep: 72 },
+    text: "Un studio veut porter votre vie à l'écran : un biopic sur votre parcours, des galères aux sommets.",
+    options: [
+      { label: "Ouvrir les portes de son histoire", hint: "Héritage", outcomes: [
+        { weight: 100, text: "Votre légende devient récit universel : des gamins rêveront grâce à vous.", fx: { rep: 6, mor: 5, money: 2 } },
+      ] },
+      { label: "Garder son intimité", hint: "Pudeur", outcomes: [
+        { weight: 100, text: "Certaines choses ne se racontent qu'à soi. Vous refusez, en paix.", fx: { m: 2, mor: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_charity_gala", cat: "Vie perso", icon: "🎗️", w: 7,
+    cond: { aMin: 27, minRep: 55, minMoney: 6 },
+    text: "Vous organisez un grand gala caritatif pour une cause qui vous tient à cœur. Le tout-foot répond présent.",
+    options: [
+      { label: "S'investir corps et âme", hint: "Cœur", outcomes: [
+        { weight: 100, text: "Une soirée mémorable, des fonds records : vous rendez au jeu ce qu'il vous a donné.", fx: { rep: 5, mor: 6, money: -2 } },
+      ] },
+      { label: "Prêter juste son image", hint: "Mesure", outcomes: [
+        { weight: 100, text: "Votre nom suffit à faire venir du monde : efficace, sans en faire trop.", fx: { rep: 3, mor: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_captain_speech", cat: "Vestiaire", icon: "©️", w: 9,
+    cond: { flag: "captain", aMin: 24 },
+    text: "Vestiaire tendu à la mi-temps, le match part à la dérive. En tant que capitaine, tous les yeux se tournent vers vous.",
+    options: [
+      { label: "Sortir le discours qui réveille", hint: "Meneur", outcomes: [
+        { weight: 60, text: "Vos mots claquent : l'équipe repart au combat et renverse tout. Un vrai patron.", fx: { rep: 5, team: 6, form: 4, mor: 4 } },
+        { weight: 40, text: "Le message ne passe pas ce soir ; le groupe reste éteint.", fx: { team: -2, mor: -3 } },
+      ] },
+      { label: "Mener par l'exemple, sans un mot", hint: "Silence", outcomes: [
+        { weight: 100, text: "Pas de grand discours : vous haussez votre niveau et le groupe suit.", fx: { form: 3, team: 3, c: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_boot_deal", cat: "Finance", icon: "👟", w: 8,
+    cond: { aMin: 21, minRep: 55 },
+    text: "Un équipementier majeur pose un contrat de chaussures sur la table : belle somme, mais obligations d'image.",
+    options: [
+      { label: "Signer le gros contrat", hint: "Business", outcomes: [
+        { weight: 60, text: "Le chèque est conséquent et l'exposition mondiale : vous devenez une marque.", fx: { money: 4, rep: 3 } },
+        { weight: 40, text: "Les obligations promo grignotent votre préparation : agaçant.", fx: { money: 4, form: -2, mor: -1 } },
+      ] },
+      { label: "Rester libre de toute attache", hint: "Liberté", outcomes: [
+        { weight: 100, text: "Vous gardez les mains libres : le terrain d'abord, les contrats plus tard.", fx: { m: 2, mor: 1 } },
+      ] },
+    ],
+  },
 ];
 
 /* ============================================================
@@ -5315,11 +5521,11 @@ const BALANCE = {
    les événements changent sensiblement.
    ============================================================ */
 const SCORE_PERCENTILES = [
-  63, 72, 88, 94, 97, 99, 101, 103, 104, 105, 106, 108, 109, 110, 111, 112, 113, 114, 115, 116,
-  117, 118, 119, 120, 121, 123, 123, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 138,
-  139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 151, 152, 153, 154, 155, 156, 157, 158, 159,
-  160, 162, 163, 164, 165, 166, 167, 169, 170, 171, 173, 174, 175, 177, 178, 179, 181, 182, 184, 185,
-  187, 189, 190, 192, 194, 196, 199, 201, 203, 206, 209, 212, 215, 219, 223, 229, 236, 245, 263
+  63, 72, 89, 94, 97, 99, 101, 103, 104, 106, 107, 108, 109, 110, 112, 113, 114, 115, 116, 117,
+  118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138,
+  139, 140, 141, 142, 143, 144, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 159, 160,
+  161, 162, 163, 164, 165, 167, 168, 169, 170, 171, 173, 174, 175, 176, 178, 179, 181, 182, 183, 185,
+  187, 189, 190, 192, 194, 196, 199, 201, 203, 206, 209, 212, 216, 220, 224, 230, 237, 247, 263
 ];
 
 /* ============================================================
@@ -5484,12 +5690,14 @@ const BADGES = [
   { id: "prolific_scorer", cat: "performances", icon: "⚽", name: "Buteur historique", hint: "Faire trembler les filets, encore et encore…", desc: "Marquer 450 buts en carrière." },
   { id: "iron_man", cat: "performances", icon: "🦾", name: "Increvable", hint: "Une longévité hors du commun…", desc: "Disputer 800 matchs professionnels." },
   { id: "ageless", cat: "performances", icon: "🕰️", name: "L'Éternel", hint: "Défier le temps, saison après saison…", desc: "Disputer une saison à 40 ans ou plus." },
+  { id: "mathusalem", cat: "performances", icon: "⏳", name: "Mathusalem", hint: "Repousser encore les limites de l'âge…", desc: "Disputer une saison à 45 ans ou plus." },
   { id: "wall", cat: "performances", icon: "🧱", name: "La Muraille", hint: "Une cage inviolable, saison après saison…", desc: "En tant que gardien, cumuler 150 clean sheets en carrière." },
   { id: "moment_5", cat: "performances", icon: "🎬", name: "Monsieur les grands soirs", hint: "Quand tout brûle, certains respirent…", desc: "Réussir 5 moments décisifs dans une même carrière." },
   { id: "derby_3", cat: "performances", icon: "🔥", name: "Roi du derby", hint: "La ville n'a qu'un seul patron…", desc: "Faire basculer 3 derbies dans une même carrière." },
   // --- Sélection nationale ---
   { id: "world_cup", cat: "selection", icon: "🏆", name: "Champion du monde", hint: "Le rêve ultime de tout gamin…", desc: "Remporter la Coupe du Monde avec votre nation." },
   { id: "centurion", cat: "selection", icon: "🎽", name: "Centurion", hint: "Porter cent fois le maillot national…", desc: "Atteindre 100 sélections avec votre nation." },
+  { id: "nations_league", cat: "selection", icon: "🛡️", name: "Roi d'Europe des sélections", hint: "Dominer le continent entre deux grands tournois…", desc: "Remporter la Ligue des Sélections avec votre nation." },
   // --- Parcours & fidélité ---
   { id: "legend_tier", cat: "parcours", icon: "👑", name: "Légende vivante", hint: "Atteindre le sommet absolu…", desc: "Terminer une carrière avec le rang « Légende du football mondial »." },
   { id: "one_club", cat: "parcours", icon: "❤️", name: "Une vie, un club", hint: "La fidélité absolue, du début à la fin…", desc: "Réussir une belle carrière sans jamais être transféré (les prêts sont tolérés)." },
