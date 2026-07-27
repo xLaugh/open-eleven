@@ -1743,6 +1743,27 @@ body { color: var(--text-0); }
 #btn-badges-back { align-self: center; }
 
 /* ---------- Écran Panthéon ---------- */
+/* Barre de tri du Panthéon : chips sélectionnables (une seule active). */
+.pantheon-sort { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; justify-content: center; }
+.pantheon-sort-chip {
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--gold-soft);
+  background: transparent;
+  color: var(--gold-soft);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, transform 0.1s ease;
+  white-space: nowrap;
+}
+.pantheon-sort-chip:hover { transform: translateY(-1px); }
+.pantheon-sort-chip.on {
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  border-color: transparent;
+  color: #241a06;
+}
 .pantheon-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
 .pantheon-card {
   background: var(--card-bg);

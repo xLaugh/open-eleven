@@ -807,15 +807,61 @@
     savePantheon(p);
   }
 
+  // Tri du Panthéon (affichage uniquement — n'altère ni le stockage ni le tirage
+  // de l'invité-légende). "recent" reproduit l'ordre historique (plus récent en tête).
+  let pantheonSort = "score";
+  const PANTHEON_SORTS = [
+    { id: "score", label: "🏅 Score" },
+    { id: "ovr", label: "📊 Note" },
+    { id: "trophies", label: "🏆 Trophées" },
+    { id: "money", label: "💰 Fortune" },
+    { id: "recent", label: "🕓 Récent" },
+  ];
+  function pantheonMajorCount(t) {
+    t = t || {};
+    return (t.worldCup || 0) + (t.ballon || 0) + (t.continental || 0) + (t.continental2 || 0) +
+      (t.continental3 || 0) + (t.league || 0) + (t.goldenBoot || 0) + (t.cup || 0);
+  }
+  // Renvoie une copie triée des entrées (index = ordre d'insertion, pour "recent").
+  function sortedPantheon(p) {
+    const idx = p.map((l, i) => ({ l, i }));
+    const cmp = {
+      score: (a, b) => (b.l.score || 0) - (a.l.score || 0),
+      ovr: (a, b) => (b.l.peakOvr || 0) - (a.l.peakOvr || 0),
+      trophies: (a, b) => pantheonMajorCount(b.l.trophies) - pantheonMajorCount(a.l.trophies),
+      money: (a, b) => (b.l.money || 0) - (a.l.money || 0),
+      recent: (a, b) => b.i - a.i,
+    }[pantheonSort] || ((a, b) => b.i - a.i);
+    // Tri stable : départage par ordre d'insertion inverse (plus récent d'abord)
+    idx.sort((a, b) => cmp(a, b) || b.i - a.i);
+    return idx.map((x) => x.l);
+  }
+  function renderPantheonSortBar() {
+    const bar = $("pantheon-sort");
+    if (!bar) return;
+    bar.innerHTML = PANTHEON_SORTS.map((s) =>
+      `<button class="pantheon-sort-chip${s.id === pantheonSort ? " on" : ""}" data-sort="${s.id}">${s.label}</button>`
+    ).join("");
+    bar.querySelectorAll(".pantheon-sort-chip").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        pantheonSort = btn.getAttribute("data-sort");
+        renderPantheonScreen();
+      });
+    });
+  }
+
   function renderPantheonScreen() {
     const p = loadPantheon();
     const list = $("pantheon-list");
+    const bar = $("pantheon-sort");
     list.innerHTML = "";
     if (!p.length) {
+      if (bar) bar.innerHTML = "";
       list.innerHTML = `<p class="pantheon-empty">Votre légende est encore à écrire.</p>`;
       return;
     }
-    [...p].reverse().forEach((l) => {
+    renderPantheonSortBar();
+    sortedPantheon(p).forEach((l) => {
       const t = l.trophies || {};
       const bits = [];
       if (t.worldCup) bits.push(`🏆×${t.worldCup}`);
