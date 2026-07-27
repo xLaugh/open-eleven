@@ -22,11 +22,11 @@ Tout commence par la **création de votre joueur** : nationalité, poste, origin
 
 Ce qui vous attend au fil des saisons :
 
-- 🌍 **48 pays**, **428 clubs**, **47 nationalités** jouables des cinq continents, sur 4 divisions (Régional · D2 · D1 · Élite)
+- 🌍 **212 pays**, **1195 clubs**, **212 nationalités** jouables des cinq continents — quasiment toute la planète FIFA — sur 5 divisions (Régional · D3 · D2 · D1 · Élite), chaque nation avec **sa propre pyramide** (le « D1 » d'un petit pays équivaut à la D3 ou au Régional d'un grand championnat)
 - ⚡ Des événements à choix qui font et défont votre carrière
 - 🎯 Des moments décisifs interactifs : penalty de finale, barrage de montée, derby…
-- 💸 Transferts, prêts, blessures, sélection nationale
-- ⏳ Une longévité poussée **jusqu'à 42 ans**, si les jambes et les clubs suivent
+- 💸 Transferts (montants réalistes), prêts, **blessures** (dont graves et fins de carrière brutales), **capitanat**, sélection nationale
+- ⏳ Une longévité poussée **jusqu'à 42 ans** — et au-delà pour de rares vétérans acharnés (jusqu'à 50 ans), mais à très bas niveau, les jambes en moins
 - 🃏 Une **fiche de légende** en fin de carrière, avec votre rang, votre palmarès et votre percentile mondial
 
 ## 🏆 Trophées & compétitions
@@ -36,7 +36,7 @@ En club comme en sélection, tout se joue :
 - 🎖️ **Championnat** et **Coupe Nationale** (la gagner, même en D2, ouvre les portes de l'Europe)
 - 👑 **Coupe des Champions** (Europe, Amérique, Afrique, Asie, Océanie), plus les coupes d'Europe secondaires : **Trophée d'Europe** et **Bouclier d'Europe**
 - 🏆 **Coupe du Monde**
-- 🌍 Le championnat continental de votre nation : **Euro**, **Coupe d'Amérique**, **Coupe d'Afrique des Nations**, **Coupe d'Asie**, **Coupe d'Océanie**
+- 🌍 Le championnat continental de votre nation : **Euro**, **Coupe d'Amérique**, **Coupe d'Afrique des Nations**, **Coupe d'Asie**, **Coupe d'Océanie** — plus la **Ligue des Sélections** européenne, disputée entre deux grands tournois
 - ⭐ Le **Ballon d'Or**, pour les plus grands
 - 👟 Le **Soulier d'Or**, pour les serial buteurs
 
@@ -52,10 +52,10 @@ En club comme en sélection, tout se joue :
 ## ✨ Et de quoi revenir chaque jour
 
 - 🛒 Une **boutique** de jetons et d'avantages de départ
-- 🏅 **37 badges** à débloquer
+- 🏅 **39 badges** à débloquer
 - 🎯 Des **quêtes** du jour, de la semaine et légendaires
 - 🔥 Des **séries** à entretenir
-- 🏛️ Un **Panthéon** qui archive vos plus belles carrières, fiche complète consultable à l'appui
+- 🏛️ Un **Panthéon** triable (score, trophées, note, fortune…) qui archive vos plus belles carrières, fiche complète consultable à l'appui
 
 ## ▶️ Comment y jouer
 
