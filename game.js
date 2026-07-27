@@ -2272,7 +2272,11 @@
     let prevSeason = null;
     $("final-seasons").innerHTML = G.seasons
       .map((se) => {
-        const icons = (se.trophies || []).map((tr) => (COMPETITIONS[tr] ? COMPETITIONS[tr].icon : "")).join("");
+        // Un titre de division inférieure (D2/D3/Rég.) n'est pas poussé dans
+        // se.trophies (pour ne pas peser sur le Ballon d'Or) : on ajoute quand
+        // même l'icône de champion ici pour qu'il apparaisse dans le tableau.
+        const champIcon = (se.divisionTitle && !(se.trophies || []).includes("league")) ? COMPETITIONS.league.icon : "";
+        const icons = champIcon + (se.trophies || []).map((tr) => (COMPETITIONS[tr] ? COMPETITIONS[tr].icon : "")).join("");
         const perf = isGk ? `${se.cleanSheets || 0} cs` : `${se.goals} b`;
         let moveArrow = "";
         if (prevSeason && prevSeason.clubName === se.clubName && se.level && prevSeason.level && se.level !== prevSeason.level) {

@@ -1466,7 +1466,7 @@
     s.totals.assists += report.assists;
     s.totals.cleanSheets += report.cleanSheets;
     s.peakOvr = Math.max(s.peakOvr, ovr(s));
-    s.seasons.push({ age: s.age, year: s.year, clubName: s.club.name, countryId: s.club.countryId, level: lvl, matches, goals: report.goals, assists: report.assists, cleanSheets: report.cleanSheets, rating: report.rating, trophies: report.trophies, onLoan: !!s.loan, leaguePos: report.leaguePos });
+    s.seasons.push({ age: s.age, year: s.year, clubName: s.club.name, countryId: s.club.countryId, level: lvl, matches, goals: report.goals, assists: report.assists, cleanSheets: report.cleanSheets, rating: report.rating, trophies: report.trophies, divisionTitle: !!report.divisionTitle, onLoan: !!s.loan, leaguePos: report.leaguePos });
 
     // Relations
     if (rating >= 7.4) s.coachRel = clamp(s.coachRel + 4, 5, 100);
