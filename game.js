@@ -115,7 +115,7 @@
     $("hh-age").textContent = `${G.age} ans · ${G.year}`;
     const clubImg = G.club.img ? `<img class="club-logo" src="${encodeURI(G.club.img)}" alt="" onerror="this.remove()" />` : "";
     const lvl = E.lvlOf(G, G.club);
-    $("hh-club").innerHTML = `${clubImg}<span class="level-tag level-${lvl}">${esc(LEVELS[lvl].short)}</span>${esc(G.club.name)}${G.club.colors ? ` ${G.club.colors}` : ""}${G.loan ? " <span class='loan-tag'>Prêt</span>" : ""} ${flagHtml(country)}`;
+    $("hh-club").innerHTML = `${clubImg}<span class="level-tag level-${lvl}">${esc(E.divShort(lvl, G.club.countryId))}</span>${esc(G.club.name)}${G.club.colors ? ` ${G.club.colors}` : ""}${G.loan ? " <span class='loan-tag'>Prêt</span>" : ""} ${flagHtml(country)}`;
 
     const o = E.ovr(G);
     const arrow = prevOvr == null || o === prevOvr ? "" : o > prevOvr ? " <span class='ovr-up'>▲</span>" : " <span class='ovr-down'>▼</span>";
@@ -340,7 +340,7 @@
       const card = document.createElement("button");
       card.className = "origin-card academy-card";
       card.innerHTML = `
-        <p class="origin-name"><span class="level-tag level-${offer.level}">${esc(LEVELS[offer.level].short)}</span> ${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)}</p>
+        <p class="origin-name"><span class="level-tag level-${offer.level}">${esc(E.divShort(offer.level, offer.club.countryId))}</span> ${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)}</p>
         <p class="origin-desc">${esc(offer.blurb)}${offer.surprise ? " — <strong>contre toute attente, ils vous veulent VOUS.</strong>" : ""}</p>`;
       card.addEventListener("click", () => { if (setup.duelRole) setup.duelChoices.push(offers.indexOf(offer)); startCareer(offer.club); });
       list.appendChild(card);
@@ -527,7 +527,7 @@
   function renderLoanChoice(offers) {
     const buttons = offers.map((offer, i) => {
       const cc = E.countryOf(offer.club.countryId);
-      return `<button class="opt-btn" data-offer="${i}"><span class="opt-hint">${esc(LEVELS[offer.club.level].short)}</span>${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)} — prêt d'une saison</button>`;
+      return `<button class="opt-btn" data-offer="${i}"><span class="opt-hint">${esc(E.divShort(offer.club.level, offer.club.countryId))}</span>${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)} — prêt d'une saison</button>`;
     }).join("");
     showCard(`
       <div class="card-tag"><span class="card-icon">🔄</span> Prêt · ${G.age} ans</div>
@@ -560,7 +560,7 @@
       const cc = E.countryOf(offer.club.countryId);
       const img = offer.club.img ? `<img class="club-logo" src="${encodeURI(offer.club.img)}" alt="" onerror="this.remove()" />` : "";
       buttons += `<button class="opt-btn" data-offer="${i}">
-        <span class="opt-hint">${offer.exotic ? "💰 " : ""}${esc(LEVELS[offer.club.level].short)}</span>
+        <span class="opt-hint">${offer.exotic ? "💰 " : ""}${esc(E.divShort(offer.club.level, offer.club.countryId))}</span>
         ${img}${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)} — ${E.fmtMoney(offer.salary)}/an · indemnité ${E.fmtMoney(offer.fee)}</button>`;
     });
     let legendLine = "";
@@ -722,14 +722,14 @@
       ? `<p class="recap-trophies">🎖️ ${awardIds.map((id) => `${AWARDS[id].icon} ${AWARDS[id].name}`).join(" · ")}</p>`
       : "";
     let leagueLine;
-    if (report.leaguePos === 1) leagueLine = report.divisionTitle ? `🥇 Champion ${E.deOf(LEVELS[report.level].short)} !` : "🥇 Champion !";
+    if (report.leaguePos === 1) leagueLine = report.divisionTitle ? `🥇 Champion ${E.deOf(E.divShort(report.level, report.countryId))} !` : "🥇 Champion !";
     else if (report.promoted) leagueLine = `${report.leaguePos}ᵉ — 🚀 montée arrachée en barrage !`;
     else if (report.playoffRun) leagueLine = `${report.leaguePos}ᵉ — barrage de montée perdu`;
     else if (report.relegated) leagueLine = `${report.leaguePos}ᵉ — 📉 RELÉGATION`;
     else leagueLine = `${report.leaguePos}ᵉ`;
 
     showCard(`
-      <div class="card-tag"><span class="card-icon">📊</span> Saison ${report.year}-${String((report.year + 1) % 100).padStart(2, "0")} · ${esc(report.clubName)} <span class="level-tag level-${report.level}">${esc(LEVELS[report.level].short)}</span>${report.onLoan ? " (prêt)" : ""}</div>
+      <div class="card-tag"><span class="card-icon">📊</span> Saison ${report.year}-${String((report.year + 1) % 100).padStart(2, "0")} · ${esc(report.clubName)} <span class="level-tag level-${report.level}">${esc(E.divShort(report.level, report.countryId))}</span>${report.onLoan ? " (prêt)" : ""}</div>
       ${report.headline ? `<p class="recap-headline">📰 ${esc(report.headline)}</p>` : ""}
       <div class="recap-grid">
         <div class="recap-cell"><span class="recap-num">${report.matches}</span><span class="recap-lbl">Matchs</span></div>
@@ -2183,7 +2183,7 @@
     const titleGroups = {};
     (G.leagueTitlesDetail || []).forEach((x) => {
       const c = E.countryOf(x.countryId);
-      const divLabel = x.level === "elite" || x.level === "d1" ? "D1" : LEVELS[x.level].short;
+      const divLabel = E.divShort(x.level, x.countryId);
       const key = `${c ? c.name : x.countryId} · ${divLabel}`;
       titleGroups[key] = (titleGroups[key] || 0) + 1;
     });
@@ -2255,7 +2255,8 @@
     $("final-path").innerHTML = G.transferHistory
       .map((step) => {
         const tag = step.loan ? ` <span class="loan-tag">Prêt</span>` : step.loanReturn ? ` <span class="loan-tag">Retour de prêt</span>` : "";
-        const lvlTag = step.level ? `<span class="level-tag level-${step.level}">${esc(LEVELS[step.level].short)}</span>` : "";
+        const stepCid = step.countryId || (COUNTRIES.find((c) => c.name === step.countryName) || {}).id;
+        const lvlTag = step.level ? `<span class="level-tag level-${step.level}">${esc(stepCid ? E.divShort(step.level, stepCid) : LEVELS[step.level].short)}</span>` : "";
         return `<div class="path-step"><span class="path-age">${step.age} ans</span><span class="path-club">${lvlTag}${esc(step.toClubName)}${tag} <span class="path-country">(${esc(step.countryName)})</span>${step.fee != null ? ` · ${E.fmtMoney(step.fee)}` : ""}</span></div>`;
       })
       .join("");
@@ -2280,7 +2281,7 @@
         const seFlag = seCountry ? flagHtml(seCountry) : "";
         return `<div class="season-row">
           <span class="season-age">${se.age}</span>
-          <span class="season-club">${se.level ? `<span class="level-tag level-${se.level}">${esc(LEVELS[se.level].short)}</span>` : ""}${seFlag ? `${seFlag} ` : ""}${esc(se.clubName)}${moveArrow}${se.onLoan ? ` <span class="loan-tag">Prêt</span>` : ""}</span>
+          <span class="season-club">${se.level ? `<span class="level-tag level-${se.level}">${esc(seCountryId ? E.divShort(se.level, seCountryId) : LEVELS[se.level].short)}</span>` : ""}${seFlag ? `${seFlag} ` : ""}${esc(se.clubName)}${moveArrow}${se.onLoan ? ` <span class="loan-tag">Prêt</span>` : ""}</span>
           <span class="season-stats">${se.matches} m · ${perf} · ${se.rating.toFixed(1)}</span>
           <span class="season-icons">${icons}</span>
         </div>`;

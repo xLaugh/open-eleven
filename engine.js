@@ -58,6 +58,29 @@
   function countryOf(countryId) { return COUNTRIES.find((c) => c.id === countryId); }
   function levelRank(levelId) { return LEVELS[levelId] ? LEVELS[levelId].rank : 0; }
 
+  // Étiquette de division RELATIVE à la nation. Le meilleur échelon d'un pays
+  // s'affiche « D1 », le suivant « D2 », etc. — même si sa FORCE réelle (level,
+  // qui pilote salaire/OVR/niveau) équivaut à un D3 voire un Régional des grands
+  // championnats. Chaque nation a ainsi sa propre pyramide à l'écran, sans rien
+  // changer à l'équilibrage. Les grands pays (top = élite) ne bougent pas.
+  const _countryTopRank = {};
+  function countryTopRank(countryId) {
+    if (_countryTopRank[countryId] == null) {
+      let top = 0;
+      for (const c of CLUBS) if (c.countryId === countryId) top = Math.max(top, levelRank(c.level));
+      _countryTopRank[countryId] = top;
+    }
+    return _countryTopRank[countryId];
+  }
+  const _DIV_SHORTS = ["D1", "D2", "D3", "Rég."];
+  function divShort(level, countryId) {
+    if (level === "elite") return "Élite"; // l'élite reste distincte (grands pays)
+    const baseIdx = { d1: 0, d2: 1, d3: 2, regional: 3 }[level];
+    if (baseIdx == null) return LEVELS[level] ? LEVELS[level].short : level;
+    const shift = Math.max(0, 3 - countryTopRank(countryId)); // 3 = rang de D1
+    return _DIV_SHORTS[Math.max(0, baseIdx - shift)];
+  }
+
   // Niveau EFFECTIF d'un club pour cette carrière : les montées/descentes
   // vécues sont stockées dans s.clubLevels sans toucher aux données globales.
   function lvlOf(s, club) {
@@ -412,8 +435,8 @@
     if (fx.pot) s.potCap = clamp(s.potCap + fx.pot, 68, 99);
     if (fx.clubBoost) {
       const newLvl = shiftClubLevel(s, s.club, fx.clubBoost);
-      chips.push({ label: `🏗️ ${s.club.name} passe en ${LEVELS[newLvl].short}`, kind: "trophy" });
-      s.history.push({ age: s.age, text: `Un investisseur propulse ${s.club.name} en ${LEVELS[newLvl].short}.`, impact: 8 });
+      chips.push({ label: `🏗️ ${s.club.name} passe en ${divShort(newLvl, s.club.countryId)}`, kind: "trophy" });
+      s.history.push({ age: s.age, text: `Un investisseur propulse ${s.club.name} en ${divShort(newLvl, s.club.countryId)}.`, impact: 8 });
     }
     if (fx.trait && !hasTrait(s, fx.trait)) {
       s.traits.push(fx.trait);
@@ -1097,7 +1120,7 @@
   // --- Simulation d'une saison ----------------------------------------------
   function playSeason(s) {
     const lvl = lvlOf(s, s.club);
-    const report = { age: s.age, year: s.year, clubName: s.club.name, level: lvl, trophies: [], awards: [], lines: [], pendingMoments: [], onLoan: !!s.loan };
+    const report = { age: s.age, year: s.year, clubName: s.club.name, countryId: s.club.countryId, level: lvl, trophies: [], awards: [], lines: [], pendingMoments: [], onLoan: !!s.loan };
     s.objective = setSeasonObjective(s);
     report.objectiveLabel = s.objective.label;
 
@@ -1228,7 +1251,7 @@
       s.leagueTitlesDetail.push({ countryId: s.club.countryId, level: lvl, clubId: s.club.id, year: s.year });
       s.rep = clamp(s.rep + Math.round(4 * visibilityOf(s)), 0, 100);
       s.moral = clamp(s.moral + 6, 5, 100);
-      s.history.push({ age: s.age, text: `Champion ${deOf(LEVELS[lvl].short)} ${s.year} avec ${s.club.name} — la montée !`, impact: 9 });
+      s.history.push({ age: s.age, text: `Champion ${deOf(divShort(lvl, s.club.countryId))} ${s.year} avec ${s.club.name} — la montée !`, impact: 9 });
     } else if (!isTopFlight && rating >= 6.4 && rng() < (BALANCE.playoffChance[lvl] || 0) * teamBoost) {
       // Saison solide sans titre : la montée se joue en barrage (moment décisif)
       report.playoffRun = true;
@@ -1684,7 +1707,7 @@
         const lvl = lvlOf(s, seasonClub);
         if (ls.promoted && (lvl === "regional" || lvl === "d3" || lvl === "d2")) {
           const newLvl = shiftClubLevel(s, seasonClub, 1);
-          if (stayed) s.history.push({ age: s.age, text: `${seasonClub.name} évolue désormais en ${LEVELS[newLvl].short} — l'ascension continue.`, impact: 6 });
+          if (stayed) s.history.push({ age: s.age, text: `${seasonClub.name} évolue désormais en ${divShort(newLvl, seasonClub.countryId)} — l'ascension continue.`, impact: 6 });
         } else if (ls.relegated && (lvl === "d1" || lvl === "d2" || lvl === "d3")) {
           shiftClubLevel(s, seasonClub, -1);
         } else if (stayed && lvl === "d1") {
@@ -1908,6 +1931,7 @@
       fromClubName: s.loan.parentClub.name,
       toClubName: offer.club.name,
       countryName: countryOf(offer.club.countryId).name,
+      countryId: offer.club.countryId,
       fee: null,
       loan: true,
       level: lvlOf(s, offer.club),
@@ -2008,6 +2032,7 @@
       fromClubName: from.name,
       toClubName: offer.club.name,
       countryName: countryOf(offer.club.countryId).name,
+      countryId: offer.club.countryId,
       fee: offer.fee,
       level: lvlOf(s, offer.club),
     });
@@ -2183,7 +2208,7 @@
   // --- Export ------------------------------------------------------------------
   const Engine = {
     rng, setSeed, clearSeed, getSeedState, setSeedState,
-    clamp, rand, randInt, pick, weightedRandom, countryOf, levelRank, lvlOf,
+    clamp, rand, randInt, pick, weightedRandom, countryOf, levelRank, lvlOf, divShort,
     deOf, leOf,
     fmtMoney, rollPotential, potStars, prodigyChance, pickTrajectory, academyOffers,
     generateName, newCareer, ovr, hasTrait, renderText, applyFx,
