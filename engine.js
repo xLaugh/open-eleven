@@ -1856,9 +1856,10 @@
 
   function salaryFor(s, club) {
     const country = countryOf(club.countryId);
-    // Les destinations exotiques paient sur une base "élite" quel que soit
-    // le niveau réel du club : c'est tout leur argument.
-    const levelBase = country && country.exotic ? BALANCE.salaryBase.elite : BALANCE.salaryBase[lvlOf(s, club)];
+    // Les pétromonarchies du Golfe (Arabie Saoudite, Qatar, Émirats) paient sur
+    // une base "élite" quel que soit le niveau réel du club : c'est tout leur
+    // argument (« l'or du désert »).
+    const levelBase = country && country.gulf ? BALANCE.salaryBase.elite : BALANCE.salaryBase[lvlOf(s, club)];
     // Le salaire suit la carrière : un vétéran sur le déclin ne touche plus les
     // émoluments de sa grande époque. Au-delà de 30 ans, la barre baisse par
     // paliers (un club ne prolonge plus un trentenaire au même tarif qu'à 27 ans).
