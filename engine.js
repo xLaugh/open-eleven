@@ -700,8 +700,13 @@
     const playerBoost = 0.6 + (ovr(s) / 100) * 0.8 + (hasTrait(s, "clutch") ? 0.15 : 0) + (s.flags.wc_fresh ? 0.1 : 0);
     delete s.flags.wc_fresh;
     let stage = weightedRandom(WC_STAGES, (st) => {
-      if (st.id === "champion" || st.id === "final") return (st.baseW / 2) * (0.4 + natW * playerBoost * BALANCE.wcBaseChampion);
-      if (st.id === "semi") return st.baseW * (0.5 + natW * playerBoost * 0.5);
+      // Tri par force de la nation (façon classement FIFA) : les étapes profondes
+      // sont pilotées par natWeight ÉLEVÉ À UNE PUISSANCE (pas de plancher), pour
+      // qu'un petit pays n'atteigne quasiment jamais une finale de Mondial. Le
+      // talent du joueur (playerBoost) ne pèse plus qu'à la marge : un crack ne
+      // porte pas un minnow au sacre. Mondial = le plus sélectif (^2.5).
+      if (st.id === "champion" || st.id === "final") return (st.baseW / 2) * Math.pow(natW, 2.5) * (0.6 + playerBoost * 0.5) * 4.6;
+      if (st.id === "semi") return st.baseW * Math.pow(natW, 1.8) * (0.4 + playerBoost * 0.4) * 1.9;
       return st.baseW;
     });
     if (storyFinal) stage = WC_STAGES.find((st) => st.id === "final") || WC_STAGES.find((st) => st.id === "champion") || stage;
@@ -751,9 +756,12 @@
     const natW = s.nationality.weight;
     const playerBoost = 0.6 + (ovr(s) / 100) * 0.8 + (hasTrait(s, "clutch") ? 0.15 : 0);
     const stage = weightedRandom(WC_STAGES, (st) => {
-      if (st.id === "champion") return st.baseW * (0.6 + natW * playerBoost * BALANCE.contBaseChampion);
-      if (st.id === "final") return st.baseW * (0.5 + natW * playerBoost * 0.6);
-      if (st.id === "semi") return st.baseW * (0.5 + natW * playerBoost * 0.5);
+      // Tri par force (cf. Mondial), mais un cran plus accessible : un titre
+      // continental reste un exploit possible pour un outsider (Grèce 2004,
+      // Zambie 2012) et un continent faible peut gagner SA coupe. Gating ^2.0.
+      if (st.id === "champion") return st.baseW * Math.pow(natW, 2.0) * (0.6 + playerBoost * 0.5) * 2.4;
+      if (st.id === "final") return st.baseW * Math.pow(natW, 2.0) * (0.5 + playerBoost * 0.45) * 2.1;
+      if (st.id === "semi") return st.baseW * Math.pow(natW, 1.5) * (0.4 + playerBoost * 0.4) * 1.4;
       return st.baseW;
     });
     const games = stage.id === "groups" ? 3 : stage.id === "r16" ? 4 : stage.id === "quarter" ? 5 : stage.id === "semi" ? 6 : 7;
@@ -799,9 +807,10 @@
     const natW = s.nationality.weight;
     const playerBoost = 0.6 + (ovr(s) / 100) * 0.8 + (hasTrait(s, "clutch") ? 0.15 : 0);
     const stage = weightedRandom(NL_STAGES, (st) => {
-      if (st.id === "champion") return st.baseW * (0.6 + natW * playerBoost * BALANCE.contBaseChampion);
-      if (st.id === "final") return st.baseW * (0.5 + natW * playerBoost * 0.6);
-      if (st.id === "final_four") return st.baseW * (0.5 + natW * playerBoost * 0.5);
+      // Ligue des Sélections (Europe) : même tri par force que le continental.
+      if (st.id === "champion") return st.baseW * Math.pow(natW, 2.0) * (0.6 + playerBoost * 0.5) * 2.4;
+      if (st.id === "final") return st.baseW * Math.pow(natW, 2.0) * (0.5 + playerBoost * 0.45) * 2.1;
+      if (st.id === "final_four") return st.baseW * Math.pow(natW, 1.5) * (0.4 + playerBoost * 0.4) * 1.4;
       return st.baseW;
     });
     const games = stage.games;
