@@ -560,7 +560,7 @@
       const cc = E.countryOf(offer.club.countryId);
       const img = offer.club.img ? `<img class="club-logo" src="${encodeURI(offer.club.img)}" alt="" onerror="this.remove()" />` : "";
       buttons += `<button class="opt-btn" data-offer="${i}">
-        <span class="opt-hint">${offer.exotic ? "💰 " : ""}${esc(E.divShort(offer.club.level, offer.club.countryId))}</span>
+        <span class="opt-hint">${offer.gulf ? "💰 " : ""}${esc(E.divShort(offer.club.level, offer.club.countryId))}</span>
         ${img}${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)} — ${E.fmtMoney(offer.salary)}/an · indemnité ${E.fmtMoney(offer.fee)}</button>`;
     });
     let legendLine = "";

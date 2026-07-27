@@ -16,7 +16,7 @@
      flag          : pose un drapeau d'histoire (storylines)
      clearFlag     : retire un drapeau
      transfer      : { d: -2..2 (delta de niveau), cross: bool,
-                       exotic: bool } → génère des offres concrètes
+                       gulf: bool } → génère des offres concrètes
      loan          : true → propose un prêt d'une saison (niveau inférieur)
      sched         : { id, inYears } → programme un événement futur
                      (conséquence à retardement, cf. scheduledOnly)
@@ -567,8 +567,10 @@ const ORIGINS = [
 ];
 
 // --- Pays de club ---------------------------------------------------------
-// exotic : destination "fin de carrière dorée" (salaires gonflés, jamais
-// un pays de départ). salaryMult : multiplicateur de salaire local.
+// gulf : destination "fin de carrière dorée" (salaires gonflés sur base élite,
+// mais visibilité médiatique ÷2 et Ballon d'Or hors de portée ; jamais atteinte
+// par un transfert ordinaire ni par un prêt — uniquement via une offre "or du
+// désert"). salaryMult : multiplicateur de salaire local.
 const COUNTRIES = [
   { id: "fr", name: "France", flag: "🇫🇷", img: "src/img/flag/Flag_of_France.png", of: "de France", salaryMult: 1, growthMult: 1, mediaMult: 1, continent: "eu" },
   { id: "de", name: "Allemagne", flag: "🇩🇪", img: "src/img/flag/Drapeau-Allemagne.png", of: "d'Allemagne", salaryMult: 1.05, growthMult: 1, mediaMult: 1, continent: "eu" },

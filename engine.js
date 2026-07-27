@@ -98,13 +98,13 @@
   }
   function leOf(w) { return (frElide(w) ? "L'" : "Le ") + w; } // « Le Balayeur » / « L'Aigle »
 
-  // Visibilité médiatique effective : les championnats exotiques paient
+  // Visibilité médiatique effective : les championnats du Golfe paient
   // très cher mais exposent deux fois moins (gains de réputation réduits,
   // Ballon d'Or hors de portée — cf. rollBallon).
   function visibilityOf(s) {
     const base = BALANCE.mediaVisibility[lvlOf(s, s.club)];
     const country = countryOf(s.club.countryId);
-    return country && country.exotic ? base * 0.5 : base;
+    return country && country.gulf ? base * 0.5 : base;
   }
   function setClubLevel(s, club, levelId) {
     s.clubLevels[club.id] = levelId;
@@ -1025,7 +1025,7 @@
     const lvl = lvlOf(s, s.club);
     if (lvl !== "elite" && lvl !== "d1") return false;
     // Loin des radars européens, ni sacre ni classement : le prix de l'exil doré
-    if ((countryOf(s.club.countryId) || {}).exotic) return false;
+    if ((countryOf(s.club.countryId) || {}).gulf) return false;
 
     // Points de saison (communs au sacre et au classement)
     let pts = (report.rating - 7) * 2.2 + (extraPts || 0);
@@ -1878,17 +1878,17 @@
   }
 
   function buildOffer(s, club) {
-    const exotic = !!countryOf(club.countryId).exotic;
+    const gulf = !!(countryOf(club.countryId) || {}).gulf;
     return {
       club,
-      fee: Math.max(0.1, Math.round(marketValue(s) * BALANCE.feeMult[lvlOf(s, club)] * (exotic ? 1.4 : 1) * rand(0.8, 1.3) * 10) / 10),
+      fee: Math.max(0.1, Math.round(marketValue(s) * BALANCE.feeMult[lvlOf(s, club)] * (gulf ? 1.4 : 1) * rand(0.8, 1.3) * 10) / 10),
       salary: salaryFor(s, club),
       years: randInt(2, 5),
-      exotic,
+      gulf,
     };
   }
 
-  // spec : { d, toLevel (niveau imposé), cross, exotic, home (pays natal),
+  // spec : { d, toLevel (niveau imposé), cross, gulf, home (pays natal),
   //          domestic (même pays) }. Règle des mineurs : avant 18 ans, un
   //          joueur au Brésil ne peut pas être transféré à l'étranger.
   function offersFor(s, spec) {
@@ -1906,13 +1906,14 @@
       // Retour aux sources : uniquement le club formateur (aucun repli)
       const originPool = CLUBS.filter((c) => c.id === s.clubsPlayed[0] && c.id !== s.club.id);
       return originPool.map((club) => buildOffer(s, club));
-    } else if (spec && (spec.exotic || spec.gulf) && !minorLock) {
+    } else if (spec && (spec.gulf || spec.exotic) && !minorLock) {
       // « Or du désert » : un club du Golfe (Arabie Saoudite / Qatar) vient vous chercher.
-      pool = CLUBS.filter((c) => { const co = countryOf(c.countryId) || {}; return (spec.gulf ? co.gulf : co.exotic) && c.id !== s.club.id; });
+      // (spec.exotic : ancien nom de spec.gulf, encore accepté par sécurité.)
+      pool = CLUBS.filter((c) => { const co = countryOf(c.countryId) || {}; return co.gulf && c.id !== s.club.id; });
     } else {
       pool = CLUBS_BY_LEVEL[targetLevel].filter((c) => {
         const co = countryOf(c.countryId);
-        if (co.exotic) return false;
+        if (co.gulf) return false; // le Golfe ne se signe jamais par un transfert ordinaire
         if (c.id === s.club.id) return false;
         if (minorLock) return c.countryId === s.club.countryId;
         if (spec && spec.home) return c.countryId === s.nationality.homeCountryId;
@@ -1923,7 +1924,7 @@
     }
     if (pool.length === 0 && spec && spec.home) {
       // Aucun club du pays natal à ce niveau : élargir aux niveaux voisins
-      pool = CLUBS.filter((c) => c.countryId === s.nationality.homeCountryId && c.id !== s.club.id && !countryOf(c.countryId).exotic);
+      pool = CLUBS.filter((c) => c.countryId === s.nationality.homeCountryId && c.id !== s.club.id && !(countryOf(c.countryId) || {}).gulf);
     }
     if (pool.length === 0) pool = CLUBS_BY_LEVEL[targetLevel].filter((c) => c.id !== s.club.id);
     const count = Math.min(pool.length, randInt(1, 3));
@@ -1937,7 +1938,7 @@
   function loanOffersFor(s) {
     const idx = LEVEL_ORDER.indexOf(lvlOf(s, s.club));
     const levels = [LEVEL_ORDER[Math.max(0, idx - 1)], LEVEL_ORDER[Math.max(0, idx - 2)]];
-    let pool = CLUBS.filter((c) => levels.includes(c.level) && c.id !== s.club.id && !countryOf(c.countryId).exotic);
+    let pool = CLUBS.filter((c) => levels.includes(c.level) && c.id !== s.club.id && !(countryOf(c.countryId) || {}).gulf);
     const domestic = pool.filter((c) => c.countryId === s.club.countryId);
     if (domestic.length >= 2) pool = domestic;
     const shuffled = [...pool].sort(() => rng() - 0.5).slice(0, Math.min(pool.length, randInt(2, 3)));
@@ -2029,10 +2030,10 @@
       spec = { d: rng() < 0.35 ? 1 : 0, cross: rng() < 0.3 };
     }
     if (!reason) return null;
-    if (s.age >= 28 && s.rep >= 55 && rng() < 0.25) spec.exoticExtra = true;
+    if (s.age >= 28 && s.rep >= 55 && rng() < 0.25) spec.gulfExtra = true;
 
     let offers = rng() < BALANCE.noOfferChance && !contractUp ? [] : offersFor(s, spec);
-    if (spec.exoticExtra) {
+    if (spec.gulfExtra) {
       const gulf = offersFor(s, { gulf: true }); // offre "or du désert" (Arabie Saoudite / Qatar) pour un vétéran coté
       if (gulf.length) offers = offers.concat(gulf.slice(0, 1));
     }
