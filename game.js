@@ -637,8 +637,16 @@
     const info = kind === "wc" ? report.wc : kind === "cont" ? report.cont : report.natl;
     const stage = info.stage;
     const rng = tourneyRng((info.year || 0) + "|" + (G.nationality.id || "") + "|" + stage + "|" + kind);
-    const others = NATIONALITIES.filter((n) => n.id !== G.nationality.id);
-    const pickNat = () => others[Math.floor(rng() * others.length)];
+    // Adversaires : le Mondial est mondial ; une compétition continentale
+    // (Euro / Copa / CAN / Coupe d'Asie / d'Océanie) et la Ligue des Sélections
+    // n'opposent QUE des nations du même continent que le joueur.
+    let pool = NATIONALITIES.filter((n) => n.id !== G.nationality.id);
+    if (kind !== "wc") {
+      const myCont = (E.countryOf(G.nationality.homeCountryId) || {}).continent;
+      const sameCont = pool.filter((n) => (E.countryOf(n.homeCountryId) || {}).continent === myCont);
+      if (sameCont.length >= 3) pool = sameCont;
+    }
+    const pickNat = () => pool[Math.floor(rng() * pool.length)];
     const KOL = { r32: "16es de finale", r16: "8es de finale", quarter: "Quart de finale", semi: "Demi-finale", final: "Finale" };
     const matches = [];
     let interactiveFinal = false;
@@ -688,8 +696,8 @@
 
     // Répartir les buts du joueur sur les matchs (priorité aux non-défaites),
     // puis rendre les scores cohérents (un buteur implique un score suffisant).
-    const pool = matches.filter((m) => m.result !== "loss");
-    const target = (pool.length ? pool : matches);
+    const scorers = matches.filter((m) => m.result !== "loss");
+    const target = (scorers.length ? scorers : matches);
     for (let g = 0; g < (info.goals || 0); g++) { const m = target[Math.floor(rng() * target.length)]; if (m) m.pgoals++; }
     matches.forEach((m) => {
       if (m.pgoals > m.sf) m.sf = m.pgoals;
