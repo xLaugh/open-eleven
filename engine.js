@@ -1247,7 +1247,12 @@
     report.rating = Math.round(rating * 10) / 10;
 
     // Trophées collectifs & destin du club (titre, montée, barrage, relégation)
-    const isTopFlight = lvl === "elite" || lvl === "d1";
+    // Sommet de la pyramide DE LA NATION (division affichée « D1 »/« Élite »),
+    // pas seulement le top mondial : un petit pays dont le meilleur échelon vaut
+    // un D3 mondial n'a AUCUNE division au-dessus — donc ni barrage de montée ni
+    // « montée » possibles (on est déjà champion de son pays).
+    const topDiv = divShort(lvl, s.club.countryId);
+    const isTopFlight = topDiv === "D1" || topDiv === "Élite";
     const teamBoost = 1 + (rating - 6.6) * 0.12;
     // Ticket "vainqueur de Coupe Nationale la saison PASSÉE" → C2 européen ; on
     // le lit et le vide AVANT tout crédit de coupe de cette saison (sinon un
