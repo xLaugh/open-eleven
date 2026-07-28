@@ -729,7 +729,7 @@
     else leagueLine = `${report.leaguePos}ᵉ`;
 
     showCard(`
-      <div class="card-tag"><span class="card-icon">📊</span> Saison ${report.year}-${String((report.year + 1) % 100).padStart(2, "0")} · ${esc(report.clubName)} <span class="level-tag level-${report.level}">${esc(E.divShort(report.level, report.countryId))}</span>${report.onLoan ? " (prêt)" : ""}</div>
+      <div class="card-tag"><span class="card-icon">📊</span> Saison ${report.year}-${String((report.year + 1) % 100).padStart(2, "0")} · ${esc(report.clubName)} <span class="level-tag level-${report.level}">${esc(E.divShort(report.level, report.countryId))}</span>${report.onLoan ? " (prêt)" : ""}${report.captain ? " 🅒" : ""}</div>
       ${report.headline ? `<p class="recap-headline">📰 ${esc(report.headline)}</p>` : ""}
       <div class="recap-grid">
         <div class="recap-cell"><span class="recap-num">${report.matches}</span><span class="recap-lbl">Matchs</span></div>
@@ -1868,6 +1868,8 @@
       tryUnlock("ageless", G.seasons.some((se) => se.age >= 40 && se.matches > 0));
       tryUnlock("mathusalem", G.seasons.some((se) => se.age >= 45 && se.matches > 0));
       tryUnlock("nations_league", (t.natLeague || 0) >= 1);
+      tryUnlock("captain_100", (G.captainMatches || 0) >= 100);
+      tryUnlock("homecoming", !G.careerEnded && G.clubsPlayed.length >= 3 && G.club.id === G.clubsPlayed[0]);
       tryUnlock("showtime", E.hasTrait(G, "showman") && G.rep >= 88);
 
       // Badges v4.2 : précocité, distinctions, championnats détaillés, moments

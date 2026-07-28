@@ -6640,6 +6640,8 @@ const BADGES = [
   // --- Parcours & fidélité ---
   { id: "legend_tier", cat: "parcours", icon: "👑", name: "Légende vivante", hint: "Atteindre le sommet absolu…", desc: "Terminer une carrière avec le rang « Légende du football mondial »." },
   { id: "one_club", cat: "parcours", icon: "❤️", name: "Une vie, un club", hint: "La fidélité absolue, du début à la fin…", desc: "Réussir une belle carrière sans jamais être transféré (les prêts sont tolérés)." },
+  { id: "captain_100", cat: "parcours", icon: "🅒", name: "Capitaine centurion", hint: "Cent fois le brassard au bras…", desc: "Disputer 100 matchs ou plus en tant que capitaine." },
+  { id: "homecoming", cat: "parcours", icon: "🏡", name: "L'enfant du pays", hint: "Revenir finir là où tout a commencé…", desc: "Terminer sa carrière dans son club formateur, après avoir porté d'autres couleurs." },
   { id: "three_countries", cat: "parcours", icon: "🌍", name: "Globe-trotter", hint: "Le football n'a pas de frontières…", desc: "Jouer dans au moins 3 pays différents." },
   { id: "well_traveled", cat: "parcours", icon: "🧳", name: "Voyageur assidu", hint: "Beaucoup de vestiaires, beaucoup de maillots…", desc: "Porter les couleurs d'au moins 5 clubs." },
   { id: "moneybags", cat: "parcours", icon: "💰", name: "Nabab", hint: "Une fortune à faire pâlir les émirs…", desc: "Amasser 100 M€ de fortune personnelle." },

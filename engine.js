@@ -1203,9 +1203,22 @@
       const seasonsHere = s.seasons.filter((se) => se.clubName === s.club.name).length;
       if (!s.flags.captain && ((hasTrait(s, "leader") && s.age >= 26 && seasonsHere >= 2) ||
           (seasonsHere >= 4 && s.age >= 30 && s.rep >= 62))) {
+        // Nomination : le vestiaire confie le brassard. Une reconnaissance qui
+        // rejaillit sur la réputation, annoncée au récap et dans l'historique.
         s.flags.captain = true;
+        s.rep = clamp(s.rep + 2, 0, 100);
+        report.newCaptain = true;
+        report.lines.push({ text: "🅒 Le vestiaire vous confie le brassard de capitaine.", impact: 7 });
+        s.history.push({ age: s.age, text: `Nommé capitaine ${deOf(s.club.name)}.`, impact: 7 });
       }
-      if (s.flags.captain) { s.captainMatches += matches; report.captain = true; }
+      if (s.flags.captain) {
+        s.captainMatches += matches;
+        report.captain = true;
+        // Rôle de patron : le brassard resserre le vestiaire et le lien au coach
+        // (leadership au quotidien). Bonus modéré, purement déterministe.
+        s.teamRel = clamp(s.teamRel + 3, 5, 100);
+        s.coachRel = clamp(s.coachRel + 2, 5, 100);
+      }
     }
 
     // Performance individuelle (modulée par l'archétype de jeu)
