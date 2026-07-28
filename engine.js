@@ -699,7 +699,9 @@
     const natW = s.nationality.weight;
     const playerBoost = 0.6 + (ovr(s) / 100) * 0.8 + (hasTrait(s, "clutch") ? 0.15 : 0) + (s.flags.wc_fresh ? 0.1 : 0);
     delete s.flags.wc_fresh;
-    let stage = weightedRandom(WC_STAGES, (st) => {
+    // Mondial au format 48 équipes (2026) : un tour de plus (seizièmes) → le
+    // finaliste joue 8 matchs. WC_STAGES_48 est propre au Mondial.
+    let stage = weightedRandom(WC_STAGES_48, (st) => {
       // Tri par force de la nation (façon classement FIFA) : les étapes profondes
       // sont pilotées par natWeight ÉLEVÉ À UNE PUISSANCE (pas de plancher), pour
       // qu'un petit pays n'atteigne quasiment jamais une finale de Mondial. Le
@@ -709,7 +711,7 @@
       if (st.id === "semi") return st.baseW * Math.pow(natW, 1.8) * (0.4 + playerBoost * 0.4) * 1.9;
       return st.baseW;
     });
-    if (storyFinal) stage = WC_STAGES.find((st) => st.id === "final") || WC_STAGES.find((st) => st.id === "champion") || stage;
+    if (storyFinal) stage = WC_STAGES_48.find((st) => st.id === "final") || WC_STAGES_48.find((st) => st.id === "champion") || stage;
 
     const finalReached = !!storyFinal || stage.id === "champion" || stage.id === "final";
     const wc = {
@@ -732,7 +734,8 @@
         s.moral = clamp(s.moral - 3, 5, 100);
       }
     }
-    const games = stage.id === "groups" ? 3 : stage.id === "r16" ? 4 : stage.id === "quarter" ? 5 : stage.id === "semi" ? 6 : 7;
+    // 8 matchs pour le finaliste : poules 3 → 16es 4 → 8es 5 → quart 6 → demie 7 → finale 8.
+    const games = stage.id === "groups" ? 3 : stage.id === "r32" ? 4 : stage.id === "r16" ? 5 : stage.id === "quarter" ? 6 : stage.id === "semi" ? 7 : 8;
     s.natTeam.caps += games;
     const wcGoals = Math.round(games * s.position.goalRate * (0.4 + s.stats.t / 150) * rand(0.5, 1.4));
     s.natTeam.goals += wcGoals;

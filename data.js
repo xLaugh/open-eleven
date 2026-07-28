@@ -6299,6 +6299,19 @@ const WC_STAGES = [
   { id: "champion", label: "CHAMPION DU MONDE", baseW: 7, text: "AU BOUT DE LA NUIT ! Votre nation est sur le toit du monde, et vous au cœur de la légende !" },
 ];
 
+// Coupe du Monde à 48 équipes (format 2026) : un tour de plus (seizièmes de
+// finale) — le finaliste dispute 8 matchs. RÉSERVÉ AU MONDIAL ; les coupes
+// continentales (24 équipes) gardent WC_STAGES et leurs huitièmes.
+const WC_STAGES_48 = [
+  { id: "groups", label: "Élimination en poules", baseW: 26, text: "La désillusion : votre nation sort dès les poules d'un Mondial élargi, dans un silence de cathédrale." },
+  { id: "r32", label: "Seizième de finale", baseW: 27, text: "L'aventure s'arrête en seizièmes : premier tour à élimination directe, premier couperet." },
+  { id: "r16", label: "Huitième de finale", baseW: 22, text: "L'aventure s'arrête en huitièmes, au terme d'un match à suspense." },
+  { id: "quarter", label: "Quart de finale", baseW: 18, text: "Un quart de finale héroïque, perdu au bout de la nuit. La fierté domine." },
+  { id: "semi", label: "Demi-finale", baseW: 12, text: "Si proche du rêve : la demi-finale se referme cruellement." },
+  { id: "final", label: "Finaliste", baseW: 8, text: "Finale perdue. La deuxième plus belle équipe du monde, et le plus grand des vides." },
+  { id: "champion", label: "CHAMPION DU MONDE", baseW: 7, text: "AU BOUT DE LA NUIT ! Votre nation est sur le toit du monde, et vous au cœur de la légende !" },
+];
+
 // Étapes de la Ligue des Sélections (phase de ligue → Final Four). Le nombre de
 // matchs est porté par l'étape (pas de poules/8es comme au Mondial).
 const NL_STAGES = [
@@ -6460,11 +6473,11 @@ const BALANCE = {
    les événements changent sensiblement.
    ============================================================ */
 const SCORE_PERCENTILES = [
-  63, 72, 89, 94, 97, 99, 101, 102, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115,
-  116, 117, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134,
-  135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 149, 150, 151, 152, 153, 154, 155,
-  156, 157, 159, 160, 161, 162, 163, 165, 166, 167, 168, 169, 171, 172, 173, 175, 176, 178, 179, 181,
-  182, 184, 186, 187, 189, 191, 193, 195, 198, 200, 203, 206, 209, 213, 217, 222, 228, 237, 251
+  64, 72, 89, 94, 97, 99, 101, 102, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115,
+  116, 117, 118, 119, 120, 121, 122, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134,
+  135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154,
+  155, 157, 158, 159, 160, 161, 162, 163, 165, 166, 167, 168, 170, 171, 172, 173, 175, 176, 178, 179,
+  181, 183, 184, 186, 188, 190, 192, 194, 197, 199, 202, 205, 208, 212, 216, 221, 227, 236, 250
 ];
 
 /* ============================================================
@@ -6789,7 +6802,7 @@ if (typeof module !== "undefined" && module.exports) {
     LEVEL_ORDER, CLUBS, CLUBS_BY_LEVEL, COMPETITIONS, COACH_NAMES, TRAITS,
     AWARDS, KEY_MOMENTS,
     EVENTS, MICRO_EVENTS, RIVAL_NEWS_GOOD, RIVAL_NEWS_BAD, RIVAL_NEWS_AHEAD,
-    RIVAL_NEWS_BEHIND, WORLD_NEWS, WC_STAGES, BALANCE, HEADLINES,
+    RIVAL_NEWS_BEHIND, WORLD_NEWS, WC_STAGES, WC_STAGES_48, BALANCE, HEADLINES,
     UNTAKEN_PATH_TEMPLATES, DAILY_QUESTS, WEEKLY_CHALLENGES, LEGEND_QUESTS, BADGE_CATS, BADGES,
     PERKS, PERK_SLOTS, STORIES, SCORE_PERCENTILES, STREAK_MILESTONES, COUNTRY_LANG,
   };
