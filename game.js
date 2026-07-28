@@ -621,6 +621,126 @@
     $("btn-next").addEventListener("click", processMomentQueue);
   }
 
+  // ── Parcours de tournoi match par match (cosmétique) ──────────────────────
+  // Le moteur a déjà décidé l'issue (tour atteint, buts). On rejoue ici la
+  // campagne match par match, en SIMULATION (aucun choix). RNG local seedé sur
+  // (année, nation, tour) → stable au re-rendu, sans toucher au hasard du moteur
+  // (déterminisme du Défi/duel préservé).
+  function tourneyRng(seedStr) {
+    let h = 1779033703 ^ seedStr.length;
+    for (let i = 0; i < seedStr.length; i++) { h = Math.imul(h ^ seedStr.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
+    let a = h >>> 0;
+    return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  }
+
+  function buildTournamentMatches(report, kind) {
+    const info = kind === "wc" ? report.wc : kind === "cont" ? report.cont : report.natl;
+    const stage = info.stage;
+    const rng = tourneyRng((info.year || 0) + "|" + (G.nationality.id || "") + "|" + stage + "|" + kind);
+    const others = NATIONALITIES.filter((n) => n.id !== G.nationality.id);
+    const pickNat = () => others[Math.floor(rng() * others.length)];
+    const KOL = { r32: "16es de finale", r16: "8es de finale", quarter: "Quart de finale", semi: "Demi-finale", final: "Finale" };
+    const matches = [];
+    let interactiveFinal = false;
+    const mk = (label, result) => {
+      let sf, sa;
+      if (result === "win") { sf = 1 + Math.floor(rng() * 3); sa = Math.floor(rng() * sf); }
+      else if (result === "loss") { sa = 1 + Math.floor(rng() * 3); sf = Math.floor(rng() * sa); }
+      else { sf = Math.floor(rng() * 3); sa = sf; }
+      return { label, result, opp: pickNat(), sf, sa, pgoals: 0 };
+    };
+
+    if (kind === "natl") {
+      const reachedFF = stage === "final_four" || stage === "final" || stage === "champion";
+      for (let i = 0; i < 6; i++) {
+        const p = rng();
+        const r = reachedFF ? (p < 0.55 ? "win" : p < 0.8 ? "draw" : "loss") : (p < 0.35 ? "win" : p < 0.65 ? "draw" : "loss");
+        matches.push(mk("Ligue · J" + (i + 1), r));
+      }
+      if (stage === "final_four") matches.push(mk("Demi-finale (Final Four)", "loss"));
+      else if (stage === "final") { matches.push(mk("Demi-finale (Final Four)", "win")); matches.push(mk("Finale", "loss")); }
+      else if (stage === "champion") { matches.push(mk("Demi-finale (Final Four)", "win")); matches.push(mk("Finale", "win")); }
+    } else {
+      const qualified = stage !== "groups";
+      const groupOpps = [pickNat(), pickNat(), pickNat()];
+      for (let i = 0; i < 3; i++) {
+        const p = rng();
+        const r = qualified ? (p < 0.5 ? "win" : p < 0.8 ? "draw" : "loss") : (p < 0.3 ? "win" : p < 0.55 ? "draw" : "loss");
+        const gm = mk("Poule · J" + (i + 1), r);
+        gm.opp = groupOpps[i]; // l'adversaire du jour = une équipe de la poule affichée
+        matches.push(gm);
+      }
+      report._groupOpps = groupOpps;
+      if (qualified) {
+        if (kind === "wc") {
+          const ko = ["r32", "r16", "quarter", "semi"];
+          if (stage === "final") { ko.forEach((rd) => matches.push(mk(KOL[rd], "win"))); interactiveFinal = true; }
+          else { const idx = ko.indexOf(stage); for (let i = 0; i < idx; i++) matches.push(mk(KOL[ko[i]], "win")); matches.push(mk(KOL[stage], "loss")); }
+        } else { // continental
+          const ko = ["r16", "quarter", "semi"];
+          if (stage === "champion" || stage === "final") {
+            ko.forEach((rd) => matches.push(mk(KOL[rd], "win")));
+            matches.push(mk("Finale", stage === "champion" ? "win" : "loss"));
+          } else { const idx = ko.indexOf(stage); for (let i = 0; i < idx; i++) matches.push(mk(KOL[ko[i]], "win")); matches.push(mk(KOL[stage], "loss")); }
+        }
+      }
+    }
+
+    // Répartir les buts du joueur sur les matchs (priorité aux non-défaites),
+    // puis rendre les scores cohérents (un buteur implique un score suffisant).
+    const pool = matches.filter((m) => m.result !== "loss");
+    const target = (pool.length ? pool : matches);
+    for (let g = 0; g < (info.goals || 0); g++) { const m = target[Math.floor(rng() * target.length)]; if (m) m.pgoals++; }
+    matches.forEach((m) => {
+      if (m.pgoals > m.sf) m.sf = m.pgoals;
+      if (m.result === "draw") m.sa = m.sf;
+      else if (m.result === "win" && m.sf <= m.sa) m.sa = Math.max(0, m.sf - 1);
+    });
+
+    const groupTeams = kind === "natl" ? null : [G.nationality, ...(report._groupOpps || [pickNat(), pickNat(), pickNat()])];
+    return { matches, interactiveFinal, groupTeams };
+  }
+
+  // Enchaîne l'affichage : poule → chaque match → onDone() (le vrai résultat).
+  function runTournament(report, kind, onDone) {
+    const info = kind === "wc" ? report.wc : kind === "cont" ? report.cont : report.natl;
+    const icon = kind === "wc" ? "🏆" : info.icon;
+    const cupName = (kind === "wc" ? "Coupe du Monde" : info.cupName) + " " + info.year;
+    const built = buildTournamentMatches(report, kind);
+    const steps = [];
+    if (built.groupTeams) steps.push({ type: "group" });
+    built.matches.forEach((m) => steps.push({ type: "match", m }));
+    let i = 0;
+    function next() {
+      if (i >= steps.length) { onDone(); return; }
+      const step = steps[i++];
+      if (step.type === "group") {
+        const teams = built.groupTeams.map((n) => `<div class="pool-team">${flagHtml(n)} ${esc(n.name)}</div>`).join("");
+        showCard(`
+          <div class="card-tag"><span class="card-icon">${icon}</span> ${esc(cupName)} · Phase de poules</div>
+          <p class="event-text">${flagHtml(G.nationality)} Votre poule pour cette édition :</p>
+          <div class="pool-grid">${teams}</div>
+          <button class="btn btn-secondary" id="btn-tstep">Coup d'envoi ▶</button>`);
+      } else {
+        const m = step.m;
+        const cls = m.result === "win" ? "tm-win" : m.result === "loss" ? "tm-loss" : "tm-draw";
+        const rtxt = m.result === "win" ? "Victoire" : m.result === "loss" ? "Défaite" : "Match nul";
+        const last = i >= steps.length;
+        showCard(`
+          <div class="card-tag"><span class="card-icon">${icon}</span> ${esc(cupName)} · ${esc(m.label)}</div>
+          <div class="tourney-match">
+            <span class="tm-side">${flagHtml(G.nationality)} ${esc(G.nationality.name)}</span>
+            <span class="tm-score ${cls}">${m.sf} – ${m.sa}</span>
+            <span class="tm-side">${flagHtml(m.opp)} ${esc(m.opp.name)}</span>
+          </div>
+          <p class="tm-result ${cls}">${rtxt}${m.pgoals ? ` · ⚽ vous : ${m.pgoals} but${m.pgoals > 1 ? "s" : ""}` : ""}</p>
+          <button class="btn btn-secondary" id="btn-tstep">${last ? "Résultat ▶" : "Match suivant ▶"}</button>`, cls === "tm-win" ? "good" : cls === "tm-loss" ? "bad" : "neutral");
+      }
+      $("btn-tstep").addEventListener("click", next);
+    }
+    next();
+  }
+
   function renderWorldCup(report) {
     const wc = report.wc;
     showCard(`
@@ -628,7 +748,7 @@
       <p class="event-text">${flagHtml(G.nationality)} Le monde retient son souffle : ${esc(G.nationality.name)} entre dans la compétition, et vous êtes du voyage.</p>
       <button class="btn btn-secondary" id="btn-wc">Vivre le tournoi</button>
     `);
-    $("btn-wc").addEventListener("click", () => {
+    $("btn-wc").addEventListener("click", () => runTournament(report, "wc", () => {
       if (wc.finalPending) {
         // La finale est atteinte : son issue se joue sur un moment décisif
         renderKeyMoment(wc.moment, (choiceId) => {
@@ -657,7 +777,7 @@
         <button class="btn btn-secondary" id="btn-next">Continuer</button>
       `, tone);
       $("btn-next").addEventListener("click", () => renderRecap(report));
-    });
+    }));
   }
 
   // Championnat continental de sélection (Euro / Copa / CAN) : auto-résolu côté
@@ -670,7 +790,7 @@
       <p class="event-text">${flagHtml(G.nationality)} ${esc(G.nationality.name)} entre dans SA grande compétition continentale, et vous êtes de l'aventure.</p>
       <button class="btn btn-secondary" id="btn-cont">Vivre le tournoi</button>
     `);
-    $("btn-cont").addEventListener("click", () => {
+    $("btn-cont").addEventListener("click", () => runTournament(report, "cont", () => {
       showCard(`
         <div class="card-tag"><span class="card-icon">${c.icon}</span> ${esc(c.cupName)} ${c.year}</div>
         <p class="wc-stage ${c.champion ? "wc-champion" : ""}">${esc(c.label)}</p>
@@ -679,7 +799,7 @@
         <button class="btn btn-secondary" id="btn-next">Continuer</button>
       `, tone);
       $("btn-next").addEventListener("click", () => renderRecap(report));
-    });
+    }));
   }
 
   function renderNationsLeague(report) {
@@ -690,7 +810,7 @@
       <p class="event-text">${flagHtml(G.nationality)} ${esc(G.nationality.name)} dispute la Ligue des Sélections européenne, et vous en êtes.</p>
       <button class="btn btn-secondary" id="btn-natl">Vivre la campagne</button>
     `);
-    $("btn-natl").addEventListener("click", () => {
+    $("btn-natl").addEventListener("click", () => runTournament(report, "natl", () => {
       showCard(`
         <div class="card-tag"><span class="card-icon">${c.icon}</span> ${esc(c.cupName)} ${c.year}</div>
         <p class="wc-stage ${c.champion ? "wc-champion" : ""}">${esc(c.label)}</p>
@@ -699,7 +819,7 @@
         <button class="btn btn-secondary" id="btn-next">Continuer</button>
       `, tone);
       $("btn-next").addEventListener("click", () => renderRecap(report));
-    });
+    }));
   }
 
 

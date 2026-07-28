@@ -1324,6 +1324,21 @@ body { color: var(--text-0); }
 .wc-golden { text-align: center; color: var(--gold-soft); font-weight: 700; font-size: 0.9rem; }
 .wc-stats { text-align: center; color: var(--text-2); font-size: 0.8rem; }
 
+/* Parcours de tournoi match par match */
+.pool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0 16px; }
+.pool-team { background: var(--panel-2, rgba(0,0,0,0.04)); border: 1px solid var(--line, rgba(0,0,0,0.1)); border-radius: 10px; padding: 9px 12px; font-size: 0.9rem; font-weight: 600; }
+.tourney-match { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 16px 0 8px; }
+.tourney-match .tm-side { flex: 1; font-weight: 700; font-size: 0.95rem; }
+.tourney-match .tm-side:last-child { text-align: right; }
+.tm-score { font-family: var(--font-display); font-weight: 800; font-size: 1.5rem; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; padding: 2px 12px; border-radius: 10px; white-space: nowrap; }
+.tm-score.tm-win { color: #0a7d4d; background: rgba(10, 125, 77, 0.12); }
+.tm-score.tm-loss { color: #b3261e; background: rgba(179, 38, 30, 0.12); }
+.tm-score.tm-draw { color: var(--text-1, #666); background: rgba(128, 128, 128, 0.12); }
+.tm-result { text-align: center; font-weight: 700; font-size: 0.9rem; margin: 4px 0 2px; }
+.tm-result.tm-win { color: #0a7d4d; }
+.tm-result.tm-loss { color: #b3261e; }
+.tm-result.tm-draw { color: var(--text-2); }
+
 /* ---------- Fiche finale (carte premium par palier) ---------- */
 #screen-final { justify-content: center; }
 .player-card {
