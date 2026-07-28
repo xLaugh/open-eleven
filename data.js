@@ -6352,6 +6352,10 @@ const BALANCE = {
   intlRetainPos: { gk: 8, def: 4, mil: 1, att: 0 },
   // OVR attendu d'un titulaire (plus c'est haut, plus la concurrence est rude)
   expectedLevel: { regional: 46, d3: 49, d2: 55, d1: 67, elite: 80 },
+  // Barre de recrutement : OVR minimum pour qu'un club de ce niveau vous SIGNE
+  // quand il s'agit de MONTER d'un cran. Grimper se mérite — un club d'élite ne
+  // recrute qu'un vrai joueur d'élite (82+), pas un bon joueur de D1 en forme.
+  signingBar: { regional: 40, d3: 48, d2: 56, d1: 70, elite: 82 },
   matchesByLevel: { regional: [30, 38], d3: [33, 41], d2: [36, 44], d1: [40, 48], elite: [44, 54] },
   // Titre de division (ne compte comme trophée national qu'en d1/élite)
   titleChance: { regional: 0.12, d3: 0.1, d2: 0.08, d1: 0.06, elite: 0.3 },

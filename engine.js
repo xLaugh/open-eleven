@@ -901,13 +901,18 @@
   // --- Temps de jeu -----------------------------------------------------------
   function playingTimeFactor(s) {
     const expected = BALANCE.expectedLevel[lvlOf(s, s.club)];
-    let pt = 0.3 + (ovr(s) - expected + 16) / 38 + (s.coachRel - 55) / 300;
+    const gap = ovr(s) - expected; // < 0 : sous le niveau du club → tu chauffes le banc
+    let pt = 0.72 + gap / 26 + (s.coachRel - 55) / 150;
+    // Confiance du coach : quand elle s'effondre, tu ne joues plus, peu importe
+    // ton niveau. Un vrai levier, pas un détail cosmétique.
+    if (s.coachRel < 22) pt -= 0.32;
+    else if (s.coachRel < 38) pt -= 0.13;
     if (s.loan) pt += 0.22;
     if (s.flags.prodigy && s.age <= 20) pt += 0.2; // on lance les cracks très tôt
     // Rotation du vétéran : après 32 ans, la jeunesse pousse et le temps de jeu
     // s'érode un peu chaque saison — sauf les gardiens, qui enchaînent tard.
     if (s.age > 32 && s.position.id !== "gk") pt -= (s.age - 32) * 0.03;
-    return clamp(pt, 0.1, 1);
+    return clamp(pt, 0.05, 1);
   }
 
   // Aptitude à durer (recalculée chaque saison : un trait gagné en cours de route
@@ -1914,9 +1919,19 @@
   //          joueur au Brésil ne peut pas être transféré à l'étranger.
   function offersFor(s, spec) {
     const d = spec && spec.d != null ? spec.d : 0;
-    const targetLevel = spec && spec.toLevel
+    let targetLevel = spec && spec.toLevel
       ? spec.toLevel
       : LEVEL_ORDER[clamp(LEVEL_ORDER.indexOf(lvlOf(s, s.club)) + d, 0, LEVEL_ORDER.length - 1)];
+    // Barre de recrutement : pour MONTER d'un cran (transfert ordinaire), il faut
+    // en avoir le niveau. Un OVR sous la barre du niveau visé fait capoter la
+    // promotion — on reste à son étage. Les chemins spéciaux (Golfe, retour au
+    // pays/formateur, club ciblé, descente forcée) ne sont pas concernés.
+    if (!(spec && (spec.toLevel || spec.clubId || spec.origin || spec.gulf || spec.exotic || spec.home))) {
+      const curIdx = LEVEL_ORDER.indexOf(lvlOf(s, s.club));
+      if (LEVEL_ORDER.indexOf(targetLevel) > curIdx && ovr(s) < (BALANCE.signingBar[targetLevel] || 0)) {
+        targetLevel = LEVEL_ORDER[curIdx]; // pas encore le niveau : la montée n'a pas lieu
+      }
+    }
     const minorLock = s.age < 18 && s.club.countryId === "br";
     let pool;
     if (spec && spec.clubId) {
@@ -2024,6 +2039,24 @@
           : "Passé 42 ans, plus aucun cador ne mise sur vous : seuls des clubs modestes vous ouvrent encore leurs portes.",
         offers: offersFor(s, { toLevel: target }),
         contractUp: false, // pas de prolongation : le vétéran doit descendre pour continuer
+        renewSalary: salaryFor(s, s.club),
+      };
+    }
+
+    // Joueur DÉPASSÉ par le niveau de son club : nettement sous le niveau attendu
+    // ET une saison ratée (banc ou note < 6) → le club s'en sépare et le pousse
+    // d'un cran (deux s'il est très loin du compte). Aucune prolongation : soit on
+    // redescend se relancer, soit on raccroche. C'est le prix du haut niveau.
+    const curLvl = lvlOf(s, s.club);
+    const expectedHere = BALANCE.expectedLevel[curLvl];
+    const outOfDepth = ovr(s) < expectedHere - 7;
+    const badSeason = report && (report.benched || (report.rating != null && report.rating < 6.0));
+    if (curLvl !== "regional" && outOfDepth && badSeason) {
+      const drop = ovr(s) < expectedHere - 16 ? -2 : -1;
+      return {
+        reason: "Trop juste pour ce niveau : le club vous remercie. Direction l'échelon inférieur pour vous relancer.",
+        offers: offersFor(s, { d: drop }),
+        contractUp: false,
         renewSalary: salaryFor(s, s.club),
       };
     }
