@@ -9,10 +9,10 @@
    ⚠️ À CHAQUE DÉPLOIEMENT : bumper CACHE (ci-dessous) en même temps
    que le ?v= d'index.html — l'ancien cache est alors purgé.
    ============================================================ */
-const CACHE = "open-eleven-v10.5";
+const CACHE = "open-eleven-v10.6";
 const CORE = [
   "./", "./index.html",
-  "./style.css?v=10.5", "./data.js?v=10.5", "./engine.js?v=10.5", "./game.js?v=10.5",
+  "./style.css?v=10.6", "./data.js?v=10.6", "./engine.js?v=10.6", "./game.js?v=10.6",
   "./site.webmanifest", "./favicon.svg",
   "./src/img/logo-11-mark.png",
   "./src/img/icon-512.png", "./src/img/og-cover.jpg",

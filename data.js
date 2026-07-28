@@ -6312,6 +6312,38 @@ const WC_STAGES_48 = [
   { id: "champion", label: "CHAMPION DU MONDE", baseW: 7, text: "AU BOUT DE LA NUIT ! Votre nation est sur le toit du monde, et vous au cœur de la légende !" },
 ];
 
+// ── Sélections de jeunes ──────────────────────────────────────────────────────
+// Échelle U17 → U23 gravie selon l'âge, si le niveau suit (ovrNeed = barre OVR
+// pour l'âge). Tant qu'on n'est pas en A, on décroche le palier de son âge.
+// Les paliers avec `tournament` déclenchent un résultat résumé (une ligne).
+const YOUTH_TIERS = [
+  { id: "u17", label: "U17", aMin: 15, aMax: 17, ovrNeed: 58, tournament: "Mondial U17" },
+  { id: "u18", label: "U18", aMin: 17, aMax: 18, ovrNeed: 62, tournament: null },
+  { id: "u19", label: "U19", aMin: 18, aMax: 19, ovrNeed: 66, tournament: "Euro U19" },
+  { id: "u20", label: "U20", aMin: 19, aMax: 20, ovrNeed: 69, tournament: "Mondial U20" },
+  { id: "u21", label: "U21", aMin: 20, aMax: 21, ovrNeed: 72, tournament: "Euro U21" },
+  { id: "u23", label: "U23", aMin: 22, aMax: 23, ovrNeed: 74, tournament: null }, // vivier olympique
+];
+// Résultat d'un tournoi de jeunes (léger, une ligne). games = matchs joués.
+const YOUTH_STAGES = [
+  { id: "groups", label: "sorti dès les poules", baseW: 34, games: 3 },
+  { id: "quarter", label: "quart de finaliste", baseW: 22, games: 4 },
+  { id: "semi", label: "demi-finaliste", baseW: 14, games: 5 },
+  { id: "final", label: "finaliste", baseW: 8, games: 6 },
+  { id: "champion", label: "VAINQUEUR", baseW: 6, games: 6, champion: true },
+];
+
+// ── Jeux Olympiques ───────────────────────────────────────────────────────────
+// Tournoi U23 (années %4==3), façon mini-Mondial : poule → quart → demie → finale.
+// Médailles or (champion) / argent (finaliste) / bronze (demi-finaliste).
+const OLYMPIC_STAGES = [
+  { id: "groups", label: "Élimination en poules", baseW: 30, games: 3, text: "Le rêve olympique s'arrête dès les poules." },
+  { id: "quarter", label: "Quart de finale", baseW: 22, games: 4, text: "Quart de finale olympique : l'aventure s'arrête aux portes des médailles." },
+  { id: "semi", label: "Demi-finale", baseW: 14, games: 5, text: "Battu en demie, mais le bronze est au bout." },
+  { id: "final", label: "Finaliste", baseW: 8, games: 6, text: "Finale olympique disputée jusqu'au dernier souffle." },
+  { id: "champion", label: "CHAMPION OLYMPIQUE", baseW: 6, games: 6, text: "Sur le toit des Jeux : l'or olympique au cou !" },
+];
+
 // Étapes de la Ligue des Sélections (phase de ligue → Final Four). Le nombre de
 // matchs est porté par l'étape (pas de poules/8es comme au Mondial).
 const NL_STAGES = [
@@ -6477,11 +6509,11 @@ const BALANCE = {
    les événements changent sensiblement.
    ============================================================ */
 const SCORE_PERCENTILES = [
-  63, 71, 85, 92, 95, 97, 98, 100, 101, 102, 103, 104, 105, 105, 106, 107, 108, 108, 109, 110,
-  111, 111, 112, 113, 113, 114, 115, 115, 116, 117, 117, 118, 119, 119, 120, 121, 121, 122, 123, 124,
-  124, 125, 126, 127, 127, 128, 129, 130, 131, 132, 133, 134, 134, 135, 136, 138, 138, 140, 141, 142,
-  143, 144, 145, 147, 148, 149, 150, 152, 153, 154, 155, 157, 158, 160, 161, 163, 164, 166, 168, 169,
-  171, 173, 175, 176, 178, 181, 183, 185, 188, 191, 194, 197, 200, 205, 209, 215, 222, 231, 247
+  63, 72, 88, 92, 95, 97, 98, 100, 101, 102, 103, 104, 104, 105, 106, 107, 108, 108, 109, 110,
+  110, 111, 111, 112, 113, 113, 114, 115, 115, 116, 117, 117, 118, 118, 119, 120, 120, 121, 122, 122,
+  123, 124, 125, 125, 126, 127, 128, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140,
+  141, 142, 143, 144, 145, 146, 147, 149, 150, 151, 153, 154, 155, 157, 158, 160, 161, 163, 164, 166,
+  168, 169, 171, 173, 175, 177, 179, 181, 184, 187, 189, 193, 196, 200, 206, 211, 218, 229, 245
 ];
 
 /* ============================================================
@@ -6628,6 +6660,7 @@ const BADGES = [
   { id: "wonderkid", cat: "precocite", icon: "🚀", name: "Prodige", hint: "Exploser avant l'heure…", desc: "Atteindre 85 de niveau général avant 22 ans." },
   { id: "prodigy", cat: "precocite", icon: "✨", name: "Élu précoce", hint: "La gloire n'attend pas le nombre des années…", desc: "Remporter un Ballon d'Or avant 24 ans." },
   { id: "early_cap", cat: "precocite", icon: "🐤", name: "Premier de cordée", hint: "Le maillot national avant même la majorité…", desc: "Être convoqué en sélection A avant 19 ans." },
+  { id: "youth_prospect", cat: "precocite", icon: "🌱", name: "Graine de crack", hint: "Repéré dès les catégories de jeunes…", desc: "Être sélectionné avec les U17 de votre nation." },
   // --- Trophées & distinctions ---
   { id: "first_ballon_or", cat: "trophees", icon: "⭐", name: "Ballon d'Or", hint: "La plus haute distinction individuelle…", desc: "Remporter au moins un Ballon d'Or." },
   { id: "ballon_3", cat: "trophees", icon: "🌟", name: "Dynastie", hint: "Régner, encore et encore…", desc: "Remporter 3 Ballons d'Or dans une même carrière." },
@@ -6654,6 +6687,7 @@ const BADGES = [
   { id: "world_cup", cat: "selection", icon: "🏆", name: "Champion du monde", hint: "Le rêve ultime de tout gamin…", desc: "Remporter la Coupe du Monde avec votre nation." },
   { id: "centurion", cat: "selection", icon: "🎽", name: "Centurion", hint: "Porter cent fois le maillot national…", desc: "Atteindre 100 sélections avec votre nation." },
   { id: "nations_league", cat: "selection", icon: "🛡️", name: "Roi d'Europe des sélections", hint: "Dominer le continent entre deux grands tournois…", desc: "Remporter la Ligue des Sélections avec votre nation." },
+  { id: "olympic_gold", cat: "selection", icon: "🥇", name: "Champion olympique", hint: "L'or au cou, sur la plus grande scène amateur…", desc: "Remporter la médaille d'or aux Jeux Olympiques." },
   // --- Parcours & fidélité ---
   { id: "legend_tier", cat: "parcours", icon: "👑", name: "Légende vivante", hint: "Atteindre le sommet absolu…", desc: "Terminer une carrière avec le rang « Légende du football mondial »." },
   { id: "one_club", cat: "parcours", icon: "❤️", name: "Une vie, un club", hint: "La fidélité absolue, du début à la fin…", desc: "Réussir une belle carrière sans jamais être transféré (les prêts sont tolérés)." },
@@ -6806,7 +6840,7 @@ if (typeof module !== "undefined" && module.exports) {
     LEVEL_ORDER, CLUBS, CLUBS_BY_LEVEL, COMPETITIONS, COACH_NAMES, TRAITS,
     AWARDS, KEY_MOMENTS,
     EVENTS, MICRO_EVENTS, RIVAL_NEWS_GOOD, RIVAL_NEWS_BAD, RIVAL_NEWS_AHEAD,
-    RIVAL_NEWS_BEHIND, WORLD_NEWS, WC_STAGES, WC_STAGES_48, BALANCE, HEADLINES,
+    RIVAL_NEWS_BEHIND, WORLD_NEWS, WC_STAGES, WC_STAGES_48, YOUTH_TIERS, YOUTH_STAGES, OLYMPIC_STAGES, BALANCE, HEADLINES,
     UNTAKEN_PATH_TEMPLATES, DAILY_QUESTS, WEEKLY_CHALLENGES, LEGEND_QUESTS, BADGE_CATS, BADGES,
     PERKS, PERK_SLOTS, STORIES, SCORE_PERCENTILES, STREAK_MILESTONES, COUNTRY_LANG,
   };

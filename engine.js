@@ -288,9 +288,11 @@
       bestBallonRank: null,
       prevClub: null, // club quitté au dernier transfert (retrouvailles)
       natTeam: { active: false, retired: false, caps: 0, goals: 0 },
+      youth: { caps: 0, goals: 0, tiers: [] }, // sélections de jeunes (U17→U23), à part des A
+      olympicMedals: { gold: 0, silver: 0, bronze: 0 }, // médailles des Jeux Olympiques
       totals: { matches: 0, goals: 0, assists: 0, cleanSheets: 0 },
       captainMatches: 0, // matchs disputés avec le brassard de capitaine (bilan de fin)
-      trophies: { league: 0, cup: 0, continental: 0, continental2: 0, continental3: 0, worldCup: 0, contInt: 0, natLeague: 0, ballon: 0, goldenBoot: 0 },
+      trophies: { league: 0, cup: 0, continental: 0, continental2: 0, continental3: 0, worldCup: 0, contInt: 0, natLeague: 0, olympic: 0, ballon: 0, goldenBoot: 0 },
       seasons: [],
       transferHistory: [],
       history: [],
@@ -850,6 +852,43 @@
     return nl;
   }
 
+  // --- Jeux Olympiques (tournoi U23, années %4==3) ----------------------------
+  function isOlympicYear(year) { return year % 4 === 3; }
+
+  function playOlympics(s, report) {
+    const natW = s.nationality.weight;
+    const playerBoost = 0.6 + (ovr(s) / 100) * 0.8 + (hasTrait(s, "clutch") ? 0.15 : 0);
+    const stage = weightedRandom(OLYMPIC_STAGES, (st) => {
+      // Plus ouvert que le Mondial (tournoi U23, terre d'exploits) : gating ^1.6.
+      if (st.id === "champion" || st.id === "final") return st.baseW * Math.pow(natW, 1.6) * (0.5 + playerBoost * 0.5) * 3.0;
+      if (st.id === "semi") return st.baseW * Math.pow(natW, 1.3) * (0.4 + playerBoost * 0.4) * 1.8;
+      return st.baseW;
+    });
+    const games = stage.games;
+    const goals = Math.round(games * s.position.goalRate * (0.4 + s.stats.t / 150) * rand(0.5, 1.4));
+    s.youth = s.youth || { caps: 0, goals: 0, tiers: [] };
+    s.youth.caps += games; // les JO (U23) comptent dans les sélections jeunes
+    s.youth.goals += goals;
+    const ol = { year: s.year, stage: stage.id, label: stage.label, text: stage.text, games, goals, icon: "🥇", cupName: "Jeux Olympiques", medal: null };
+    if (stage.id === "champion") {
+      s.trophies.olympic += 1; s.olympicMedals.gold += 1; ol.medal = "gold"; ol.label = "MÉDAILLE D'OR";
+      s.rep = clamp(s.rep + 5, 0, 100); s.moral = clamp(s.moral + 9, 5, 100);
+      s.history.push({ age: s.age, text: `🥇 Champion olympique ${s.year} avec ${s.nationality.name} !`, impact: 16 });
+      if (!report.awards.includes("ballon_won")) rollBallon(s, report, 0.5); // petit coup de pouce Ballon d'Or
+    } else if (stage.id === "final") {
+      s.olympicMedals.silver += 1; ol.medal = "silver"; ol.label = "Médaille d'argent";
+      s.rep = clamp(s.rep + 3, 0, 100); s.moral = clamp(s.moral - 2, 5, 100);
+      s.history.push({ age: s.age, text: `🥈 Médaille d'argent olympique ${s.year}.`, impact: 9 });
+    } else if (stage.id === "semi") {
+      s.olympicMedals.bronze += 1; ol.medal = "bronze"; ol.label = "Médaille de bronze";
+      s.rep = clamp(s.rep + 2, 0, 100);
+      s.history.push({ age: s.age, text: `🥉 Médaille de bronze olympique ${s.year}.`, impact: 7 });
+    } else {
+      s.moral = clamp(s.moral - 2, 5, 100);
+    }
+    return ol;
+  }
+
   // Renvoie le moment de finale scénarisée si le joueur suit une histoire dont
   // la finale de CDM tombe à son âge actuel (année de Mondial garantie).
   function storyWcFinalFor(s) {
@@ -1404,13 +1443,32 @@
       s.history.push({ age: s.age, text: `Soulier d'Or européen ${s.year} — meilleur buteur du continent.`, impact: 12 });
     }
 
-    // Sélection Espoirs : l'antichambre des A pour les jeunes qui percent
-    if (!s.natTeam.active && !s.natTeam.retired && !s.flags.youth_int &&
-        s.age >= 17 && s.age <= 20 && ovr(s) >= 71 && s.rep >= 35) {
-      s.flags.youth_int = true;
-      s.rep = clamp(s.rep + 2, 0, 100);
-      report.lines.push({ text: `Première convocation avec les Espoirs ${deOf(s.nationality.name)} — l'antichambre des A.`, impact: 5 });
-      s.history.push({ age: s.age, text: `Sélectionné avec les Espoirs ${deOf(s.nationality.name)}.`, impact: 5 });
+    // Sélections de jeunes (U17 → U23) : on gravit l'échelle selon l'âge, tant
+    // qu'on n'est pas passé chez les A, si le niveau suit. Chaque nouveau palier
+    // décroché : annonce + réputation, et — pour les grands tournois de jeunes —
+    // un résultat résumé en une ligne. Les caps jeunes sont comptés à part des A.
+    if (!s.natTeam.active && !s.natTeam.retired && s.age <= 23) {
+      s.youth = s.youth || { caps: 0, goals: 0, tiers: [] };
+      for (const tier of YOUTH_TIERS) {
+        if (s.age < tier.aMin || s.age > tier.aMax || s.youth.tiers.includes(tier.id)) continue;
+        if (ovr(s) < tier.ovrNeed || s.rep < 18 + (tier.aMin - 15) * 4) continue;
+        s.youth.tiers.push(tier.id);
+        s.flags.youth_int = true;
+        s.youth.caps += randInt(3, 6);
+        s.rep = clamp(s.rep + 2, 0, 100);
+        report.lines.push({ text: `🎽 Première convocation avec les ${tier.label} ${deOf(s.nationality.name)}.`, impact: 5 });
+        s.history.push({ age: s.age, text: `Sélectionné en ${tier.label} ${deOf(s.nationality.name)}.`, impact: 5 });
+        if (tier.tournament) {
+          const natW = s.nationality.weight;
+          const st = weightedRandom(YOUTH_STAGES, (x) =>
+            x.id === "champion" ? x.baseW * (0.4 + natW * 1.6) :
+            (x.id === "final" || x.id === "semi") ? x.baseW * (0.5 + natW * 1.0) : x.baseW);
+          s.youth.caps += st.games;
+          report.lines.push({ text: `🏆 ${tier.tournament} : ${st.label}.`, impact: st.champion ? 8 : 4 });
+          if (st.champion) s.history.push({ age: s.age, text: `Vainqueur du ${tier.tournament} ${s.year} !`, impact: 9 });
+        }
+        break; // un seul palier par saison
+      }
     }
 
     // Mode Histoire : la finale mondiale scénarisée impose la sélection cette
@@ -1448,6 +1506,18 @@
       else if (isWorldCupYear(s.year)) { report.wc = playWorldCup(s); report.caps += report.wc.games; report.natGoals += report.wc.goals; }
       else if (isContinentalYear(s.year)) { report.cont = playContinental(s, report); report.caps += report.cont.games; report.natGoals += report.cont.goals; }
       else if (nlYear) { report.natl = playNationsLeague(s, report); report.caps += report.natl.games; report.natGoals += report.natl.goals; }
+    }
+
+    // Jeux Olympiques (années %4==3, sans tournoi A) : tournoi U23, ouvert aux
+    // jeunes prometteurs comme aux jeunes déjà en A, et à de rares surclassés.
+    // Médailles or/argent/bronze. Les caps olympiques comptent en jeunes (U23).
+    const olympicInjury = (s.seasonInjuryWeeks || 0) >= BALANCE.injury.tournamentSkip;
+    if (isOlympicYear(s.year) && !s.careerEnded && !olympicInjury) {
+      s.youth = s.youth || { caps: 0, goals: 0, tiers: [] };
+      const u23 = s.age <= 23;
+      const overage = s.age >= 24 && s.age <= 29 && s.rep >= 62 && s.natTeam.active && rng() < 0.35; // surclassé, rare
+      const goodEnough = ovr(s) >= 66 && (s.natTeam.active || s.flags.youth_int || ovr(s) >= 70);
+      if ((u23 || overage) && goodEnough) report.olympic = playOlympics(s, report);
     }
 
     // Distinctions promises par les événements, puis celles de la saison, puis Ballon d'Or
@@ -2157,7 +2227,7 @@
     return Math.round(
       s.peakOvr * 1.0 + s.rep * 0.45 +
       t.worldCup * 20 + t.ballon * 18 + t.continental * 9 + (t.contInt || 0) * 11 +
-      (t.natLeague || 0) * 5 + (t.continental2 || 0) * 5 + (t.continental3 || 0) * 2 +
+      (t.natLeague || 0) * 5 + (t.olympic || 0) * 8 + (t.continental2 || 0) * 5 + (t.continental3 || 0) * 2 +
       t.league * 4 + t.cup * 2 + t.goldenBoot * 5 +
       Math.min(12, totalAwards(s) * 1.2) +
       Math.min(20, s.natTeam.caps / 6) + Math.min(15, s.totals.goals / 30) +
@@ -2293,7 +2363,7 @@
     generateName, newCareer, ovr, hasTrait, renderText, applyFx,
     eventEligible, pickEvent, optionEligible, resolveOption, netImpact, toneOf,
     keyMomentFor, keyMomentSuccess, playKeyMoment, isWorldCupYear,
-    playWorldCup, resolveWcFinal, isContinentalYear, playContinental, isNationsLeagueYear, playNationsLeague, playingTimeFactor, setSeasonObjective,
+    playWorldCup, resolveWcFinal, isContinentalYear, playContinental, isNationsLeagueYear, playNationsLeague, isOlympicYear, playOlympics, playingTimeFactor, setSeasonObjective,
     objectiveMet, headlineFor, grantAward, rollSeasonAwards, rollBallon,
     playSeason, resolveSeasonMoment, advanceYear, marketValue, salaryFor,
     buildOffer, offersFor, loanOffersFor, applyLoan, transferWindow,

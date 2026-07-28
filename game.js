@@ -505,6 +505,7 @@
       else if (lastReport.wc) renderWorldCup(lastReport);
       else if (lastReport.cont) renderContinental(lastReport);
       else if (lastReport.natl) renderNationsLeague(lastReport);
+      else if (lastReport.olympic) renderOlympics(lastReport);
       else renderRecap(lastReport);
       return;
     }
@@ -634,14 +635,14 @@
   }
 
   function buildTournamentMatches(report, kind) {
-    const info = kind === "wc" ? report.wc : kind === "cont" ? report.cont : report.natl;
+    const info = kind === "wc" ? report.wc : kind === "cont" ? report.cont : kind === "olympic" ? report.olympic : report.natl;
     const stage = info.stage;
     const rng = tourneyRng((info.year || 0) + "|" + (G.nationality.id || "") + "|" + stage + "|" + kind);
-    // Adversaires : le Mondial est mondial ; une compétition continentale
-    // (Euro / Copa / CAN / Coupe d'Asie / d'Océanie) et la Ligue des Sélections
-    // n'opposent QUE des nations du même continent que le joueur.
+    // Adversaires : le Mondial et les Jeux Olympiques sont mondiaux ; une
+    // compétition continentale (Euro / Copa / CAN / Coupe d'Asie / d'Océanie) et
+    // la Ligue des Sélections n'opposent QUE des nations du même continent.
     let pool = NATIONALITIES.filter((n) => n.id !== G.nationality.id);
-    if (kind !== "wc") {
+    if (kind !== "wc" && kind !== "olympic") {
       const myCont = (E.countryOf(G.nationality.homeCountryId) || {}).continent;
       const sameCont = pool.filter((n) => (E.countryOf(n.homeCountryId) || {}).continent === myCont);
       if (sameCont.length >= 3) pool = sameCont;
@@ -684,6 +685,12 @@
           const ko = ["r32", "r16", "quarter", "semi"];
           if (stage === "final") { ko.forEach((rd) => matches.push(mk(KOL[rd], "win"))); interactiveFinal = true; }
           else { const idx = ko.indexOf(stage); for (let i = 0; i < idx; i++) matches.push(mk(KOL[ko[i]], "win")); matches.push(mk(KOL[stage], "loss")); }
+        } else if (kind === "olympic") {
+          const ko = ["quarter", "semi"];
+          if (stage === "champion" || stage === "final") {
+            ko.forEach((rd) => matches.push(mk(KOL[rd], "win")));
+            matches.push(mk("Finale", stage === "champion" ? "win" : "loss"));
+          } else { const idx = ko.indexOf(stage); for (let i = 0; i < idx; i++) matches.push(mk(KOL[ko[i]], "win")); matches.push(mk(KOL[stage], "loss")); }
         } else { // continental
           const ko = ["r16", "quarter", "semi"];
           if (stage === "champion" || stage === "final") {
@@ -711,7 +718,7 @@
 
   // Enchaîne l'affichage : poule → chaque match → onDone() (le vrai résultat).
   function runTournament(report, kind, onDone) {
-    const info = kind === "wc" ? report.wc : kind === "cont" ? report.cont : report.natl;
+    const info = kind === "wc" ? report.wc : kind === "cont" ? report.cont : kind === "olympic" ? report.olympic : report.natl;
     const icon = kind === "wc" ? "🏆" : info.icon;
     const cupName = (kind === "wc" ? "Coupe du Monde" : info.cupName) + " " + info.year;
     const built = buildTournamentMatches(report, kind);
@@ -822,6 +829,26 @@
       showCard(`
         <div class="card-tag"><span class="card-icon">${c.icon}</span> ${esc(c.cupName)} ${c.year}</div>
         <p class="wc-stage ${c.champion ? "wc-champion" : ""}">${esc(c.label)}</p>
+        <p class="result-text">${esc(c.text)}</p>
+        <p class="wc-stats">${c.games} matchs · ${c.goals} but${c.goals > 1 ? "s" : ""} dans le tournoi</p>
+        <button class="btn btn-secondary" id="btn-next">Continuer</button>
+      `, tone);
+      $("btn-next").addEventListener("click", () => renderRecap(report));
+    }));
+  }
+
+  function renderOlympics(report) {
+    const c = report.olympic;
+    const tone = c.medal === "gold" ? "great" : (c.medal === "silver" || c.medal === "bronze") ? "good" : "bad";
+    showCard(`
+      <div class="card-tag"><span class="card-icon">${c.icon}</span> Jeux Olympiques ${c.year}</div>
+      <p class="event-text">${flagHtml(G.nationality)} ${esc(G.nationality.name)} dispute le tournoi olympique (U23), et vous en êtes.</p>
+      <button class="btn btn-secondary" id="btn-olympic">Vivre les Jeux</button>
+    `);
+    $("btn-olympic").addEventListener("click", () => runTournament(report, "olympic", () => {
+      showCard(`
+        <div class="card-tag"><span class="card-icon">${c.icon}</span> Jeux Olympiques ${c.year}</div>
+        <p class="wc-stage ${c.medal === "gold" ? "wc-champion" : ""}">${esc(c.label)}</p>
         <p class="result-text">${esc(c.text)}</p>
         <p class="wc-stats">${c.games} matchs · ${c.goals} but${c.goals > 1 ? "s" : ""} dans le tournoi</p>
         <button class="btn btn-secondary" id="btn-next">Continuer</button>
@@ -1997,6 +2024,8 @@
       tryUnlock("mathusalem", G.seasons.some((se) => se.age >= 45 && se.matches > 0));
       tryUnlock("nations_league", (t.natLeague || 0) >= 1);
       tryUnlock("captain_100", (G.captainMatches || 0) >= 100);
+      tryUnlock("olympic_gold", (t.olympic || 0) >= 1);
+      tryUnlock("youth_prospect", !!(G.youth && G.youth.tiers && G.youth.tiers.includes("u17")));
       tryUnlock("homecoming", !G.careerEnded && G.clubsPlayed.length >= 3 && G.club.id === G.clubsPlayed[0]);
       tryUnlock("showtime", E.hasTrait(G, "showman") && G.rep >= 88);
 
@@ -2309,6 +2338,7 @@
       statRowHtml("Passes décisives", G.totals.assists),
       ...((G.captainMatches || 0) > 0 ? [statRowHtml("©️ Matchs comme capitaine", G.captainMatches)] : []),
       statRowHtml(`${flagHtml(G.nationality)} Sélections`, G.natTeam.caps),
+      ...(((G.youth && G.youth.caps) || 0) > 0 ? [statRowHtml(`🎽 Sélections jeunes${G.youth.tiers && G.youth.tiers.length ? ` (${G.youth.tiers.map((t) => t.toUpperCase()).join(" · ")})` : ""}`, G.youth.caps)] : []),
       statRowHtml("💰 Fortune", E.fmtMoney(G.money)),
     ].join("");
 
@@ -2351,11 +2381,17 @@
     const nlRow = (playerCont === "eu" || (t.natLeague || 0) > 0)
       ? [statRowHtml(`${NATIONS_LEAGUE.icon} ${NATIONS_LEAGUE.name}`, t.natLeague || 0, (t.natLeague || 0) > 0)]
       : [];
+    // Médailles olympiques (or / argent / bronze)
+    const om = G.olympicMedals || { gold: 0, silver: 0, bronze: 0 };
+    const olyRow = (om.gold + om.silver + om.bronze) > 0
+      ? [statRowHtml("🥇 Jeux Olympiques", `${om.gold ? `🥇${om.gold} ` : ""}${om.silver ? `🥈${om.silver} ` : ""}${om.bronze ? `🥉${om.bronze}` : ""}`.trim(), true)]
+      : [];
 
     $("final-trophies").innerHTML = [
       statRowHtml(`${COMPETITIONS.worldCup.icon} ${COMPETITIONS.worldCup.name}`, t.worldCup, t.worldCup > 0),
       ...ntCupRow,
       ...nlRow,
+      ...olyRow,
       statRowHtml(`${COMPETITIONS.ballon.icon} ${COMPETITIONS.ballon.name}`, t.ballon, t.ballon > 0),
       ...(t.ballon === 0 && G.bestBallonRank
         ? [statRowHtml(`⭐ Meilleur classement Ballon d'Or`, `${G.bestBallonRank}ᵉ`, G.bestBallonRank <= 10)]
