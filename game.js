@@ -568,7 +568,8 @@
     let legendLine = "";
     if (legendGuest && !legendGuestUsed && offers.length) {
       legendGuestUsed = true;
-      legendLine = `<p class="legend-line">🏛️ Dans les tribunes, ${esc(legendGuest.name)}, légende de votre Panthéon, observe votre mercato.</p>`;
+      const src = legendGuest.community ? "légende de la communauté" : "légende de votre Panthéon";
+      legendLine = `<p class="legend-line">🏛️ Dans les tribunes, ${esc(legendGuest.name)}, ${src}, observe votre mercato.</p>`;
     }
     showCard(`
       <div class="card-tag"><span class="card-icon">💼</span> Mercato · ${G.age} ans</div>
@@ -959,6 +960,15 @@
   }
   function pickLegendGuest() {
     const p = loadPantheon();
+    // Panthéon communautaire : une fois sur deux, l'invité du mercato est une
+    // légende d'un VRAI joueur (via le compte). Purement cosmétique (n'utilise
+    // que le nom) → Math.random, aucun impact sur le déterminisme du moteur.
+    const community = (window.OpenElevenAccount && window.OpenElevenAccount.getLegends && window.OpenElevenAccount.getLegends()) || [];
+    if (community.length && (!p.length || Math.random() < 0.5)) {
+      const c = community[Math.floor(Math.random() * community.length)];
+      const b = c.best || {};
+      return { name: b.name || c.pseudo, title: b.title || "", nationalityFlag: b.natFlag || "", community: true, pseudo: c.pseudo };
+    }
     return p.length ? p[Math.floor(Math.random() * p.length)] : null;
   }
   function saveToPantheon() {
@@ -2205,6 +2215,8 @@
     let guard = 0;
     if (!G.duel) { while (!R.careerEnded && R.age <= E.BALANCE_REF.ageMax && guard++ < 30) E.rivalSeason(R); }
     saveToPantheon();
+    // Met à jour la vitrine publique (meilleure carrière, badges, série) si connecté.
+    if (window.OpenElevenAccount && window.OpenElevenAccount.pushProfile) window.OpenElevenAccount.pushProfile();
     const score = E.computeCareerScore(G);
     const questNotes = evaluateQuests(); // avant les badges (streak/total à jour)
     const newBadges = evaluateBadges();

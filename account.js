@@ -97,6 +97,7 @@
         '<div class="acc-row"><input type="text" id="acc-pseudo" maxlength="24" placeholder="Ton pseudo" value="' + esc(pseudo || "") + '" style="margin:0" />' +
         '<button class="acc-btn soft" id="acc-savepseudo" style="width:auto;padding:11px 14px">OK</button></div>' +
         '<button class="acc-btn primary" id="acc-push">☁️ Sauvegarder maintenant</button>' +
+        '<button class="acc-btn soft" id="acc-profile">🏛️ Voir mon profil public</button>' +
         '<button class="acc-btn soft" id="acc-pull">📥 Restaurer depuis le cloud</button>' +
         '<button class="acc-btn danger" id="acc-signout">Se déconnecter</button>' +
         '<p class="acc-msg"></p>';
@@ -106,6 +107,10 @@
         msg(r.ok ? "Pseudo enregistré ✔" : (r.error && r.error.message) || "Échec", r.ok ? "ok" : "err");
       };
       box.querySelector("#acc-push").onclick = async () => { msg("Sauvegarde…"); const r = await pushSave(); msg(r.ok ? "Sauvegarde envoyée au cloud ✔" : "Échec : " + (r.error && r.error.message || "erreur"), r.ok ? "ok" : "err"); };
+      box.querySelector("#acc-profile").onclick = async () => {
+        if (!pseudo) return msg("Choisis d'abord un pseudo ci-dessus.", "err");
+        await pushProfileStats(); close(); openProfile(pseudo);
+      };
       box.querySelector("#acc-pull").onclick = async () => {
         msg("Récupération…");
         const r = await pullSave();
@@ -174,14 +179,14 @@
   sb.auth.onAuthStateChange((event, s) => {
     session = s;
     renderModal();
-    if (event === "SIGNED_IN") { onFreshLogin(); loadPseudo().then(renderModal); }
+    if (event === "SIGNED_IN") { onFreshLogin(); loadPseudo().then(() => { renderModal(); pushProfileStats(); }); }
     if (event === "SIGNED_OUT") pseudo = null;
   });
-  sb.auth.getSession().then(({ data }) => { session = data.session; renderModal(); if (session) loadPseudo().then(renderModal); });
+  sb.auth.getSession().then(({ data }) => { session = data.session; renderModal(); if (session) loadPseudo().then(() => { renderModal(); pushProfileStats(); }); });
 
   // ---- sauvegarde auto quand on quitte / passe en arrière-plan ---------------
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden" && session && Date.now() - lastPush > 8000) pushSave();
+    if (document.visibilityState === "hidden" && session && Date.now() - lastPush > 8000) { pushSave(); pushProfileStats(); }
   });
 
   // ============================================================================
@@ -203,8 +208,40 @@
     const { error } = await sb.from("profiles").upsert(
       { user_id: session.user.id, pseudo: p }, { onConflict: "user_id" }
     );
-    if (!error) pseudo = p;
+    if (!error) { pseudo = p; pushProfileStats(); }
     return { ok: !error, error };
+  }
+
+  // ---- vitrine du joueur (profil public + pool de légendes communautaires) ---
+  // Auto-déclarée (non vérifiée) : c'est une VITRINE, pas un classement. Le rang
+  // général, lui, vient des scores vérifiés (fonction public_profile).
+  function buildStats() {
+    let best = null, badges = 0, careers = 0, bestStreak = 0;
+    try {
+      const pan = JSON.parse(localStorage.getItem("destinDeChampion_pantheon") || "[]");
+      if (Array.isArray(pan) && pan.length) {
+        const top = pan.reduce((a, b) => ((b.score || 0) > (a.score || 0) ? b : a));
+        best = {
+          name: top.name, title: top.title, natFlag: top.nationalityFlag, natName: top.nationalityName,
+          posIcon: top.positionIcon, score: top.score || 0, peakOvr: top.peakOvr || 0,
+          money: top.money || 0, trophies: top.trophies || {},
+        };
+        careers = pan.length;
+      }
+      const pr = JSON.parse(localStorage.getItem("destinDeChampion_progress") || "{}");
+      badges = Array.isArray(pr.unlockedBadges) ? pr.unlockedBadges.length : 0;
+      careers = Math.max(careers, Number(pr.careersPlayed) || 0);
+      bestStreak = (pr.daily && Number(pr.daily.bestStreak)) || 0;
+    } catch (_) {}
+    return { best, badges, careers, bestStreak };
+  }
+  async function pushProfileStats() {
+    if (!session || !pseudo) return; // pseudo requis pour publier
+    try {
+      await sb.from("profiles").upsert(
+        { user_id: session.user.id, pseudo, stats: buildStats() }, { onConflict: "user_id" }
+      );
+    } catch (_) {}
   }
 
   // Envoi anti-triche : le serveur est seul juge du score.
@@ -252,7 +289,14 @@
     ".lb-name{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" +
     ".lb-pts{font-weight:800;color:var(--green-ink,#0b3b26)}" +
     ".lb-sub{font-size:.8rem;color:var(--text-1,#567);font-weight:400}" +
-    ".lb-empty{padding:22px 4px;text-align:center;color:var(--text-1,#567);font-size:.9rem}";
+    ".lb-empty{padding:22px 4px;text-align:center;color:var(--text-1,#567);font-size:.9rem}" +
+    ".lb-row[data-pseudo]{cursor:pointer}.lb-row[data-pseudo]:hover{background:rgba(8,123,75,.08);border-radius:8px}" +
+    ".pf-best{padding:12px 14px;border-radius:12px;background:var(--panel-2,rgba(8,123,75,.1));border-left:4px solid var(--gold,#d4af37)}" +
+    ".pf-best-top{font-weight:800;font-size:1.05rem;color:var(--green-ink,#0b3b26)}" +
+    ".pf-best-title{font-size:.9rem;color:var(--text-1,#567);margin:1px 0 6px}" +
+    ".pf-best-stats{font-weight:700;font-size:.9rem;color:var(--green-ink,#0b3b26)}" +
+    ".pf-counters{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}" +
+    ".pf-counters span{flex:1;min-width:96px;text-align:center;padding:8px 4px;border-radius:9px;background:var(--panel-2,rgba(8,123,75,.1));font-weight:700;font-size:.82rem;color:var(--green-ink,#0b3b26)}";
   document.head.appendChild(lbStyle);
 
   const lbOverlay = document.createElement("div");
@@ -306,21 +350,73 @@
         ? '<ul class="lb-list">' + rows.map((r) => {
             const val = isRange ? r.total : r.score;
             const sub = isRange ? ' <span class="lb-sub">· ' + r.days + " j</span>" : "";
-            return '<li class="lb-row' + (uid && r.user_id === uid ? " mine" : "") + '">' +
+            return '<li class="lb-row' + (uid && r.user_id === uid ? " mine" : "") + '" data-pseudo="' + esc(r.pseudo || "") + '">' +
               '<span class="lb-rank">' + medal(Number(r.rank)) + "</span>" +
               '<span class="lb-name">' + esc(r.pseudo || "Joueur") + "</span>" +
               '<span class="lb-pts">' + val + ' <span class="lb-sub">pts</span>' + sub + "</span></li>";
           }).join("") + "</ul>"
         : '<p class="lb-empty">Personne au classement pour l\'instant. Sois le premier !</p>';
       content.innerHTML = meHtml + list;
+      content.querySelectorAll(".lb-row[data-pseudo]").forEach((el) => {
+        if (el.dataset.pseudo) el.onclick = () => openProfile(el.dataset.pseudo);
+      });
     } catch (e) {
       content.innerHTML = '<p class="lb-empty">Classement indisponible pour le moment.</p>';
     }
   }
   function openLeaderboard() { lbTab = "today"; renderLeaderboard(); lbOverlay.classList.add("on"); }
 
+  // ---- fiche publique d'un joueur (profil par pseudo) ------------------------
+  const pfOverlay = document.createElement("div");
+  pfOverlay.className = "acc-overlay";
+  pfOverlay.innerHTML = '<div class="lb-box" role="dialog" aria-modal="true"></div>';
+  document.body.appendChild(pfOverlay);
+  const pfBox = pfOverlay.querySelector(".lb-box");
+  pfOverlay.addEventListener("click", (e) => { if (e.target === pfOverlay) pfOverlay.classList.remove("on"); });
+  const medalR = (r) => (r === 1 ? "🥇" : r === 2 ? "🥈" : r === 3 ? "🥉" : "#" + r);
+  const money = (m) => (m >= 1e6 ? (m / 1e6).toFixed(m >= 1e7 ? 0 : 1) + " M€" : m >= 1e3 ? Math.round(m / 1e3) + " k€" : m + " €");
+
+  async function openProfile(who) {
+    pfBox.innerHTML = '<button class="acc-x" aria-label="Fermer">×</button><p class="lb-empty">Chargement…</p>';
+    pfBox.querySelector(".acc-x").onclick = () => pfOverlay.classList.remove("on");
+    pfOverlay.classList.add("on");
+    let row = null;
+    try { const { data } = await sb.rpc("public_profile", { p_pseudo: who }); row = data && data[0]; } catch (_) {}
+    if (!row) {
+      pfBox.innerHTML = '<button class="acc-x" aria-label="Fermer">×</button><h3>🏛️ ' + esc(who) + "</h3><p class=\"lb-empty\">Profil introuvable.</p>";
+      pfBox.querySelector(".acc-x").onclick = () => pfOverlay.classList.remove("on");
+      return;
+    }
+    const st = row.stats || {};
+    const b = st.best;
+    const rankLine = row.rank
+      ? '<div class="lb-me">Classement général : <strong>' + medalR(Number(row.rank)) + "</strong> · " + row.total + ' pts <span class="lb-sub">(' + row.days + " défis)</span></div>"
+      : '<div class="lb-me lb-sub" style="font-weight:400">Pas encore classé au Défi du jour.</div>';
+    const bestLine = b
+      ? '<div class="pf-best"><div class="pf-best-top">' + (b.natFlag || "") + " " + esc(b.name || "—") + "</div>" +
+        '<div class="pf-best-title">' + (b.posIcon || "") + " " + esc(b.title || "") + "</div>" +
+        '<div class="pf-best-stats">🏅 ' + (b.score || 0) + " pts · 📊 " + (b.peakOvr || 0) + " · 💰 " + money(b.money || 0) + "</div></div>"
+      : '<p class="lb-sub">Aucune carrière partagée.</p>';
+    pfBox.innerHTML =
+      '<button class="acc-x" aria-label="Fermer">×</button>' +
+      "<h3>🏛️ " + esc(row.pseudo || who) + "</h3>" +
+      rankLine +
+      '<p class="acc-sub" style="margin:12px 0 2px">Meilleure carrière <span class="lb-sub">(vitrine)</span></p>' +
+      bestLine +
+      '<div class="pf-counters"><span>🏆 ' + (st.badges || 0) + " badges</span><span>🔥 " + (st.bestStreak || 0) + " j (série)</span><span>👤 " + (st.careers || 0) + " carrières</span></div>";
+    pfBox.querySelector(".acc-x").onclick = () => pfOverlay.classList.remove("on");
+  }
+
+  // ---- pool de légendes communautaires (invité du mercato) -------------------
+  let legendsCache = [];
+  async function loadLegends() {
+    try { const { data } = await sb.rpc("random_legends", { n: 16 }); if (Array.isArray(data)) legendsCache = data; } catch (_) {}
+  }
+  function getLegends() { return legendsCache; }
+  loadLegends();
+
   // ---- API publique pour le jeu ----------------------------------------------
-  window.OpenElevenAccount = { submitDaily, openLeaderboard };
+  window.OpenElevenAccount = { submitDaily, openLeaderboard, openProfile, getLegends, pushProfile: pushProfileStats };
 
   // ---- bouton d'accueil -------------------------------------------------------
   if (btn) btn.addEventListener("click", open);
