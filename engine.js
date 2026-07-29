@@ -2354,6 +2354,90 @@
     return `${r.name} aura eu la carrière que vous auriez rêvé d'avoir.`;
   }
 
+  // --- Défi du jour : dérivation déterministe (PARTAGÉE client ↔ serveur) -------
+  // hashInt DOIT rester identique à celui de game.js : la graine du jour ne doit
+  // jamais diverger entre l'affichage (client) et la vérification (serveur).
+  function hashInt(n) {
+    let h = (n >>> 0);
+    h ^= h >>> 16;
+    h = Math.imul(h, 0x45d9f3b);
+    h ^= h >>> 16;
+    h = Math.imul(h, 0x45d9f3b);
+    h ^= h >>> 16;
+    return h >>> 0;
+  }
+  // Profil imposé du jour (nationalité/poste/origine), dérivé de la date.
+  function dailyChallenge(dateKey) {
+    const seed = Number(String(dateKey).replace(/-/g, ""));
+    return {
+      id: dateKey,
+      nationality: NATIONALITIES[hashInt(seed * 5 + 1) % NATIONALITIES.length],
+      position: POSITIONS[hashInt(seed * 5 + 2) % POSITIONS.length],
+      origin: ORIGINS[hashInt(seed * 5 + 3) % ORIGINS.length],
+    };
+  }
+  // Graine MOTEUR du run de défi : mêmes événements pour tous, à choix égaux.
+  function dailySeedFor(dateKey) { return hashInt(Number(String(dateKey).replace(/-/g, "")) + 777); }
+
+  // Rejeu HEADLESS d'un run de Défi du jour à partir du SEUL journal de choix.
+  // Cœur de l'anti-triche : le serveur (Edge Function) charge ce même moteur,
+  // rejoue (dateKey, choices) et RECALCULE le score. Le client ne peut donc pas
+  // mentir sur son score — seuls ses CHOIX comptent. Miroir exact du chemin
+  // interactif du défi (même ordre de consommation du hasard que le duel rejoué).
+  function replayDaily(dateKey, choices) {
+    const log = choices || [];
+    let i = 0;
+    const next = () => (i < log.length ? log[i++] : 0);
+    setSeed(dailySeedFor(dateKey));
+    const prof = dailyChallenge(dateKey);
+    const lifestyle = LIFESTYLES[next()] || LIFESTYLES[0];
+    const entourage = ENTOURAGES[next()] || ENTOURAGES[0];
+    const potCap = rollPotential(prof.origin, lifestyle, entourage);
+    const offers = academyOffers({ nationality: prof.nationality, origin: prof.origin, lifestyle, entourage, potCap });
+    const club = (offers[next()] || offers[0]).club;
+    const s = newCareer({ nationality: prof.nationality, origin: prof.origin, position: prof.position, lifestyle, entourage, potCap, club });
+    let guard = 0;
+    while (!s.careerEnded && !s.retiring && s.age <= BALANCE.ageMax && guard++ < 40) {
+      const ev = pickEvent(s);
+      if (ev) {
+        const res = resolveOption(s, ev.options[next()] || ev.options[0]);
+        if (s.careerEnded) break;
+        if (res.outcome.fx && res.outcome.fx.transfer && !res.outcome.fx.transfer.direct) {
+          const t = offersFor(s, res.outcome.fx.transfer);
+          const ch = next();
+          if (t.length && ch >= 0) applyTransfer(s, t[ch] || t[0]);
+        } else if (res.outcome.fx && res.outcome.fx.loan) {
+          const l = loanOffersFor(s);
+          const ch = next();
+          if (l.length) applyLoan(s, l[ch] || l[0]);
+        }
+      }
+      if (s.age <= 18 && rng() < BALANCE.earlyEndChance) { s.careerEnded = true; s.careerEndReason = "injury"; break; }
+      const report = playSeason(s);
+      while (report.pendingMoments.length) {
+        const entry = report.pendingMoments.shift();
+        const opt = entry.moment.options[next()];
+        resolveSeasonMoment(s, report, entry, opt ? opt.id : null);
+      }
+      if (report.wc && report.wc.finalPending) {
+        const opt = report.wc.moment.options[next()];
+        resolveWcFinal(s, report, opt ? opt.id : null);
+      }
+      if (s.careerEnded) break;
+      if (s.retiring || s.age >= BALANCE.ageMax) break;
+      const window = transferWindow(s, report);
+      if (window) {
+        const ch = next();
+        if (window.offers.length && ch >= 0) applyTransfer(s, window.offers[ch] || window.offers[0]);
+        else if (window.contractUp) renewContract(s, window);
+      }
+      advanceYear(s);
+    }
+    return s;
+  }
+  // Score officiel d'un run de défi rejoué (ce que le serveur inscrit au classement).
+  function scoreDaily(dateKey, choices) { return computeCareerScore(replayDaily(dateKey, choices)); }
+
   // --- Export ------------------------------------------------------------------
   const Engine = {
     rng, setSeed, clearSeed, getSeedState, setSeedState,
@@ -2370,6 +2454,7 @@
     applyTransfer, renewContract, totalAwards, careerRating, computeCareerScore, visibilityOf,
     careerTitle, pickHighlights, buildNarrative, buildUntakenPath,
     newRival, rivalSeason, rivalNewsLine, compareVerdict,
+    hashInt, dailyChallenge, dailySeedFor, replayDaily, scoreDaily,
     BALANCE_REF: BALANCE,
   };
 

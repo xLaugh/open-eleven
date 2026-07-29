@@ -786,6 +786,10 @@ body { color: var(--text-0); }
 .account-fab:active { transform: scale(0.95); }
 .account-fab:focus-visible { outline: 2px solid var(--on-green); outline-offset: 2px; }
 
+/* Bouton « Classement mondial » sous le Défi du jour (affiché si compte configuré). */
+.daily-lb-btn { display: block; margin: 10px auto 0; }
+.daily-lb-btn[hidden] { display: none; }
+
 /* ---------- Modale de confirmation ---------- */
 .modal-overlay {
   position: fixed;

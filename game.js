@@ -283,7 +283,7 @@
       const card = document.createElement("button");
       card.className = "origin-card";
       card.innerHTML = `<p class="origin-name">${ls.icon} ${esc(ls.name)}</p><p class="origin-desc">${esc(ls.desc)}</p>`;
-      card.addEventListener("click", () => { setup.lifestyle = ls; if (setup.duelRole) setup.duelChoices.push(LIFESTYLES.indexOf(ls)); showScreen("screen-entourage"); });
+      card.addEventListener("click", () => { setup.lifestyle = ls; if (setup.duelChoices) setup.duelChoices.push(LIFESTYLES.indexOf(ls)); showScreen("screen-entourage"); });
       list.appendChild(card);
     });
   }
@@ -297,7 +297,7 @@
       card.innerHTML = `<p class="origin-name">${ent.icon} ${esc(ent.name)}</p><p class="origin-desc">${esc(ent.desc)}</p>`;
       card.addEventListener("click", () => {
         setup.entourage = ent;
-        if (setup.duelRole) setup.duelChoices.push(ENTOURAGES.indexOf(ent));
+        if (setup.duelChoices) setup.duelChoices.push(ENTOURAGES.indexOf(ent));
         // Mode Histoire : le club de départ fait partie de la légende — pas
         // d'écran académie, la carrière démarre là où tout a commencé.
         if (setup.storyId && setup.startClubId) {
@@ -342,7 +342,7 @@
       card.innerHTML = `
         <p class="origin-name"><span class="level-tag level-${offer.level}">${esc(E.divShort(offer.level, offer.club.countryId))}</span> ${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)}</p>
         <p class="origin-desc">${esc(offer.blurb)}${offer.surprise ? " — <strong>contre toute attente, ils vous veulent VOUS.</strong>" : ""}</p>`;
-      card.addEventListener("click", () => { if (setup.duelRole) setup.duelChoices.push(offers.indexOf(offer)); startCareer(offer.club); });
+      card.addEventListener("click", () => { if (setup.duelChoices) setup.duelChoices.push(offers.indexOf(offer)); startCareer(offer.club); });
       list.appendChild(card);
     });
   }
@@ -357,7 +357,7 @@
     const id = active ? active.id : "";
     const idx = CREATION_ORDER.indexOf(id);
     if (idx < 0) return;
-    if (setup.duelRole && setup.duelChoices && (id === "screen-entourage" || id === "screen-academy")) {
+    if (setup.duelChoices && (id === "screen-entourage" || id === "screen-academy")) {
       setup.duelChoices.pop(); // le choix qui a mené ici va être refait
     }
     if (id === (setup.entryScreen || "screen-nationality")) { resetGame(); return; }
@@ -387,6 +387,7 @@
     });
     if (setup.dailyDate) {
       G.dailyDate = setup.dailyDate; // Défi du jour : aucun avantage (équité)
+      G.choiceLog = (setup.duelChoices || []).slice(); // journal pour le classement vérifié
     } else if (setup.duelRole) {
       G.duel = true; G.duelRole = setup.duelRole; G.duelSeed = setup.duelSeed;
       G.choiceLog = (setup.duelChoices || []).slice(); // journal des choix de création
@@ -447,7 +448,7 @@
   }
 
   function chooseOption(opt) {
-    if (G.duel) G.choiceLog.push(currentEvent.options.indexOf(opt)); // journal de duel
+    if (G.duel || G.dailyDate) G.choiceLog.push(currentEvent.options.indexOf(opt)); // journal de duel
     $("game-card").querySelectorAll(".opt-btn").forEach((b) => { b.disabled = true; b.classList.add("thinking"); });
     setTimeout(() => {
       const res = E.resolveOption(G, opt);
@@ -510,7 +511,7 @@
       return;
     }
     renderKeyMoment(entry.moment, (choiceId) => {
-      if (G.duel) G.choiceLog.push(entry.moment.options.findIndex((o) => o.id === choiceId)); // journal de duel
+      if (G.duel || G.dailyDate) G.choiceLog.push(entry.moment.options.findIndex((o) => o.id === choiceId)); // journal de duel
       const res = E.resolveSeasonMoment(G, lastReport, entry, choiceId);
       updateHeader();
       showCard(`
@@ -537,7 +538,7 @@
     `);
     $("game-card").querySelectorAll(".opt-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        if (G.duel) G.choiceLog.push(Number(btn.dataset.offer)); // journal de duel
+        if (G.duel || G.dailyDate) G.choiceLog.push(Number(btn.dataset.offer)); // journal de duel
         E.applyLoan(G, offers[Number(btn.dataset.offer)]);
         updateHeader();
         proceedToSeason();
@@ -577,7 +578,7 @@
     `);
     $("game-card").querySelectorAll(".opt-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        if (G.duel) G.choiceLog.push(btn.dataset.stay ? -1 : Number(btn.dataset.offer)); // journal de duel
+        if (G.duel || G.dailyDate) G.choiceLog.push(btn.dataset.stay ? -1 : Number(btn.dataset.offer)); // journal de duel
         if (btn.dataset.stay) {
           if (window && window.contractUp) E.renewContract(G, window);
         } else {
@@ -767,7 +768,7 @@
       if (wc.finalPending) {
         // La finale est atteinte : son issue se joue sur un moment décisif
         renderKeyMoment(wc.moment, (choiceId) => {
-          if (G.duel) G.choiceLog.push(wc.moment.options.findIndex((o) => o.id === choiceId)); // journal de duel
+          if (G.duel || G.dailyDate) G.choiceLog.push(wc.moment.options.findIndex((o) => o.id === choiceId)); // journal de duel
           const res = E.resolveWcFinal(G, report, choiceId);
           updateHeader();
           showCard(`
@@ -1381,19 +1382,11 @@
   // Score du jour = computeCareerScore ; meilleur du jour + record + série 🔥
   // conservés en local (progress.daily). Un run de défi reste une vraie
   // carrière (quêtes/badges/Panthéon comptent) et profite de l'autosave.
-  function dailyChallengeFor(dateKey) {
-    const seed = Number(dateKey.replace(/-/g, ""));
-    return {
-      id: dateKey,
-      nationality: NATIONALITIES[hashInt(seed * 5 + 1) % NATIONALITIES.length],
-      position: POSITIONS[hashInt(seed * 5 + 2) % POSITIONS.length],
-      origin: ORIGINS[hashInt(seed * 5 + 3) % ORIGINS.length],
-    };
-  }
-
-  // Graine du MOTEUR pour le run de défi (distincte des sels de sélection des
-  // contraintes) → mêmes événements/résultats pour tous, à choix égaux.
-  function dailySeedFor(dateKey) { return hashInt(Number(dateKey.replace(/-/g, "")) + 777); }
+  // Profil imposé + graine du jour : dérivés dans le MOTEUR (E.dailyChallenge /
+  // E.dailySeedFor) pour que l'affichage (client) et la vérification anti-triche
+  // (serveur, Edge Function) partagent EXACTEMENT la même source — aucune dérive.
+  function dailyChallengeFor(dateKey) { return E.dailyChallenge(dateKey); }
+  function dailySeedFor(dateKey) { return E.dailySeedFor(dateKey); }
 
   // Clé du jour précédent (locale, sans dérive de fuseau) — pour la série.
   function prevDayKey(key) {
@@ -1474,7 +1467,9 @@
       if (!ok) return;
     }
     const ch = dailyChallengeFor(todayKey());
-    setup = { nationality: ch.nationality, position: ch.position, origin: ch.origin, dailyDate: ch.id, entryScreen: "screen-lifestyle" };
+    // duelChoices : journal des choix de création (hygiène/entourage/club) — sert
+    // ensuite au rejeu serveur pour vérifier le score (anti-triche du classement).
+    setup = { nationality: ch.nationality, position: ch.position, origin: ch.origin, dailyDate: ch.id, duelChoices: [], entryScreen: "screen-lifestyle" };
     E.setSeed(dailySeedFor(ch.id)); // moteur déterministe pour TOUT le run de défi
     track("daily_started", { date: ch.id });
     const reminder = $("daily-reminder");
@@ -2214,6 +2209,12 @@
     const questNotes = evaluateQuests(); // avant les badges (streak/total à jour)
     const newBadges = evaluateBadges();
     const dailyResult = G.dailyDate ? recordDailyResult(G.dailyDate, score) : null;
+    // Classement mondial vérifié : on envoie SEULEMENT (date, journal de choix) —
+    // le serveur rejoue et recalcule le score lui-même (anti-triche). No-op si
+    // pas de compte connecté / Supabase non configuré.
+    if (G.dailyDate && window.OpenElevenAccount && window.OpenElevenAccount.submitDaily) {
+      window.OpenElevenAccount.submitDaily(G.dailyDate, (G.choiceLog || []).slice(), score);
+    }
     const storyResult = G.storyId ? recordStoryResult(G.storyId, score) : null;
     const jetonBonus = awardCareerJetons(score);
     track("career_end", {
@@ -3208,6 +3209,13 @@
     document.querySelectorAll(".creation-back").forEach((b) => b.addEventListener("click", creationBack));
     $("btn-resume").addEventListener("click", resumeCareer);
     $("daily-panel").addEventListener("click", startDailyChallenge);
+    // Bouton « Classement mondial » : visible seulement si le compte est configuré
+    // (Supabase). La lecture du classement est publique, même sans être connecté.
+    const lbBtn = $("btn-leaderboard");
+    if (lbBtn && window.OpenElevenAccount && window.OpenElevenAccount.openLeaderboard) {
+      lbBtn.hidden = false;
+      lbBtn.addEventListener("click", () => window.OpenElevenAccount.openLeaderboard());
+    }
     $("btn-replay").addEventListener("click", () => {
       if (reviewingPantheon) { reviewingPantheon = false; renderPantheonScreen(); showScreen("screen-pantheon"); }
       else resetGame();

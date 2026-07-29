@@ -93,11 +93,18 @@
         '<button class="acc-x" aria-label="Fermer">×</button>' +
         "<h3>Mon compte</h3>" +
         '<p class="acc-sub">Connecté : <span class="acc-mail">' + esc(session.user.email || "") + "</span></p>" +
+        '<p class="acc-sub" style="margin:0 0 4px">Pseudo au classement mondial :</p>' +
+        '<div class="acc-row"><input type="text" id="acc-pseudo" maxlength="24" placeholder="Ton pseudo" value="' + esc(pseudo || "") + '" style="margin:0" />' +
+        '<button class="acc-btn soft" id="acc-savepseudo" style="width:auto;padding:11px 14px">OK</button></div>' +
         '<button class="acc-btn primary" id="acc-push">☁️ Sauvegarder maintenant</button>' +
         '<button class="acc-btn soft" id="acc-pull">📥 Restaurer depuis le cloud</button>' +
         '<button class="acc-btn danger" id="acc-signout">Se déconnecter</button>' +
         '<p class="acc-msg"></p>';
       box.querySelector(".acc-x").onclick = close;
+      box.querySelector("#acc-savepseudo").onclick = async () => {
+        const r = await savePseudo(box.querySelector("#acc-pseudo").value);
+        msg(r.ok ? "Pseudo enregistré ✔" : (r.error && r.error.message) || "Échec", r.ok ? "ok" : "err");
+      };
       box.querySelector("#acc-push").onclick = async () => { msg("Sauvegarde…"); const r = await pushSave(); msg(r.ok ? "Sauvegarde envoyée au cloud ✔" : "Échec : " + (r.error && r.error.message || "erreur"), r.ok ? "ok" : "err"); };
       box.querySelector("#acc-pull").onclick = async () => {
         msg("Récupération…");
@@ -167,14 +174,153 @@
   sb.auth.onAuthStateChange((event, s) => {
     session = s;
     renderModal();
-    if (event === "SIGNED_IN") onFreshLogin();
+    if (event === "SIGNED_IN") { onFreshLogin(); loadPseudo().then(renderModal); }
+    if (event === "SIGNED_OUT") pseudo = null;
   });
-  sb.auth.getSession().then(({ data }) => { session = data.session; renderModal(); });
+  sb.auth.getSession().then(({ data }) => { session = data.session; renderModal(); if (session) loadPseudo().then(renderModal); });
 
   // ---- sauvegarde auto quand on quitte / passe en arrière-plan ---------------
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden" && session && Date.now() - lastPush > 8000) pushSave();
   });
+
+  // ============================================================================
+  //  Classement mondial VÉRIFIÉ du Défi du jour
+  //  • submitDaily : envoie SEULEMENT (date, choix) ; le serveur rejoue + recalcule.
+  //  • Lecture du classement : publique (RPC), fonctionne même sans compte.
+  // ============================================================================
+  let pseudo = null;
+
+  async function loadPseudo() {
+    if (!session) { pseudo = null; return; }
+    const { data } = await sb.from("profiles").select("pseudo").eq("user_id", session.user.id).maybeSingle();
+    pseudo = data && data.pseudo ? data.pseudo : null;
+  }
+  async function savePseudo(p) {
+    if (!session) return { ok: false };
+    p = String(p || "").trim().slice(0, 24);
+    if (p.length < 2) return { ok: false, error: { message: "Pseudo trop court (2 caractères min)." } };
+    const { error } = await sb.from("profiles").upsert(
+      { user_id: session.user.id, pseudo: p }, { onConflict: "user_id" }
+    );
+    if (!error) pseudo = p;
+    return { ok: !error, error };
+  }
+
+  // Envoi anti-triche : le serveur est seul juge du score.
+  async function submitDaily(date, choices) {
+    if (!session) return; // pas connecté → pas de classement (lecture reste publique)
+    try {
+      await fetch(URL.replace(/\/+$/, "") + "/functions/v1/submit-daily", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: ANON, Authorization: "Bearer " + session.access_token },
+        body: JSON.stringify({ date, choices }),
+      });
+    } catch (_) { /* silencieux : ne jamais gêner la fin de partie */ }
+  }
+
+  function todayKeyLocal() {
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function myTodayBest() {
+    try {
+      const p = JSON.parse(localStorage.getItem("destinDeChampion_progress") || "{}");
+      const dy = p && p.daily;
+      if (dy && dy.today === todayKeyLocal() && dy.todayBest != null) return dy.todayBest;
+    } catch (_) {}
+    return null;
+  }
+  function weekSince() {
+    const d = new Date(); d.setDate(d.getDate() - 6);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+
+  // ---- modale classement (overlay dédié) -------------------------------------
+  const lbStyle = document.createElement("style");
+  lbStyle.textContent =
+    ".lb-box{width:100%;max-width:440px;max-height:82vh;overflow:auto;background:var(--card-bg,#fff);color:var(--text-0,#182);border-radius:16px;padding:20px 20px 22px;box-shadow:0 24px 60px rgba(0,0,0,.4);font-family:var(--font,system-ui)}" +
+    ".lb-box h3{font-family:var(--font-display,inherit);margin:0 0 2px;font-size:1.3rem;color:var(--green-ink,#0b3b26)}" +
+    ".lb-tabs{display:flex;gap:6px;margin:12px 0 8px}" +
+    ".lb-tab{flex:1;padding:8px 4px;border:1.5px solid rgba(12,45,30,.18);border-radius:9px;background:transparent;color:var(--text-1,#567);font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit}" +
+    ".lb-tab.on{background:var(--green,#087b4b);color:#fff;border-color:var(--green,#087b4b)}" +
+    ".lb-me{margin:8px 0 4px;padding:9px 12px;border-radius:10px;background:var(--panel-2,rgba(8,123,75,.12));font-size:.88rem;font-weight:700;color:var(--green-ink,#0b3b26)}" +
+    ".lb-list{list-style:none;margin:6px 0 0;padding:0}" +
+    ".lb-row{display:flex;align-items:center;gap:10px;padding:8px 6px;border-bottom:1px solid rgba(12,45,30,.08);font-size:.92rem}" +
+    ".lb-row.mine{background:rgba(212,175,55,.16);border-radius:8px}" +
+    ".lb-rank{min-width:2.1em;font-weight:800;color:var(--green,#087b4b);text-align:right}" +
+    ".lb-name{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" +
+    ".lb-pts{font-weight:800;color:var(--green-ink,#0b3b26)}" +
+    ".lb-sub{font-size:.8rem;color:var(--text-1,#567);font-weight:400}" +
+    ".lb-empty{padding:22px 4px;text-align:center;color:var(--text-1,#567);font-size:.9rem}";
+  document.head.appendChild(lbStyle);
+
+  const lbOverlay = document.createElement("div");
+  lbOverlay.className = "acc-overlay";
+  lbOverlay.innerHTML = '<div class="lb-box" role="dialog" aria-modal="true"></div>';
+  document.body.appendChild(lbOverlay);
+  const lbBox = lbOverlay.querySelector(".lb-box");
+  lbOverlay.addEventListener("click", (e) => { if (e.target === lbOverlay) lbOverlay.classList.remove("on"); });
+
+  let lbTab = "today";
+  const medal = (r) => (r === 1 ? "🥇" : r === 2 ? "🥈" : r === 3 ? "🥉" : "#" + r);
+
+  async function renderLeaderboard() {
+    const today = todayKeyLocal();
+    lbBox.innerHTML =
+      '<button class="acc-x" aria-label="Fermer">×</button>' +
+      "<h3>🏆 Classement mondial</h3>" +
+      '<p class="acc-sub" style="margin:0 0 2px">Défi du jour — scores vérifiés par le serveur.</p>' +
+      '<div class="lb-tabs">' +
+      '<button class="lb-tab' + (lbTab === "today" ? " on" : "") + '" data-t="today">Aujourd\'hui</button>' +
+      '<button class="lb-tab' + (lbTab === "week" ? " on" : "") + '" data-t="week">Semaine</button>' +
+      '<button class="lb-tab' + (lbTab === "alltime" ? " on" : "") + '" data-t="alltime">Général</button>' +
+      "</div>" +
+      '<div class="lb-content"><p class="lb-empty">Chargement…</p></div>';
+    lbBox.querySelector(".acc-x").onclick = () => lbOverlay.classList.remove("on");
+    lbBox.querySelectorAll(".lb-tab").forEach((b) => (b.onclick = () => { lbTab = b.dataset.t; renderLeaderboard(); }));
+    const content = lbBox.querySelector(".lb-content");
+
+    try {
+      let rows, meHtml = "";
+      if (lbTab === "today") {
+        const best = myTodayBest();
+        const { data } = await sb.rpc("daily_top", { d: today, lim: 100 });
+        rows = data || [];
+        if (session && best != null) {
+          const { data: rk } = await sb.rpc("daily_rank", { d: today, sc: best });
+          if (rk && rk[0]) meHtml = '<div class="lb-me">Ta place aujourd\'hui : <strong>' + medal(Number(rk[0].rank)) + "</strong> · " + best + " pts <span class=\"lb-sub\">(sur " + rk[0].players + " joueurs)</span></div>";
+        } else if (!session) {
+          meHtml = '<div class="lb-me lb-sub" style="font-weight:400">Connecte-toi (👤) pour apparaître au classement.</div>';
+        } else {
+          meHtml = '<div class="lb-me lb-sub" style="font-weight:400">Termine le défi du jour pour entrer au classement.</div>';
+        }
+      } else {
+        const since = lbTab === "week" ? weekSince() : "";
+        const { data } = await sb.rpc("range_top", { since, lim: 100 });
+        rows = data || [];
+      }
+      const uid = session ? session.user.id : null;
+      const isRange = lbTab !== "today";
+      const list = rows.length
+        ? '<ul class="lb-list">' + rows.map((r) => {
+            const val = isRange ? r.total : r.score;
+            const sub = isRange ? ' <span class="lb-sub">· ' + r.days + " j</span>" : "";
+            return '<li class="lb-row' + (uid && r.user_id === uid ? " mine" : "") + '">' +
+              '<span class="lb-rank">' + medal(Number(r.rank)) + "</span>" +
+              '<span class="lb-name">' + esc(r.pseudo || "Joueur") + "</span>" +
+              '<span class="lb-pts">' + val + ' <span class="lb-sub">pts</span>' + sub + "</span></li>";
+          }).join("") + "</ul>"
+        : '<p class="lb-empty">Personne au classement pour l\'instant. Sois le premier !</p>';
+      content.innerHTML = meHtml + list;
+    } catch (e) {
+      content.innerHTML = '<p class="lb-empty">Classement indisponible pour le moment.</p>';
+    }
+  }
+  function openLeaderboard() { lbTab = "today"; renderLeaderboard(); lbOverlay.classList.add("on"); }
+
+  // ---- API publique pour le jeu ----------------------------------------------
+  window.OpenElevenAccount = { submitDaily, openLeaderboard };
 
   // ---- bouton d'accueil -------------------------------------------------------
   if (btn) btn.addEventListener("click", open);
