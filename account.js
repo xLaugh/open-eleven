@@ -205,11 +205,22 @@
     if (!session) return { ok: false };
     p = String(p || "").trim().slice(0, 24);
     if (p.length < 2) return { ok: false, error: { message: "Pseudo trop court (2 caractères min)." } };
+    // Pré-vérif best-effort : déjà pris par un AUTRE joueur (insensible à la casse).
+    // On échappe %/_ pour que ilike fasse une correspondance exacte, pas un motif.
+    const esc = p.replace(/[\\%_]/g, "\\$&");
+    const { data: taken } = await sb.from("profiles").select("user_id").ilike("pseudo", esc).neq("user_id", session.user.id).limit(1);
+    if (taken && taken.length) return { ok: false, error: { message: "Ce pseudo est déjà pris." } };
+    // Source de vérité = index unique sur lower(pseudo) : en cas de course, l'upsert
+    // renvoie une violation d'unicité (23505) qu'on traduit proprement.
     const { error } = await sb.from("profiles").upsert(
       { user_id: session.user.id, pseudo: p }, { onConflict: "user_id" }
     );
-    if (!error) { pseudo = p; pushProfileStats(); }
-    return { ok: !error, error };
+    if (error) {
+      const dup = error.code === "23505" || /duplicate|unique|pseudo_lower/i.test(error.message || "");
+      return { ok: false, error: { message: dup ? "Ce pseudo est déjà pris." : (error.message || "Échec") } };
+    }
+    pseudo = p; pushProfileStats();
+    return { ok: true };
   }
 
   // ---- vitrine du joueur (profil public + pool de légendes communautaires) ---
@@ -453,13 +464,19 @@
         '<p class="acc-sub" style="margin:4px 0 8px">Entre le pseudo d\'un ami. Tu joues ta carrière, ton défi lui est envoyé (même parcours pour vous deux).</p>' +
         '<input type="text" id="du-pseudo" maxlength="24" placeholder="Pseudo de l\'adversaire" style="width:100%;box-sizing:border-box;margin:0 0 8px;padding:11px 13px;border:1.5px solid rgba(12,45,30,.18);border-radius:10px;font-size:1rem" />' +
         '<button class="acc-btn primary" id="du-go" style="margin:0">🆚 Lancer le défi</button><p class="acc-msg"></p>';
-      const go = () => {
+      const go = async () => {
         const p = duBox.querySelector("#du-pseudo").value.trim();
         const m = duBox.querySelector(".acc-msg");
         if (p.length < 2) { m.textContent = "Pseudo trop court."; m.className = "acc-msg err"; return; }
         if (p.toLowerCase() === (pseudo || "").toLowerCase()) { m.textContent = "Tu ne peux pas te défier toi-même."; m.className = "acc-msg err"; return; }
+        // Vérifie que le pseudo existe AVANT de jouer (évite un run perdu sur une faute).
+        m.textContent = "Vérification…"; m.className = "acc-msg";
+        const esc = p.replace(/[\\%_]/g, "\\$&");
+        const { data } = await sb.from("profiles").select("pseudo").ilike("pseudo", esc).limit(1);
+        if (!data || !data.length) { m.textContent = "Aucun joueur avec ce pseudo."; m.className = "acc-msg err"; return; }
         duOverlay.classList.remove("on");
-        if (window.OpenElevenGame && window.OpenElevenGame.startDuelVsPseudo) window.OpenElevenGame.startDuelVsPseudo(p);
+        // Utilise la casse exacte du profil trouvé.
+        if (window.OpenElevenGame && window.OpenElevenGame.startDuelVsPseudo) window.OpenElevenGame.startDuelVsPseudo(data[0].pseudo);
       };
       duBox.querySelector("#du-go").onclick = go;
       return;
