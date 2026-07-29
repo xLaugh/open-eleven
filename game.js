@@ -1804,7 +1804,7 @@
     panel.innerHTML = `
       <div class="hc-head">Duel entre amis</div>
       <div class="hc-body">
-        <p class="hc-text">Défie un ami : même parcours, le meilleur gagne.</p>
+        <p class="hc-text">Défie un ami par lien : même parcours, le meilleur gagne.</p>
         <div class="hc-cta">Lancer un duel</div>
       </div>`;
   }
@@ -3198,12 +3198,16 @@
     document.querySelectorAll(".creation-back").forEach((b) => b.addEventListener("click", creationBack));
     $("btn-resume").addEventListener("click", resumeCareer);
     $("daily-panel").addEventListener("click", startDailyChallenge);
-    // Bouton « Classement mondial » : visible seulement si le compte est configuré
-    // (Supabase). La lecture du classement est publique, même sans être connecté.
-    const lbBtn = $("btn-leaderboard");
-    if (lbBtn && window.OpenElevenAccount && window.OpenElevenAccount.openLeaderboard) {
-      lbBtn.hidden = false;
-      lbBtn.addEventListener("click", () => window.OpenElevenAccount.openLeaderboard());
+    // Bloc « Compétition en ligne » (Classement + Duels) : révélé seulement si le
+    // compte est configuré (Supabase). Le classement se lit sans connexion.
+    const onlineGroup = $("online-group");
+    const acc = window.OpenElevenAccount;
+    if (onlineGroup && acc && (acc.openLeaderboard || acc.openDuels)) {
+      onlineGroup.hidden = false;
+      const lbBtn = $("btn-leaderboard");
+      if (lbBtn && acc.openLeaderboard) lbBtn.addEventListener("click", () => acc.openLeaderboard());
+      const duelsBtn = $("btn-duels");
+      if (duelsBtn && acc.openDuels) duelsBtn.addEventListener("click", () => acc.openDuels());
     }
     $("btn-replay").addEventListener("click", () => {
       if (reviewingPantheon) { reviewingPantheon = false; renderPantheonScreen(); showScreen("screen-pantheon"); }
@@ -3224,12 +3228,6 @@
     $("btn-shop").addEventListener("click", () => { track("open_shop"); renderShopScreen(); showScreen("screen-shop"); });
     $("btn-shop-back").addEventListener("click", () => showScreen("screen-home"));
     $("duel-panel").addEventListener("click", () => startDuelCreate());
-    // Bouton « Duels » (par pseudo) : visible seulement si le compte est configuré.
-    const duelsBtn = $("btn-duels");
-    if (duelsBtn && window.OpenElevenAccount && window.OpenElevenAccount.openDuels) {
-      duelsBtn.hidden = false;
-      duelsBtn.addEventListener("click", () => window.OpenElevenAccount.openDuels());
-    }
     $("story-panel").addEventListener("click", () => { track("open_stories"); renderStoryScreen(); showScreen("screen-story"); });
     $("btn-story-back").addEventListener("click", () => showScreen("screen-home"));
     $("btn-duel-share").addEventListener("click", (e) => shareDuel(currentDuelLink(), e.currentTarget));

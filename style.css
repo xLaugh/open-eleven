@@ -786,9 +786,29 @@ body { color: var(--text-0); }
 .account-fab:active { transform: scale(0.95); }
 .account-fab:focus-visible { outline: 2px solid var(--on-green); outline-offset: 2px; }
 
-/* Bouton « Classement mondial » sous le Défi du jour (affiché si compte configuré). */
-.daily-lb-btn { display: block; margin: 10px auto 0; }
-.daily-lb-btn[hidden] { display: none; }
+/* ---------- Compétition en ligne (Classement + Duels) ----------
+   Bloc groupé et labellisé sous le Défi du jour, visible seulement si le
+   compte Supabase est configuré. Accent doré = features compétitives. */
+.online-group { width: 100%; max-width: 400px; }
+.online-group[hidden] { display: none; }
+.online-label {
+  font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--on-green-soft);
+  margin: 0 0 8px; text-align: center;
+}
+.online-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.online-btn {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  background: var(--card-bg); color: var(--green-ink);
+  border: 2px solid var(--gold); border-radius: 14px;
+  padding: 12px 8px; font-size: 0.84rem; font-weight: 800;
+  font-family: var(--font); cursor: pointer; text-align: center;
+  box-shadow: 0 4px 12px var(--shadow);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+.online-btn:hover { transform: translateY(-1px); box-shadow: 0 7px 18px var(--shadow); background: var(--panel-2); }
+.online-btn:active { transform: translateY(0); }
+@media (max-width: 360px) { .online-btn { font-size: 0.78rem; padding: 11px 4px; } }
 
 /* ---------- Modale de confirmation ---------- */
 .modal-overlay {
