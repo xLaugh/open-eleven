@@ -195,8 +195,19 @@
   //  • Lecture du classement : publique (RPC), fonctionne même sans compte.
   // ============================================================================
   let pseudo = null;
-  // Modération de confort (miroir du trigger DB check_pseudo, source de vérité).
-  const BADWORDS = /\b(con|connard|conasse|salop[ea]?|pute|encul[eé]?|niquer?|fdp|ntm|merde|batard|bâtard|pd|tapette|negre|nègre|bougnoule|youpin|nazi|hitler|viol|nigg\w*|fuck\w*|shit|bitch|whore|slut|rape|faggot|cunt)\b/i;
+  // Modération de confort (message immédiat). La liste vient de src/badwords.js
+  // (source UNIQUE, partagée avec le trigger DB via supabase/badwords.sql).
+  // On normalise (minuscules + sans accents) pour attraper « Nègre » / « negre ».
+  const BADWORDS = (function () {
+    const norm = (s) => String(s).toLowerCase().normalize("NFD").split("").filter((c) => { const n = c.charCodeAt(0); return n < 0x300 || n > 0x36f; }).join("").replace(/[^a-z0-9]+/g, " ");
+    const list = (window.OE_BADWORDS && window.OE_BADWORDS.length)
+      ? window.OE_BADWORDS
+      : ["fuck", "shit", "con", "pute", "salope", "encule", "nigger", "faggot", "pd", "nazi"]; // repli si non chargé
+    const esc = list.map((w) => norm(w).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).filter(Boolean);
+    let re;
+    try { re = new RegExp("\\b(" + esc.join("|") + ")\\b", "i"); } catch (_) { re = /\b(fuck|shit|con|pute)\b/i; }
+    return { test: (p) => re.test(norm(p)) };
+  })();
 
   async function loadPseudo() {
     if (!session) { pseudo = null; return; }
