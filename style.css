@@ -772,6 +772,20 @@ body { color: var(--text-0); }
 }
 .privacy-link:hover { color: var(--on-green); text-decoration: underline; }
 
+/* Bouton Compte : icône flottante discrète en haut à droite de l'accueil. */
+#screen-home { position: relative; }
+.account-fab {
+  position: absolute; top: 10px; right: 6px; z-index: 6;
+  width: 42px; height: 42px; border-radius: 50%;
+  border: 1px solid var(--on-green-line); background: var(--on-green-panel);
+  color: var(--on-green); font-size: 1.15rem; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+.account-fab:hover { background: rgba(255, 255, 255, 0.22); transform: translateY(-1px); }
+.account-fab:active { transform: scale(0.95); }
+.account-fab:focus-visible { outline: 2px solid var(--on-green); outline-offset: 2px; }
+
 /* ---------- Modale de confirmation ---------- */
 .modal-overlay {
   position: fixed;

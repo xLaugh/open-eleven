@@ -30,13 +30,14 @@
 <link rel="preload" href="src/fonts/poppins-400-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="src/fonts/oswald-600-latin.woff2" as="font" type="font/woff2" crossorigin />
 
-<link rel="stylesheet" href="style.css?v=10.9" />
+<link rel="stylesheet" href="style.css?v=10.11" />
 </head>
 <body>
 <div id="app">
 
   <!-- ============ ÉCRAN ACCUEIL ============ -->
   <section id="screen-home" class="screen active">
+    <button class="account-fab" id="btn-account" style="display:none" aria-label="Mon compte" title="Mon compte">👤</button>
     <div class="home-wrap">
       <h1 class="title" id="home-title">Ope<img class="wm-11-img" src="src/img/logo-11-mark.png" alt="11" /> Eleven</h1>
       <p class="tagline">Écrivez une carrière de footballeur, saison après saison.<br/>Chaque choix compte. Personne ne connaît son destin à l'avance.</p>
@@ -46,7 +47,6 @@
         <button class="btn-link" id="btn-shop">🛒 Boutique</button>
         <button class="btn-link" id="btn-badges">🏅 Badges</button>
         <button class="btn-link" id="btn-pantheon">🏛️ Panthéon</button>
-        <button class="btn-link" id="btn-account" style="display:none">👤 Compte</button>
       </div>
       <div class="daily-panel" id="daily-panel"></div>
       <div class="quest-panel" id="quest-panel"></div>
@@ -274,13 +274,13 @@
   </div>
 </div>
 
-<script src="data.js?v=10.9"></script>
-<script src="engine.js?v=10.9"></script>
-<script src="game.js?v=10.9"></script>
+<script src="data.js?v=10.11"></script>
+<script src="engine.js?v=10.11"></script>
+<script src="game.js?v=10.11"></script>
 <!-- Compte & sauvegarde cloud (optionnel, désactivé tant que supabase-config.js est vide) -->
-<script src="src/vendor/supabase.js?v=10.9"></script>
-<script src="src/supabase-config.js?v=10.9"></script>
-<script src="account.js?v=10.9"></script>
+<script src="src/vendor/supabase.js?v=10.11"></script>
+<script src="src/supabase-config.js?v=10.11"></script>
+<script src="account.js?v=10.11"></script>
 <script>
   // PWA : installable + chargement instantané au retour + hors-ligne.
   if ("serviceWorker" in navigator) {

@@ -113,7 +113,7 @@
         "<h3>Compte & sauvegarde cloud</h3>" +
         '<p class="acc-sub">Optionnel. Retrouvez vos carrières, votre Panthéon et votre progression sur tous vos appareils.</p>' +
         '<input type="email" id="acc-email" placeholder="E-mail" autocomplete="email" />' +
-        '<input type="password" id="acc-pass" placeholder="Mot de passe (6+ caractères)" autocomplete="current-password" />' +
+        '<input type="password" id="acc-pass" placeholder="Mot de passe (8+ caractères)" autocomplete="current-password" />' +
         '<button class="acc-btn primary" id="acc-login">Se connecter</button>' +
         '<button class="acc-btn ghost" id="acc-signup">Créer un compte</button>' +
         '<p class="acc-msg"></p>';
@@ -127,7 +127,7 @@
         if (error) msg(traduire(error.message), "err");
       };
       box.querySelector("#acc-signup").onclick = async () => {
-        if (!email() || pass().length < 6) return msg("Mot de passe : 6 caractères minimum.", "err");
+        if (!email() || pass().length < 8) return msg("Mot de passe : 8 caractères minimum.", "err");
         msg("Création…");
         const { data, error } = await sb.auth.signUp({ email: email(), password: pass() });
         if (error) return msg(traduire(error.message), "err");
