@@ -273,6 +273,8 @@
       seasonAwards: [],
       loan: null,
       loanReturn: null,
+      role: 2, // statut au club (index ROLES) — fixé juste après selon le club de départ
+      seasonsAtClub: 0, // saisons au club actuel (la revue de rôle saute la 1re)
       objective: null,
       lastSeason: null,
       clubLevels: {}, // niveaux effectifs des clubs (montées/descentes vécues)
@@ -329,6 +331,7 @@
     if (opts.clubLevels) s.clubLevels = { ...opts.clubLevels }; // mode Histoire : niveaux d'époque
     s.contract.salary = salaryFor(s, opts.club) * 0.3;
     s.transferHistory.push({ age: s.age, toClubName: opts.club.name, countryName: countryOf(opts.club.countryId).name, fee: null, level: lvlOf(s, opts.club) });
+    s.role = roleForClub(s, opts.club); // statut au centre de formation (souvent Espoir/Rotation)
     s.peakOvr = ovr(s);
     return s;
   }
@@ -403,6 +406,11 @@
     if (fx.team) {
       s.teamRel = clamp(s.teamRel + fx.team, 5, 100);
       chips.push({ label: `${fx.team > 0 ? "+" : ""}${fx.team} Vestiaire`, kind: fx.team > 0 ? "good" : "bad" });
+    }
+    if (fx.role) { // ajustement direct du statut au club (ex. « tu restes → tu perds ta place »)
+      const before = typeof s.role === "number" ? s.role : 2;
+      s.role = clamp(before + fx.role, 0, 4);
+      if (s.role !== before) chips.push({ label: `${fx.role > 0 ? "⬆️ Promu" : "⬇️ Rétrogradé"} : ${ROLES[s.role].label}`, kind: fx.role > 0 ? "good" : "bad" });
     }
     if (fx.money) {
       let d = fx.money;
@@ -937,13 +945,50 @@
     return res;
   }
 
+  // --- Statut au club (rôle) --------------------------------------------------
+  // Rôle proposé sur une offre : dérivé de ta marge (OVR − niveau attendu du club),
+  // modulé par l'âge/potentiel (un jeune crack dans un grand club = projet) et le
+  // contexte (le Golfe construit autour de ses signatures). Retourne un INDEX 0→4.
+  function roleForClub(s, club) {
+    const bar = BALANCE.expectedLevel[lvlOf(s, club)];
+    const margin = ovr(s) - bar;
+    const m = BALANCE.role.margins;
+    let idx = margin >= m[0] ? 4 : margin >= m[1] ? 3 : margin >= m[2] ? 2 : margin >= m[3] ? 1 : 0;
+    const lvl = lvlOf(s, club);
+    const big = lvl === "elite" || lvl === "d1";
+    if (s.age <= 20 && big && idx > 1) idx -= 1;                              // recruté pour l'avenir
+    if ((countryOf(club.countryId) || {}).gulf) idx = Math.min(4, idx + 1);  // le Golfe titularise ses recrues
+    if (s.flags && s.flags.prodigy && s.age <= 20) idx = Math.max(idx, 3);   // un crack est lancé
+    return clamp(idx, 0, 4);
+  }
+  function roleOf(s) { return ROLES[typeof s.role === "number" ? clamp(s.role, 0, 4) : 2]; }
+
+  // Revue de statut en fin de saison (dynamique) : promotion si tu dépasses
+  // l'attente et que le coach te fait confiance ; rétrogradation si tu es sous
+  // l'attente, si la confiance s'effondre, ou si une recrue star débarque à ton
+  // poste. Sautée la 1re saison au club (le rôle vient d'être signé).
+  function reviewRole(s, report) {
+    if (s.loan || (s.seasonsAtClub || 0) < 1) return;
+    const role = roleOf(s);
+    const r = report.rating || 6;
+    const from = typeof s.role === "number" ? s.role : 2;
+    let idx = from, reason = null;
+    if (r >= role.expect + 0.6 && s.coachRel >= 60 && idx < 4 && rng() < 0.7) { idx++; reason = "up"; }
+    else if ((r <= role.expect - 0.7 || s.coachRel < 32) && idx > 0 && rng() < 0.75) { idx--; reason = "down"; }
+    else if (idx >= 2 && rng() < BALANCE.role.starSignChance) { idx--; reason = "signing"; }
+    if (idx !== from) {
+      s.role = idx;
+      s.coachRel = clamp(s.coachRel + (idx > from ? 4 : -3), 5, 100);
+      report.roleChange = { from, to: idx, reason };
+    }
+  }
+
   // --- Temps de jeu -----------------------------------------------------------
   function playingTimeFactor(s) {
-    const expected = BALANCE.expectedLevel[lvlOf(s, s.club)];
-    const gap = ovr(s) - expected; // < 0 : sous le niveau du club → tu chauffes le banc
-    let pt = 0.72 + gap / 26 + (s.coachRel - 55) / 150;
+    const role = roleOf(s);
+    let pt = role.pt + (s.coachRel - 55) / 180; // le rôle ANCRE, la confiance du coach module
     // Confiance du coach : quand elle s'effondre, tu ne joues plus, peu importe
-    // ton niveau. Un vrai levier, pas un détail cosmétique.
+    // ton statut. Un vrai levier, pas un détail cosmétique.
     if (s.coachRel < 22) pt -= 0.32;
     else if (s.coachRel < 38) pt -= 0.13;
     if (s.loan) pt += 0.22;
@@ -1583,6 +1628,7 @@
 
     if (s.loan) s.loan.rating = report.rating;
     s.lastSeason = { clubId: s.club.id, leaguePos: report.leaguePos, promoted: !!report.promoted, relegated: !!report.relegated, rating: report.rating };
+    reviewRole(s, report); // statut dynamique : promotion / rétrogradation / recrue concurrente
     report.headline = headlineFor(s, report);
     return report;
   }
@@ -1726,7 +1772,11 @@
     // retraite. La perte est RÉCUPÉRABLE (on freine la progression de l'année, on
     // n'érode pas définitivement les stats — une pépite n'est jamais condamnée).
     const seasonInj = s.seasonInjuryWeeks || 0;
+    s.seasonsAtClub = (s.seasonsAtClub || 0) + 1; // une saison de plus au club (débloque la revue de rôle)
     const pt = playingTimeFactor(s);
+    // Développement des jeunes : un Espoir joue peu en compétition mais s'ENTRAÎNE
+    // au haut niveau → sa progression n'est pas étranglée par le manque de minutes.
+    const devPt = s.age <= 21 ? Math.max(pt, 0.5) : pt;
     const infra = BALANCE.growthInfra[lvlOf(s, s.club)];
     const gap = s.potCap - ovr(s);
     let potDamp = gap <= 0 ? 0.15 : gap <= 4 ? 0.45 : 1;
@@ -1735,7 +1785,7 @@
     const g = (s.flags.lateBloomer ? 1.15 : 1) * infra * potDamp * trajGrowthMult(s) * injDamp;
 
     if (s.age <= 21) {
-      s.stats.t = clamp(s.stats.t + Math.round(rand(2, 4) * pt * g * (hasTrait(s, "genius") ? 1.4 : 1)), 1, 99);
+      s.stats.t = clamp(s.stats.t + Math.round(rand(2, 4) * devPt * g * (hasTrait(s, "genius") ? 1.4 : 1)), 1, 99);
       s.stats.p = clamp(s.stats.p + randInt(1, 3), 1, 99);
       s.stats.m = clamp(s.stats.m + randInt(0, 2), 1, 99);
       s.stats.c = clamp(s.stats.c + randInt(0, 1), 1, 99);
@@ -1744,7 +1794,7 @@
       const explosive = (s.trajectory.id === "early" || s.trajectory.id === "flash") ||
         (s.trajectory.id === "surge" && s.age >= s.sparkAge);
       const prod = s.flags.prodigy && s.age <= 20; // un crack brûle vraiment les étapes
-      if (explosive && pt >= (prod ? 0.3 : 0.5) && rng() < (prod ? 0.9 : 0.6)) {
+      if (explosive && devPt >= (prod ? 0.3 : 0.5) && rng() < (prod ? 0.9 : 0.6)) {
         s.stats.t = clamp(s.stats.t + randInt(prod ? 5 : 3, prod ? 9 : 6), 1, 99);
         s.stats.p = clamp(s.stats.p + randInt(prod ? 3 : 2, prod ? 5 : 4), 1, 99);
         s.stats.m = clamp(s.stats.m + randInt(prod ? 2 : 1, prod ? 4 : 3), 1, 99);
@@ -1981,6 +2031,7 @@
       salary: salaryFor(s, club),
       years: randInt(2, 5),
       gulf,
+      role: roleForClub(s, club), // statut proposé (Espoir → Titulaire) : la vraie info de décision
     };
   }
 
@@ -2173,6 +2224,8 @@
     s.teamRel = 52 + randInt(0, 10);
     s.contract = { salary: offer.salary, years: offer.years };
     s.money += Math.min(3, offer.fee * 0.06);
+    s.role = (offer.role != null) ? offer.role : roleForClub(s, offer.club); // statut signé
+    s.seasonsAtClub = 0; // nouveau club : la revue de rôle saute la 1re saison
     s.clubMomentum = 0;
     s.clubFade = 0;
     if (!s.clubsPlayed.includes(offer.club.id)) s.clubsPlayed.push(offer.club.id);
@@ -2459,6 +2512,7 @@
     keyMomentFor, keyMomentSuccess, playKeyMoment, isWorldCupYear,
     playWorldCup, resolveWcFinal, isContinentalYear, playContinental, isNationsLeagueYear, playNationsLeague, isOlympicYear, playOlympics, playingTimeFactor, setSeasonObjective,
     objectiveMet, headlineFor, grantAward, rollSeasonAwards, rollBallon,
+    roleForClub, roleOf,
     playSeason, resolveSeasonMoment, advanceYear, marketValue, salaryFor,
     buildOffer, offersFor, loanOffersFor, applyLoan, transferWindow,
     applyTransfer, renewContract, totalAwards, careerRating, computeCareerScore, visibilityOf,

@@ -115,7 +115,9 @@
     $("hh-age").textContent = `${G.age} ans · ${G.year}`;
     const clubImg = G.club.img ? `<img class="club-logo" src="${encodeURI(G.club.img)}" alt="" onerror="this.remove()" />` : "";
     const lvl = E.lvlOf(G, G.club);
-    $("hh-club").innerHTML = `${clubImg}<span class="level-tag level-${lvl}">${esc(E.divShort(lvl, G.club.countryId))}</span>${esc(G.club.name)}${G.club.colors ? ` ${G.club.colors}` : ""}${G.loan ? " <span class='loan-tag'>Prêt</span>" : ""} ${flagHtml(country)}`;
+    const role = E.roleOf(G);
+    const roleChip = (!G.loan && role) ? ` <span class="role-chip role-${role.id}" title="${esc(role.desc)}">${role.icon} ${esc(role.label)}</span>` : "";
+    $("hh-club").innerHTML = `${clubImg}<span class="level-tag level-${lvl}">${esc(E.divShort(lvl, G.club.countryId))}</span>${esc(G.club.name)}${G.club.colors ? ` ${G.club.colors}` : ""}${G.loan ? " <span class='loan-tag'>Prêt</span>" : ""} ${flagHtml(country)}${roleChip}`;
 
     const o = E.ovr(G);
     const arrow = prevOvr == null || o === prevOvr ? "" : o > prevOvr ? " <span class='ovr-up'>▲</span>" : " <span class='ovr-down'>▼</span>";
@@ -563,9 +565,12 @@
     offers.forEach((offer, i) => {
       const cc = E.countryOf(offer.club.countryId);
       const img = offer.club.img ? `<img class="club-logo" src="${encodeURI(offer.club.img)}" alt="" onerror="this.remove()" />` : "";
+      const role = ROLES[offer.role != null ? offer.role : 2];
+      const roleChip = role ? `<span class="role-chip role-${role.id}" title="${esc(role.desc)}">${role.icon} ${esc(role.label)}</span>` : "";
       buttons += `<button class="opt-btn" data-offer="${i}">
         <span class="opt-hint">${offer.gulf ? "💰 " : ""}${esc(E.divShort(offer.club.level, offer.club.countryId))}</span>
-        ${img}${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)} — ${E.fmtMoney(offer.salary)}/an · indemnité ${E.fmtMoney(offer.fee)}</button>`;
+        ${img}${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)} — ${E.fmtMoney(offer.salary)}/an · indemnité ${E.fmtMoney(offer.fee)}
+        <span class="opt-role">Statut proposé : ${roleChip}</span></button>`;
     });
     let legendLine = "";
     if (legendGuest && !legendGuestUsed && offers.length) {
@@ -887,6 +892,19 @@
     else if (report.relegated) leagueLine = `${report.leaguePos}ᵉ — 📉 RELÉGATION`;
     else leagueLine = `${report.leaguePos}ᵉ`;
 
+    // Changement de statut (rôle) décidé en fin de saison.
+    let roleChangeHtml = "";
+    if (report.roleChange) {
+      const to = ROLES[report.roleChange.to];
+      const up = report.roleChange.to > report.roleChange.from;
+      const txt = report.roleChange.reason === "signing"
+        ? `🛒 Une recrue de renom débarque à votre poste : vous voilà <strong>${to.icon} ${esc(to.label)}</strong>.`
+        : up
+          ? `📈 Le coach vous promeut : nouveau statut <strong>${to.icon} ${esc(to.label)}</strong>.`
+          : `📉 Vous perdez du galon : statut <strong>${to.icon} ${esc(to.label)}</strong>.`;
+      roleChangeHtml = `<p class="recap-role ${up ? "up" : "down"}">${txt}</p>`;
+    }
+
     showCard(`
       <div class="card-tag"><span class="card-icon">📊</span> Saison ${report.year}-${String((report.year + 1) % 100).padStart(2, "0")} · ${esc(report.clubName)} <span class="level-tag level-${report.level}">${esc(E.divShort(report.level, report.countryId))}</span>${report.onLoan ? " (prêt)" : ""}${report.captain ? " 🅒" : ""}</div>
       ${report.headline ? `<p class="recap-headline">📰 ${esc(report.headline)}</p>` : ""}
@@ -901,6 +919,7 @@
       ${report.ballonRank && report.ballonRank > 1 ? `<p class="recap-trophies">⭐ Classement Ballon d'Or : <strong>${report.ballonRank}ᵉ</strong></p>` : ""}
       ${awardsHtml}
       ${objHtml}
+      ${roleChangeHtml}
       ${report.benched ? `<p class="recap-warn">⚠️ Cruellement court en temps de jeu : votre moral en souffre.</p>` : ""}
       ${report.seasonInjury ? `<p class="recap-warn">🚑 ${esc((E.BALANCE_REF.injury.labels || {})[report.seasonInjury.tier] || "Blessure")} : ${report.seasonInjury.weeks} semaines sur la touche.</p>` : (report.injuryWeeks ? `<p class="recap-warn">🩹 ${report.injuryWeeks} semaines d'infirmerie cette saison.</p>` : "")}
       ${report.carryInjury ? `<p class="recap-warn">🩼 Toujours en reconstruction : ${report.carryInjury} semaines de retard traînées de la saison passée.</p>` : ""}

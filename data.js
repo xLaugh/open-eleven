@@ -837,6 +837,18 @@ const LEVELS = {
 };
 const LEVEL_ORDER = ["regional", "d3", "d2", "d1", "elite"];
 
+// --- Statut au club (rôle) ------------------------------------------
+// Cran de statut vis-à-vis du coach, du plus faible au plus fort. `pt` = temps
+// de jeu de base (ancre) ; `expect` = note de saison à tenir pour garder le poste.
+// L'ordre du tableau EST le rang (index 0→4) ; s.role stocke cet index.
+const ROLES = [
+  { id: "espoir", label: "Espoir", icon: "🌱", pt: 0.12, expect: 5.6, desc: "Un pari sur l'avenir : peu de minutes, mais tu apprends au haut niveau." },
+  { id: "sporadique", label: "Sporadique", icon: "🔸", pt: 0.30, expect: 6.0, desc: "Utilisé au compte-gouttes, souvent sur le banc." },
+  { id: "rotation", label: "Rotation", icon: "🔄", pt: 0.52, expect: 6.3, desc: "Dans la rotation : environ une titularisation sur deux." },
+  { id: "important", label: "Important", icon: "⭐", pt: 0.74, expect: 6.6, desc: "Cadre de la rotation, presque toujours sur la feuille." },
+  { id: "titulaire", label: "Titulaire", icon: "👑", pt: 0.93, expect: 6.8, desc: "Indiscutable : tu joues, mais on attend beaucoup de toi." },
+];
+
 // --- Clubs ----------------------------------------------------------
 // Noms inspirés de vrais clubs/villes, par pays jouable + destinations
 // exotiques. colors (optionnel) : couleurs du maillot en emoji.
@@ -2821,6 +2833,43 @@ const EVENTS = [
         { weight: 40, text: "Le grand saut réussi : vous vous imposez chez les cadors.", fx: { t: 4, rep: 8, transfer: { d: 1 } } },
         { weight: 35, text: "Le transfert se fait, mais le niveau est brutal : il va falloir s'accrocher.", fx: { rep: 3, form: -6, transfer: { d: 1 } } },
         { weight: 25, text: "Votre bras de fer pour partir laisse des traces : les supporters vous conspuent.", fx: { rep: -5, mor: -6, transfer: { d: 1 } } },
+      ] },
+    ],
+  },
+  {
+    // « Un club a formulé une offre, et VOTRE club l'a acceptée. » La décision est
+    // à vous : écouter les propositions (chaque club affiche le STATUT proposé) ou
+    // rester. Le cœur de la mécanique de rôle.
+    id: "ev_bid_accepted", cat: "Mercato", icon: "📩", w: 15,
+    cond: { aMin: 19, aMax: 33, minRep: 22 },
+    text: "Votre agent vous appelle : un club a déposé une offre, et votre club l'a ACCEPTÉE. La balle est dans votre camp — vous écoutez les propositions, ou vous restez.",
+    options: [
+      { label: "Écouter les offres", hint: "Voir les clubs & statuts", outcomes: [
+        { weight: 55, text: "Les propositions s'étalent sur la table : à vous de choisir votre prochain chapitre.", fx: { transfer: { d: 1 } } },
+        { weight: 30, text: "Les prétendants se bousculent — plusieurs clubs passent à l'action.", fx: { rep: 2, transfer: { d: 1 } } },
+        { weight: 15, text: "L'intérêt est réel, mais d'un cran plus modeste que vos rêves. Reste à trancher.", fx: { transfer: { d: 0 } } },
+      ] },
+      { label: "Décliner, je reste fidèle", outcomes: [
+        { weight: 60, text: "Vous snobez les avances. Le vestiaire et le coach saluent la loyauté.", fx: { coach: 5, team: 4, mor: 3 } },
+        { weight: 40, text: "Vous restez, mais la direction, frustrée de la vente ratée, garde une dent contre vous.", fx: { coach: -3, mor: -2 } },
+      ] },
+    ],
+  },
+  {
+    // Variante « ton club VEUT te vendre » : si tu t'accroches, ton STATUT baisse
+    // (le coach te pousse dehors). Vraie pression : partir ou subir.
+    id: "ev_forced_sale", cat: "Mercato", icon: "🚪", w: 9,
+    cond: { aMin: 23, aMax: 34, levels: ["d1", "elite"], minRep: 30 },
+    text: "Le coach est clair : il ne compte plus sur vous et le club a bouclé un accord pour votre départ. Vous pouvez partir la tête haute… ou vous accrocher, au risque de finir sur le banc.",
+    options: [
+      { label: "Accepter de partir", hint: "Rebondir ailleurs", outcomes: [
+        { weight: 55, text: "Nouveau départ : ailleurs, on vous veut vraiment.", fx: { mor: 3, transfer: { d: 0 } } },
+        { weight: 45, text: "Vous rebondissez un cran plus bas, mais avec les clés du camion.", fx: { rep: -2, transfer: { d: -1 } } },
+      ] },
+      { label: "M'accrocher coûte que coûte", hint: "Risqué", outcomes: [
+        { weight: 50, text: "Bras de fer perdu : mis au placard, vous perdez votre statut.", fx: { coach: -8, mor: -6, role: -1 } },
+        { weight: 30, text: "Vous vous accrochez, relégué à la rotation, en attendant votre heure.", fx: { coach: -3, role: -1 } },
+        { weight: 20, text: "Contre toute attente, vous retournez le coach par le travail. Respect regagné.", fx: { coach: 6, mor: 4, rep: 2 } },
       ] },
     ],
   },
@@ -6384,6 +6433,9 @@ const BALANCE = {
   intlRetainPos: { gk: 8, def: 4, mil: 1, att: 0 },
   // OVR attendu d'un titulaire (plus c'est haut, plus la concurrence est rude)
   expectedLevel: { regional: 46, d3: 49, d2: 55, d1: 67, elite: 80 },
+  // Statut au club (rôle) : seuils de marge (OVR − expectedLevel) → cran de rôle,
+  // et probabilité qu'une recrue star débarque à ton poste (te rétrograde).
+  role: { margins: [6, 2, -2, -6], starSignChance: 0.14 },
   // Barre de recrutement : OVR minimum pour qu'un club de ce niveau vous SIGNE
   // quand il s'agit de MONTER d'un cran. Grimper se mérite — un club d'élite ne
   // recrute qu'un vrai joueur d'élite (82+), pas un bon joueur de D1 en forme.
@@ -6836,7 +6888,7 @@ const COUNTRY_LANG = {
 if (typeof module !== "undefined" && module.exports) {
   const dataExports = {
     BRAND, NATIONALITIES, NAME_POOLS, LIFESTYLES, ENTOURAGES, TRAJECTORIES,
-    ARCHETYPES, POSITIONS, ORIGINS, COUNTRIES, CONTINENTAL_CUPS, NATIONAL_CUPS, NATIONS_LEAGUE, NL_STAGES, LEVELS,
+    ARCHETYPES, POSITIONS, ORIGINS, COUNTRIES, CONTINENTAL_CUPS, NATIONAL_CUPS, NATIONS_LEAGUE, NL_STAGES, LEVELS, ROLES,
     LEVEL_ORDER, CLUBS, CLUBS_BY_LEVEL, COMPETITIONS, COACH_NAMES, TRAITS,
     AWARDS, KEY_MOMENTS,
     EVENTS, MICRO_EVENTS, RIVAL_NEWS_GOOD, RIVAL_NEWS_BAD, RIVAL_NEWS_AHEAD,
