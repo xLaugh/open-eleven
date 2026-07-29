@@ -765,6 +765,12 @@ body { color: var(--text-0); }
 }
 .github-link:hover { color: var(--on-green); }
 .github-link svg { display: block; }
+.privacy-link {
+  display: block; align-self: center; margin-top: 8px;
+  color: var(--on-green-faint); font-size: 0.72rem; text-decoration: none;
+  transition: color 0.15s ease;
+}
+.privacy-link:hover { color: var(--on-green); text-decoration: underline; }
 
 /* ---------- Modale de confirmation ---------- */
 .modal-overlay {
