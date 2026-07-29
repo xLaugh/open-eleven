@@ -14,12 +14,8 @@
 <link rel="stylesheet" href="style.css?v=10.8" />
 <style>
   .legal-wrap { max-width: 720px; margin: 0 auto; padding: 26px 16px 70px; }
-  .legal-brand {
-    font-family: var(--font-display); font-weight: 600; font-size: 1.7rem;
-    letter-spacing: 0.01em; text-align: center; color: var(--on-green);
-    margin: 6px 0 18px;
-  }
-  .legal-brand em { font-style: normal; color: var(--gold-bright); }
+  /* Titre identique à l'accueil : « Ope[11] Eleven » avec le logo. */
+  .legal-title { text-align: center; margin: 8px 0 20px; }
   .legal-card {
     background: var(--card-bg); border-radius: var(--radius);
     box-shadow: 0 14px 40px rgba(0, 0, 0, 0.22);
@@ -59,7 +55,7 @@
 </head>
 <body>
 <div class="legal-wrap">
-  <div class="legal-brand">⚽ Open <em>Eleven</em></div>
+  <div class="title legal-title" aria-label="Open Eleven">Ope<img class="wm-11-img" src="src/img/logo-11-mark.png" alt="11" /> Eleven</div>
 
   <div class="legal-card">
     <h1>Politique de confidentialité</h1>
