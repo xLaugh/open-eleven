@@ -842,9 +842,9 @@ const LEVEL_ORDER = ["regional", "d3", "d2", "d1", "elite"];
 // de jeu de base (ancre) ; `expect` = note de saison à tenir pour garder le poste.
 // L'ordre du tableau EST le rang (index 0→4) ; s.role stocke cet index.
 const ROLES = [
-  { id: "espoir", label: "Espoir", icon: "🌱", pt: 0.12, expect: 5.6, desc: "Un pari sur l'avenir : peu de minutes, mais tu apprends au haut niveau." },
-  { id: "sporadique", label: "Sporadique", icon: "🔸", pt: 0.30, expect: 6.0, desc: "Utilisé au compte-gouttes, souvent sur le banc." },
-  { id: "rotation", label: "Rotation", icon: "🔄", pt: 0.52, expect: 6.3, desc: "Dans la rotation : environ une titularisation sur deux." },
+  { id: "espoir", label: "Espoir", icon: "🌱", pt: 0.12, expect: 5.4, desc: "Un pari sur l'avenir : peu de minutes, mais tu apprends au haut niveau." },
+  { id: "sporadique", label: "Sporadique", icon: "🔸", pt: 0.30, expect: 5.9, desc: "Utilisé au compte-gouttes, souvent sur le banc." },
+  { id: "rotation", label: "Rotation", icon: "🔄", pt: 0.52, expect: 6.2, desc: "Dans la rotation : environ une titularisation sur deux." },
   { id: "important", label: "Important", icon: "⭐", pt: 0.74, expect: 6.6, desc: "Cadre de la rotation, presque toujours sur la feuille." },
   { id: "titulaire", label: "Titulaire", icon: "👑", pt: 0.93, expect: 6.8, desc: "Indiscutable : tu joues, mais on attend beaucoup de toi." },
 ];
