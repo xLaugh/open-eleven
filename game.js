@@ -3223,12 +3223,14 @@
     // compte est configuré (Supabase). Le classement se lit sans connexion.
     const onlineGroup = $("online-group");
     const acc = window.OpenElevenAccount;
-    if (onlineGroup && acc && (acc.openLeaderboard || acc.openDuels)) {
+    if (onlineGroup && acc && (acc.openLeaderboard || acc.openDuels || acc.openFriends)) {
       onlineGroup.hidden = false;
       const lbBtn = $("btn-leaderboard");
       if (lbBtn && acc.openLeaderboard) lbBtn.addEventListener("click", () => acc.openLeaderboard());
       const duelsBtn = $("btn-duels");
       if (duelsBtn && acc.openDuels) duelsBtn.addEventListener("click", () => acc.openDuels());
+      const friendsBtn = $("btn-friends");
+      if (friendsBtn && acc.openFriends) friendsBtn.addEventListener("click", () => acc.openFriends());
     }
     $("btn-replay").addEventListener("click", () => {
       if (reviewingPantheon) { reviewingPantheon = false; renderPantheonScreen(); showScreen("screen-pantheon"); }

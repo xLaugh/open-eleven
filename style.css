@@ -796,7 +796,7 @@ body { color: var(--text-0); }
   letter-spacing: 0.08em; color: var(--on-green-soft);
   margin: 0 0 8px; text-align: center;
 }
-.online-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.online-nav { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
 .online-btn {
   display: flex; align-items: center; justify-content: center; gap: 4px;
   background: var(--card-bg); color: var(--green-ink);

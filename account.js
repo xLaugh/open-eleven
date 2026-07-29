@@ -551,6 +551,110 @@
   }
   function openDuels() { duTab = "send"; renderDuels(); duOverlay.classList.add("on"); }
 
+  // ============================================================================
+  //  Amis (suivi par pseudo) + classement entre amis
+  //  Modèle « follow » : tu ajoutes un pseudo, ton classement = toi + tes suivis.
+  // ============================================================================
+  async function resolvePseudo(p) {
+    const e = String(p).replace(/[\\%_]/g, "\\$&");
+    const { data } = await sb.from("profiles").select("user_id, pseudo").ilike("pseudo", e).limit(1);
+    return data && data[0] ? data[0] : null;
+  }
+  async function addFriend(p) {
+    if (!session) return { ok: false, error: { message: "Connecte-toi." } };
+    p = String(p || "").trim();
+    if (p.length < 2) return { ok: false, error: { message: "Pseudo trop court." } };
+    if (p.toLowerCase() === (pseudo || "").toLowerCase()) return { ok: false, error: { message: "C'est toi !" } };
+    const found = await resolvePseudo(p);
+    if (!found) return { ok: false, error: { message: "Aucun joueur avec ce pseudo." } };
+    if (found.user_id === session.user.id) return { ok: false, error: { message: "C'est toi !" } };
+    const { error } = await sb.from("friends").insert({ user_id: session.user.id, friend_id: found.user_id, friend_pseudo: found.pseudo });
+    if (error) {
+      if (error.code === "23505" || /duplicate/i.test(error.message || "")) return { ok: false, error: { message: found.pseudo + " est déjà dans tes amis." } };
+      return { ok: false, error };
+    }
+    return { ok: true, pseudo: found.pseudo };
+  }
+  async function removeFriend(fid) {
+    if (!session) return;
+    try { await sb.from("friends").delete().eq("user_id", session.user.id).eq("friend_id", fid); } catch (_) {}
+  }
+  async function listFriends() {
+    if (!session) return [];
+    const { data } = await sb.from("friends").select("friend_id, friend_pseudo, created_at").eq("user_id", session.user.id).order("created_at", { ascending: false });
+    return data || [];
+  }
+
+  const frOverlay = document.createElement("div");
+  frOverlay.className = "acc-overlay";
+  frOverlay.innerHTML = '<div class="lb-box" role="dialog" aria-modal="true"></div>';
+  document.body.appendChild(frOverlay);
+  const frBox = frOverlay.querySelector(".lb-box");
+  frOverlay.addEventListener("click", (e) => { if (e.target === frOverlay) frOverlay.classList.remove("on"); });
+  let frTab = "today";
+
+  async function renderFriends() {
+    frBox.innerHTML =
+      '<button class="acc-x" aria-label="Fermer">×</button><h3>👥 Amis</h3>' +
+      '<div class="lb-tabs">' +
+      '<button class="lb-tab' + (frTab === "today" ? " on" : "") + '" data-t="today">Aujourd\'hui</button>' +
+      '<button class="lb-tab' + (frTab === "week" ? " on" : "") + '" data-t="week">Semaine</button>' +
+      '<button class="lb-tab' + (frTab === "alltime" ? " on" : "") + '" data-t="alltime">Général</button>' +
+      '<button class="lb-tab' + (frTab === "manage" ? " on" : "") + '" data-t="manage">Gérer</button>' +
+      "</div><div class=\"lb-content\"><p class=\"lb-empty\">Chargement…</p></div>";
+    frBox.querySelector(".acc-x").onclick = () => frOverlay.classList.remove("on");
+    frBox.querySelectorAll(".lb-tab").forEach((b) => (b.onclick = () => { frTab = b.dataset.t; renderFriends(); }));
+    const content = frBox.querySelector(".lb-content");
+
+    if (!session) { content.innerHTML = '<p class="lb-empty">Connecte-toi (👤) pour gérer tes amis.</p>'; return; }
+
+    if (frTab === "manage") {
+      const friends = await listFriends();
+      content.innerHTML =
+        '<div class="acc-row" style="margin:2px 0 6px"><input type="text" id="fr-pseudo" maxlength="24" placeholder="Ajouter un ami par pseudo" style="margin:0" />' +
+        '<button class="acc-btn soft" id="fr-add" style="width:auto;padding:11px 14px">+ Ajouter</button></div><p class="acc-msg"></p>' +
+        (friends.length
+          ? '<ul class="lb-list">' + friends.map((f, i) =>
+              '<li class="lb-row"><span class="lb-name" data-pseudo="' + esc(f.friend_pseudo || "") + '" style="cursor:pointer">👤 ' + esc(f.friend_pseudo || "Joueur") + "</span>" +
+              '<button class="acc-btn danger fr-del" data-i="' + i + '" style="width:auto;margin:0;padding:6px 10px;font-size:.78rem">Retirer</button></li>'
+            ).join("") + "</ul>"
+          : '<p class="lb-empty">Aucun ami pour l\'instant. Ajoute un pseudo ci-dessus.</p>');
+      const m = content.querySelector(".acc-msg");
+      const doAdd = async () => {
+        const r = await addFriend(content.querySelector("#fr-pseudo").value);
+        m.textContent = r.ok ? (r.pseudo + " ajouté ✔") : ((r.error && r.error.message) || "Échec");
+        m.className = "acc-msg " + (r.ok ? "ok" : "err");
+        if (r.ok) renderFriends();
+      };
+      content.querySelector("#fr-add").onclick = doAdd;
+      content.querySelector("#fr-pseudo").addEventListener("keydown", (e) => { if (e.key === "Enter") doAdd(); });
+      content.querySelectorAll(".fr-del").forEach((b) => (b.onclick = async () => { await removeFriend(friends[Number(b.dataset.i)].friend_id); renderFriends(); }));
+      content.querySelectorAll("[data-pseudo]").forEach((el) => { if (el.dataset.pseudo) el.onclick = () => openProfile(el.dataset.pseudo); });
+      return;
+    }
+
+    // classement entre amis (moi + suivis)
+    try {
+      let rows, isRange = frTab !== "today";
+      if (frTab === "today") { const { data } = await sb.rpc("friends_daily", { d: todayKeyLocal(), lim: 100 }); rows = data || []; }
+      else { const { data } = await sb.rpc("friends_range", { since: frTab === "week" ? weekSince() : "", lim: 100 }); rows = data || []; }
+      content.innerHTML = rows.length
+        ? '<ul class="lb-list">' + rows.map((r) => {
+            const val = isRange ? r.total : r.score;
+            const sub = isRange ? ' <span class="lb-sub">· ' + r.days + " j</span>" : "";
+            return '<li class="lb-row' + (r.is_me ? " mine" : "") + '" data-pseudo="' + esc(r.pseudo || "") + '">' +
+              '<span class="lb-rank">' + medalR(Number(r.rank)) + "</span>" +
+              '<span class="lb-name">' + esc(r.pseudo || "Joueur") + (r.is_me ? " <span class=\"lb-sub\">(toi)</span>" : "") + "</span>" +
+              '<span class="lb-pts">' + val + ' <span class="lb-sub">pts</span>' + sub + "</span></li>";
+          }).join("") + "</ul>"
+        : '<p class="lb-empty">Personne n\'a encore joué le défi. Ajoute des amis dans « Gérer ».</p>';
+      content.querySelectorAll(".lb-row[data-pseudo]").forEach((el) => { if (el.dataset.pseudo) el.onclick = () => openProfile(el.dataset.pseudo); });
+    } catch (e) {
+      content.innerHTML = '<p class="lb-empty">Classement indisponible pour le moment.</p>';
+    }
+  }
+  function openFriends() { frTab = "today"; renderFriends(); frOverlay.classList.add("on"); }
+
   // ---- pool de légendes communautaires (invité du mercato) -------------------
   let legendsCache = [];
   async function loadLegends() {
@@ -562,7 +666,7 @@
   // ---- API publique pour le jeu ----------------------------------------------
   window.OpenElevenAccount = {
     submitDaily, openLeaderboard, openProfile, getLegends, pushProfile: pushProfileStats,
-    openDuels, submitDuelCreate, submitDuelRespond,
+    openDuels, submitDuelCreate, submitDuelRespond, openFriends,
   };
 
   // ---- bouton d'accueil -------------------------------------------------------
