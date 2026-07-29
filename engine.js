@@ -949,6 +949,10 @@
   // Rôle proposé sur une offre : dérivé de ta marge (OVR − niveau attendu du club),
   // modulé par l'âge/potentiel (un jeune crack dans un grand club = projet) et le
   // contexte (le Golfe construit autour de ses signatures). Retourne un INDEX 0→4.
+  // Plancher de statut : « Espoir » n'a de sens que pour un jeune. Passé
+  // ROLE_ESPOIR_MAX_AGE, on ne peut plus redescendre en dessous de « Sporadique ».
+  function roleFloor(s) { return s.age <= ROLE_ESPOIR_MAX_AGE ? 0 : 1; }
+
   function roleForClub(s, club) {
     const bar = BALANCE.expectedLevel[lvlOf(s, club)];
     const margin = ovr(s) - bar;
@@ -959,7 +963,7 @@
     if (s.age <= 20 && big && idx > 1) idx -= 1;                              // recruté pour l'avenir
     if ((countryOf(club.countryId) || {}).gulf) idx = Math.min(4, idx + 1);  // le Golfe titularise ses recrues
     if (s.flags && s.flags.prodigy && s.age <= 20) idx = Math.max(idx, 3);   // un crack est lancé
-    return clamp(idx, 0, 4);
+    return clamp(idx, roleFloor(s), 4);
   }
   function roleOf(s) { return ROLES[typeof s.role === "number" ? clamp(s.role, 0, 4) : 2]; }
 
@@ -972,10 +976,12 @@
     const role = roleOf(s);
     const r = report.rating || 6;
     const from = typeof s.role === "number" ? s.role : 2;
+    const floor = roleFloor(s); // plus d'« Espoir » passé 20 ans
     let idx = from, reason = null;
     if (r >= role.expect + 0.6 && s.coachRel >= 60 && idx < 4 && rng() < 0.7) { idx++; reason = "up"; }
-    else if ((r <= role.expect - 0.7 || s.coachRel < 32) && idx > 0 && rng() < 0.75) { idx--; reason = "down"; }
+    else if ((r <= role.expect - 0.7 || s.coachRel < 32) && idx > floor && rng() < 0.75) { idx--; reason = "down"; }
     else if (idx >= 2 && rng() < BALANCE.role.starSignChance) { idx--; reason = "signing"; }
+    if (idx < floor) idx = floor;
     if (idx !== from) {
       s.role = idx;
       s.coachRel = clamp(s.coachRel + (idx > from ? 4 : -3), 5, 100);
@@ -1939,6 +1945,9 @@
     s.age += 1;
     s.year += 1;
     s.contract.years -= 1;
+    // On sort de l'âge « Espoir » : le statut de pari sur l'avenir n'existe plus,
+    // le plancher devient Sporadique (sans hasard consommé → PRNG intact).
+    if (s.role === 0 && s.age > ROLE_ESPOIR_MAX_AGE) s.role = 1;
 
     // Sélection : possible dès 17 ans pour un crack, de plus en plus
     // accessible entre 21 et 23 ans ; la visibilité du niveau compte,

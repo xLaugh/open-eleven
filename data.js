@@ -841,13 +841,16 @@ const LEVEL_ORDER = ["regional", "d3", "d2", "d1", "elite"];
 // Cran de statut vis-à-vis du coach, du plus faible au plus fort. `pt` = temps
 // de jeu de base (ancre) ; `expect` = note de saison à tenir pour garder le poste.
 // L'ordre du tableau EST le rang (index 0→4) ; s.role stocke cet index.
+// « Espoir » est réservé aux JEUNES (≤ ROLE_ESPOIR_MAX_AGE) : passé cet âge on
+// n'est plus un pari sur l'avenir, le plancher devient « Sporadique ».
 const ROLES = [
-  { id: "espoir", label: "Espoir", icon: "🌱", pt: 0.12, expect: 5.4, desc: "Un pari sur l'avenir : peu de minutes, mais tu apprends au haut niveau." },
-  { id: "sporadique", label: "Sporadique", icon: "🔸", pt: 0.30, expect: 5.9, desc: "Utilisé au compte-gouttes, souvent sur le banc." },
-  { id: "rotation", label: "Rotation", icon: "🔄", pt: 0.52, expect: 6.2, desc: "Dans la rotation : environ une titularisation sur deux." },
-  { id: "important", label: "Important", icon: "⭐", pt: 0.74, expect: 6.6, desc: "Cadre de la rotation, presque toujours sur la feuille." },
-  { id: "titulaire", label: "Titulaire", icon: "👑", pt: 0.93, expect: 6.8, desc: "Indiscutable : tu joues, mais on attend beaucoup de toi." },
+  { id: "espoir", label: "Espoir", icon: "🌱", pt: 0.12, expect: 5.0, desc: "Un pari sur l'avenir : peu de minutes, mais tu apprends au haut niveau." },
+  { id: "sporadique", label: "Sporadique", icon: "🔸", pt: 0.30, expect: 5.5, desc: "Utilisé au compte-gouttes, souvent sur le banc." },
+  { id: "rotation", label: "Rotation", icon: "🔄", pt: 0.52, expect: 5.8, desc: "Dans la rotation : environ une titularisation sur deux." },
+  { id: "important", label: "Important", icon: "⭐", pt: 0.74, expect: 6.0, desc: "Cadre de la rotation, presque toujours sur la feuille." },
+  { id: "titulaire", label: "Titulaire", icon: "👑", pt: 0.93, expect: 6.2, desc: "Indiscutable : tu joues, mais on attend beaucoup de toi." },
 ];
+const ROLE_ESPOIR_MAX_AGE = 20; // au-delà, plancher = Sporadique (index 1)
 
 // --- Clubs ----------------------------------------------------------
 // Noms inspirés de vrais clubs/villes, par pays jouable + destinations
@@ -6561,11 +6564,11 @@ const BALANCE = {
    les événements changent sensiblement.
    ============================================================ */
 const SCORE_PERCENTILES = [
-  64, 72, 83, 87, 89, 91, 92, 93, 94, 95, 96, 97, 97, 98, 99, 99, 100, 100, 101, 102,
-  102, 103, 103, 104, 104, 105, 105, 106, 106, 107, 107, 108, 108, 109, 109, 110, 110, 111, 111, 112,
-  112, 113, 113, 114, 114, 115, 115, 116, 117, 117, 118, 118, 119, 120, 121, 121, 122, 123, 124, 124,
-  125, 126, 127, 128, 129, 130, 131, 132, 133, 135, 136, 137, 139, 140, 141, 143, 144, 146, 148, 150,
-  152, 153, 155, 158, 160, 162, 165, 167, 170, 173, 176, 179, 184, 188, 193, 199, 207, 218, 235
+  63, 71, 83, 88, 90, 92, 93, 94, 95, 96, 97, 98, 99, 99, 100, 101, 101, 102, 102, 103,
+  104, 104, 105, 105, 106, 106, 107, 107, 108, 108, 109, 109, 110, 110, 111, 111, 112, 112, 113, 113,
+  114, 115, 115, 116, 116, 117, 118, 118, 119, 119, 120, 121, 121, 122, 123, 124, 124, 125, 126, 127,
+  128, 129, 130, 130, 131, 132, 134, 135, 136, 137, 138, 140, 141, 143, 144, 146, 147, 149, 151, 153,
+  154, 156, 158, 160, 162, 164, 167, 169, 172, 175, 178, 182, 186, 191, 197, 203, 210, 221, 238
 ];
 
 /* ============================================================
@@ -6888,7 +6891,7 @@ const COUNTRY_LANG = {
 if (typeof module !== "undefined" && module.exports) {
   const dataExports = {
     BRAND, NATIONALITIES, NAME_POOLS, LIFESTYLES, ENTOURAGES, TRAJECTORIES,
-    ARCHETYPES, POSITIONS, ORIGINS, COUNTRIES, CONTINENTAL_CUPS, NATIONAL_CUPS, NATIONS_LEAGUE, NL_STAGES, LEVELS, ROLES,
+    ARCHETYPES, POSITIONS, ORIGINS, COUNTRIES, CONTINENTAL_CUPS, NATIONAL_CUPS, NATIONS_LEAGUE, NL_STAGES, LEVELS, ROLES, ROLE_ESPOIR_MAX_AGE,
     LEVEL_ORDER, CLUBS, CLUBS_BY_LEVEL, COMPETITIONS, COACH_NAMES, TRAITS,
     AWARDS, KEY_MOMENTS,
     EVENTS, MICRO_EVENTS, RIVAL_NEWS_GOOD, RIVAL_NEWS_BAD, RIVAL_NEWS_AHEAD,
