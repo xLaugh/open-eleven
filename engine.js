@@ -2183,8 +2183,30 @@
     }
 
     if (contractUp) {
+      // Le club ne prolonge PAS automatiquement : une saison ratée (note faible,
+      // banc, coach à cran) peut le pousser à NE PAS renouveler → il faut rebondir
+      // ailleurs, souvent un cran plus bas. Les cadres (Important/Titulaire) sont
+      // mieux protégés ; un Espoir/Sporadique est plus vite lâché.
+      const r = report && report.rating != null ? report.rating : 6.2;
+      const benched = report && report.benched;
+      let decline = 0;
+      if (r < 5.4 || (benched && s.coachRel < 30)) decline = 0.85;
+      else if (benched || r < 6.0 || s.coachRel < 35) decline = 0.55;
+      else if (r < 6.4) decline = 0.2;
+      decline *= (s.role >= 3 ? 0.55 : s.role <= 1 ? 1.3 : 1);
+      if (decline > 0 && rng() < decline) {
+        let offers = [];
+        for (let d = (r < 5.4 ? -1 : (rng() < 0.5 ? -1 : 0)); d >= -3 && !offers.length; d--) offers = offersFor(s, { d });
+        if (offers.length) {
+          return {
+            reason: `Vos statistiques n'ont pas convaincu : ${s.club.name} ne prolonge pas votre contrat. À vous de rebondir ailleurs.`,
+            offers, contractUp: false, noStay: true, renewSalary: salaryFor(s, s.club),
+          };
+        }
+        // Aucun club preneur : on n'envoie pas dans le vide → la prolongation a lieu quand même.
+      }
       reason = "Votre contrat expire : il faut trancher.";
-      spec = { d: report && report.rating >= 7.2 ? 1 : 0 };
+      spec = { d: r >= 7.2 ? 1 : 0 };
     } else if (report && report.promoted) {
       reason = `La montée ${deOf(s.club.name)} fait de vous une cible : rester pour l'aventure, ou viser encore plus haut ?`;
       spec = { d: 1 };

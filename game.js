@@ -555,7 +555,9 @@
   function renderTransferChoice(offers, window) {
     const reason = window ? window.reason : "Votre décision est prise : reste à choisir la destination.";
     let buttons = "";
-    if (window && window.contractUp) {
+    if (window && window.noStay) {
+      // Le club ne prolonge pas : aucune option « rester », il FAUT choisir un club.
+    } else if (window && window.contractUp) {
       buttons += `<button class="opt-btn" data-stay="1"><span class="opt-hint">Prolonger</span>Rester à ${esc(G.club.name)} — ${E.fmtMoney(window.renewSalary)}/an</button>`;
     } else if (window) {
       buttons += `<button class="opt-btn" data-stay="1">Rester à ${esc(G.club.name)}</button>`;
