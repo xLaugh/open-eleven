@@ -32,6 +32,13 @@ Deno.serve(async (req) => {
   if (date > utcTodayPlus(1)) return json({ error: "Date dans le futur" }, 400);
   if (!validChoices(choices)) return json({ error: "Journal de choix invalide" }, 400);
 
+  const admin = adminClient();
+
+  // Rate-limit AVANT le rejeu (coûteux) : anti brute-force / anti-martelage.
+  const rl = await admin.rpc("rate_take", { p_user: user.id, p_bucket: "daily", p_day: date, p_cap: 25, p_cooldown_ms: 8000 });
+  if (rl.data === "cooldown") return json({ error: "Doucement — attends quelques secondes." }, 429);
+  if (rl.data === "cap") return json({ error: "Trop de tentatives aujourd'hui pour ce défi." }, 429);
+
   // REJOUER + RECALCULER le score côté serveur (anti-triche).
   let score: number;
   try {
@@ -42,8 +49,6 @@ Deno.serve(async (req) => {
   }
   if (!Number.isFinite(score) || score < 0 || score > 1000) return json({ error: "Score hors bornes" }, 422);
   score = Math.round(score);
-
-  const admin = adminClient();
   const { data: prof } = await admin.from("profiles").select("pseudo").eq("user_id", user.id).maybeSingle();
   const pseudo = (prof?.pseudo && String(prof.pseudo).slice(0, 24)) || `Joueur ${user.id.slice(0, 4)}`;
 

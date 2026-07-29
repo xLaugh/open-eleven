@@ -16,6 +16,14 @@ async function pseudoOf(admin: any, userId: string): Promise<string | null> {
   const { data } = await admin.from("profiles").select("pseudo").eq("user_id", userId).maybeSingle();
   return data?.pseudo ? String(data.pseudo).slice(0, 24) : null;
 }
+function utcToday(): string { return new Date().toISOString().slice(0, 10); }
+// Rate-limit AVANT le rejeu. Renvoie une Response 429 si bloqué, sinon null.
+async function rateGuard(admin: any, user: string, bucket: string, cap: number, cooldownMs: number) {
+  const rl = await admin.rpc("rate_take", { p_user: user, p_bucket: bucket, p_day: utcToday(), p_cap: cap, p_cooldown_ms: cooldownMs });
+  if (rl.data === "cooldown") return json({ error: "Doucement — attends quelques secondes." }, 429);
+  if (rl.data === "cap") return json({ error: "Trop de duels aujourd'hui, réessaie demain." }, 429);
+  return null;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -42,6 +50,9 @@ Deno.serve(async (req) => {
     if (!fromPseudo) return json({ error: "Choisis d'abord un pseudo" }, 400);
     if (toPseudo.toLowerCase() === fromPseudo.toLowerCase()) return json({ error: "Tu ne peux pas te défier toi-même" }, 400);
 
+    const g = await rateGuard(admin, user.id, "duel_create", 40, 6000);
+    if (g) return g;
+
     let fromScore: number;
     try { fromScore = Math.round(E.scoreDuel(seed, choices)); } catch (e) { return json({ error: "Vérification impossible", detail: String(e) }, 500); }
     if (!Number.isFinite(fromScore) || fromScore < 0 || fromScore > 1000) return json({ error: "Score hors bornes" }, 422);
@@ -65,6 +76,9 @@ Deno.serve(async (req) => {
     const myPseudo = await pseudoOf(admin, user.id);
     if (!myPseudo) return json({ error: "Choisis d'abord un pseudo" }, 400);
     if (duel.to_pseudo.toLowerCase() !== myPseudo.toLowerCase()) return json({ error: "Ce défi ne t'est pas adressé" }, 403);
+
+    const g = await rateGuard(admin, user.id, "duel_respond", 80, 4000);
+    if (g) return g;
 
     let toScore: number;
     try { toScore = Math.round(E.scoreDuel(duel.seed, choices)); } catch (e) { return json({ error: "Vérification impossible", detail: String(e) }, 500); }

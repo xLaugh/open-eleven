@@ -195,6 +195,8 @@
   //  • Lecture du classement : publique (RPC), fonctionne même sans compte.
   // ============================================================================
   let pseudo = null;
+  // Modération de confort (miroir du trigger DB check_pseudo, source de vérité).
+  const BADWORDS = /\b(con|connard|conasse|salop[ea]?|pute|encul[eé]?|niquer?|fdp|ntm|merde|batard|bâtard|pd|tapette|negre|nègre|bougnoule|youpin|nazi|hitler|viol|nigg\w*|fuck\w*|shit|bitch|whore|slut|rape|faggot|cunt)\b/i;
 
   async function loadPseudo() {
     if (!session) { pseudo = null; return; }
@@ -205,6 +207,7 @@
     if (!session) return { ok: false };
     p = String(p || "").trim().slice(0, 24);
     if (p.length < 2) return { ok: false, error: { message: "Pseudo trop court (2 caractères min)." } };
+    if (BADWORDS.test(p)) return { ok: false, error: { message: "Pseudo non autorisé." } };
     // Pré-vérif best-effort : déjà pris par un AUTRE joueur (insensible à la casse).
     // On échappe %/_ pour que ilike fasse une correspondance exacte, pas un motif.
     const esc = p.replace(/[\\%_]/g, "\\$&");
@@ -216,8 +219,10 @@
       { user_id: session.user.id, pseudo: p }, { onConflict: "user_id" }
     );
     if (error) {
-      const dup = error.code === "23505" || /duplicate|unique|pseudo_lower/i.test(error.message || "");
-      return { ok: false, error: { message: dup ? "Ce pseudo est déjà pris." : (error.message || "Échec") } };
+      const m = error.message || "";
+      if (/pseudo_forbidden/i.test(m)) return { ok: false, error: { message: "Pseudo non autorisé." } };
+      const dup = error.code === "23505" || /duplicate|unique|pseudo_lower/i.test(m);
+      return { ok: false, error: { message: dup ? "Ce pseudo est déjà pris." : (m || "Échec") } };
     }
     pseudo = p; pushProfileStats();
     return { ok: true };
@@ -412,7 +417,7 @@
       '<button class="acc-x" aria-label="Fermer">×</button>' +
       "<h3>🏛️ " + esc(row.pseudo || who) + "</h3>" +
       rankLine +
-      '<p class="acc-sub" style="margin:12px 0 2px">Meilleure carrière <span class="lb-sub">(vitrine)</span></p>' +
+      '<p class="acc-sub" style="margin:12px 0 2px">Meilleure carrière <span class="lb-sub">(vitrine, non vérifiée)</span></p>' +
       bestLine +
       '<div class="pf-counters"><span>🏆 ' + (st.badges || 0) + " badges</span><span>🔥 " + (st.bestStreak || 0) + " j (série)</span><span>👤 " + (st.careers || 0) + " carrières</span></div>";
     pfBox.querySelector(".acc-x").onclick = () => pfOverlay.classList.remove("on");
@@ -499,16 +504,39 @@
       return;
     }
 
-    // historique
-    let rows = [];
-    try { const { data } = await sb.rpc("duels_history"); rows = data || []; } catch (_) {}
-    content.innerHTML = rows.length
-      ? '<ul class="lb-list">' + rows.map((r) => {
-          const mine = r.i_am, myScore = mine === "from" ? r.from_score : r.to_score, opp = mine === "from" ? r.to_pseudo : r.from_pseudo, oppScore = mine === "from" ? r.to_score : r.from_score;
-          const res = r.winner === "tie" ? '<span style="color:var(--text-1,#567)">Nul</span>' : (r.winner === mine ? '<span style="color:var(--green,#087b4b);font-weight:800">Victoire</span>' : '<span style="color:#b3261e;font-weight:800">Défaite</span>');
-          return '<li class="lb-row"><span class="lb-name">vs <strong>' + esc(opp) + "</strong> <span class=\"lb-sub\">" + myScore + " – " + oppScore + "</span></span><span class=\"lb-pts\">" + res + "</span></li>";
-        }).join("") + "</ul>"
-      : '<p class="lb-empty">Aucun duel terminé pour l\'instant.</p>';
+    // historique (+ défis envoyés encore en attente, annulables)
+    let out = [], hist = [];
+    try { const a = await sb.rpc("duels_outgoing"); out = a.data || []; } catch (_) {}
+    try { const b = await sb.rpc("duels_history"); hist = b.data || []; } catch (_) {}
+    let html = "";
+    if (out.length) {
+      html += '<p class="acc-sub" style="margin:6px 0 4px;font-weight:700">En attente (envoyés)</p><ul class="lb-list">' +
+        out.map((r, i) =>
+          '<li class="lb-row"><span class="lb-name">vs <strong>' + esc(r.to_pseudo) + '</strong> <span class="lb-sub">' + r.from_score + " pts · en attente</span></span>" +
+          '<button class="acc-btn danger du-cancel" data-i="' + i + '" style="width:auto;margin:0;padding:7px 10px">Annuler</button></li>'
+        ).join("") + "</ul>";
+    }
+    if (hist.length) {
+      if (out.length) html += '<p class="acc-sub" style="margin:12px 0 4px;font-weight:700">Terminés</p>';
+      html += '<ul class="lb-list">' + hist.map((r) => {
+        const mine = r.i_am, myScore = mine === "from" ? r.from_score : r.to_score, opp = mine === "from" ? r.to_pseudo : r.from_pseudo, oppScore = mine === "from" ? r.to_score : r.from_score;
+        const res = r.winner === "tie" ? '<span style="color:var(--text-1,#567)">Nul</span>' : (r.winner === mine ? '<span style="color:var(--green,#087b4b);font-weight:800">Victoire</span>' : '<span style="color:#b3261e;font-weight:800">Défaite</span>');
+        return '<li class="lb-row"><span class="lb-name">vs <strong>' + esc(opp) + "</strong> <span class=\"lb-sub\">" + myScore + " – " + oppScore + "</span></span>" +
+          '<span class="lb-pts" style="display:flex;align-items:center;gap:8px">' + res +
+          '<button class="acc-btn soft du-rematch" data-opp="' + esc(opp) + '" style="width:auto;margin:0;padding:6px 9px;font-size:.78rem">Revanche</button></span></li>';
+      }).join("") + "</ul>";
+    }
+    content.innerHTML = html || '<p class="lb-empty">Aucun duel pour l\'instant.</p>';
+    content.querySelectorAll(".du-cancel").forEach((b) => (b.onclick = async () => {
+      const r = out[Number(b.dataset.i)];
+      b.disabled = true; b.textContent = "…";
+      try { await sb.rpc("duel_cancel", { p_id: r.id }); } catch (_) {}
+      renderDuels();
+    }));
+    content.querySelectorAll(".du-rematch").forEach((b) => (b.onclick = () => {
+      duOverlay.classList.remove("on");
+      if (window.OpenElevenGame && window.OpenElevenGame.startDuelVsPseudo) window.OpenElevenGame.startDuelVsPseudo(b.dataset.opp);
+    }));
   }
   function openDuels() { duTab = "send"; renderDuels(); duOverlay.classList.add("on"); }
 
