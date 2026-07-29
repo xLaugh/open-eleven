@@ -305,6 +305,12 @@ body { color: var(--text-0); }
 }
 .home-meta { color: var(--on-green-faint); font-size: 0.8rem; margin: 0; }
 
+/* Wrappers de mise en page de l'accueil : NEUTRALISÉS par défaut (mobile).
+   display:contents fait disparaître la boîte — leurs enfants redeviennent des
+   items directs de .home-wrap, donc le rendu mobile est inchangé au pixel près.
+   Ils ne reprennent vie qu'en desktop (voir la media query plus bas). */
+.home-side, .home-cards { display: contents; }
+
 /* ---------- Cartes de l'accueil (défi / quêtes / duel) ----------
    Structure commune générée par game.js :
    .hc-head (bandeau coloré) + .hc-body (contenu + .hc-cta). */
@@ -810,6 +816,55 @@ body { color: var(--text-0); }
 .online-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(201, 151, 28, 0.32); background: var(--gold); border-color: var(--gold); color: #3a2c05; }
 .online-btn:active { transform: translateY(0); }
 @media (max-width: 360px) { .online-btn { font-size: 0.78rem; padding: 11px 4px; } }
+
+/* ==========================================================================
+   ACCUEIL — MISE EN PAGE DESKTOP (≥ 900px)
+   Le jeu est pensé mobile-first : une colonne de 480px. Sur grand écran, cette
+   colonne unique paraît tassée et laisse deux bandes vides. Ici, et UNIQUEMENT
+   ici, l'accueil s'étale en 2 colonnes : identité + actions à gauche, cartes de
+   jeu à droite. Aucun changement de style (couleurs, cartes, boutons) — que de
+   la structure. Les autres écrans gardent leur gabarit 480px grâce au :has().
+   ========================================================================== */
+@media (min-width: 900px) {
+  /* @supports : l'élargissement du conteneur repose sur :has(). Sans lui, on ne
+     doit SURTOUT pas passer en 2 colonnes dans un cadre de 480px — tout le bloc
+     est donc conditionné, et un vieux navigateur garde simplement l'accueil
+     mobile (dégradation propre, jamais cassée). */
+  @supports selector(:has(*)) {
+    /* Seul l'accueil élargit le conteneur ; création/partie/écrans restent à 480px. */
+    #app:has(#screen-home.active) { max-width: 1060px; padding-top: 34px; }
+
+    #screen-home.active .home-wrap {
+      display: grid;
+      grid-template-columns: minmax(290px, 350px) minmax(0, 1fr);
+      grid-template-areas:
+        "side cards"
+        "meta cards";
+      grid-template-rows: auto 1fr;
+      align-items: start;
+      gap: 20px 36px;
+    }
+    /* Les wrappers reprennent vie (ils étaient en display:contents). */
+    #screen-home.active .home-side {
+      grid-area: side;
+      display: flex; flex-direction: column; align-items: center; gap: 18px;
+    }
+    #screen-home.active .home-cards {
+      grid-area: cards;
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px; align-items: start;
+    }
+    #screen-home.active .home-meta { grid-area: meta; align-self: start; }
+
+    /* Cartes : elles pilotaient leur propre largeur en colonne unique ; dans la
+       grille, c'est la cellule qui décide. */
+    #screen-home.active .home-cards > * { max-width: none; width: auto; }
+    /* Têtes d'affiche sur toute la largeur ; Quêtes et Duel se partagent la ligne. */
+    #screen-home.active .daily-panel,
+    #screen-home.active .online-group,
+    #screen-home.active .story-panel { grid-column: 1 / -1; }
+  }
+}
 
 /* ---------- Statut au club (rôle) ---------- */
 .role-chip {
