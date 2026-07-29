@@ -2379,17 +2379,24 @@
   // Graine MOTEUR du run de défi : mêmes événements pour tous, à choix égaux.
   function dailySeedFor(dateKey) { return hashInt(Number(String(dateKey).replace(/-/g, "")) + 777); }
 
-  // Rejeu HEADLESS d'un run de Défi du jour à partir du SEUL journal de choix.
-  // Cœur de l'anti-triche : le serveur (Edge Function) charge ce même moteur,
-  // rejoue (dateKey, choices) et RECALCULE le score. Le client ne peut donc pas
-  // mentir sur son score — seuls ses CHOIX comptent. Miroir exact du chemin
-  // interactif du défi (même ordre de consommation du hasard que le duel rejoué).
-  function replayDaily(dateKey, choices) {
+  // Profil imposé d'un duel : même dérivation que le Défi, mais depuis la graine.
+  function duelChallenge(seed) {
+    return {
+      nationality: NATIONALITIES[hashInt(seed * 5 + 1) % NATIONALITIES.length],
+      position: POSITIONS[hashInt(seed * 5 + 2) % POSITIONS.length],
+      origin: ORIGINS[hashInt(seed * 5 + 3) % ORIGINS.length],
+    };
+  }
+
+  // Rejeu HEADLESS d'un run à partir du SEUL journal de choix, sous (graine, profil).
+  // Cœur de l'anti-triche : le serveur charge ce même moteur, rejoue et RECALCULE
+  // le score. Le client ne peut donc pas mentir sur son score — seuls ses CHOIX
+  // comptent. Miroir EXACT du chemin interactif (Défi du jour ET duel).
+  function replayRun(seed, prof, choices) {
     const log = choices || [];
     let i = 0;
     const next = () => (i < log.length ? log[i++] : 0);
-    setSeed(dailySeedFor(dateKey));
-    const prof = dailyChallenge(dateKey);
+    setSeed(seed);
     const lifestyle = LIFESTYLES[next()] || LIFESTYLES[0];
     const entourage = ENTOURAGES[next()] || ENTOURAGES[0];
     const potCap = rollPotential(prof.origin, lifestyle, entourage);
@@ -2435,8 +2442,11 @@
     }
     return s;
   }
-  // Score officiel d'un run de défi rejoué (ce que le serveur inscrit au classement).
+  function replayDaily(dateKey, choices) { return replayRun(dailySeedFor(dateKey), dailyChallenge(dateKey), choices); }
+  function replayDuel(seed, choices) { return replayRun((seed | 0) || 1, duelChallenge((seed | 0) || 1), choices); }
+  // Scores officiels d'un run rejoué (ce que le serveur inscrit / compare).
   function scoreDaily(dateKey, choices) { return computeCareerScore(replayDaily(dateKey, choices)); }
+  function scoreDuel(seed, choices) { return computeCareerScore(replayDuel(seed, choices)); }
 
   // --- Export ------------------------------------------------------------------
   const Engine = {
@@ -2454,7 +2464,7 @@
     applyTransfer, renewContract, totalAwards, careerRating, computeCareerScore, visibilityOf,
     careerTitle, pickHighlights, buildNarrative, buildUntakenPath,
     newRival, rivalSeason, rivalNewsLine, compareVerdict,
-    hashInt, dailyChallenge, dailySeedFor, replayDaily, scoreDaily,
+    hashInt, dailyChallenge, dailySeedFor, duelChallenge, replayDaily, replayDuel, scoreDaily, scoreDuel,
     BALANCE_REF: BALANCE,
   };
 

@@ -390,6 +390,8 @@
       G.choiceLog = (setup.duelChoices || []).slice(); // journal pour le classement vérifié
     } else if (setup.duelRole) {
       G.duel = true; G.duelRole = setup.duelRole; G.duelSeed = setup.duelSeed;
+      G.duelTargetPseudo = setup.duelTargetPseudo || null; // duel par pseudo (création)
+      G.duelServerId = setup.duelServerId || null;         // duel par pseudo (réponse)
       G.choiceLog = (setup.duelChoices || []).slice(); // journal des choix de création
       if (setup.duelRole === "respond") { G.duelFromEntry = setup.duelFromEntry; G.duelFromLabel = setup.duelFromLabel; }
     } else if (setup.storyId) {
@@ -1627,14 +1629,9 @@
   // brut — donc falsifiable, et vecteur d'injection : il est refusé à l'entrée.
   let duelData = null; // duel en cours de consultation (intro/résultat)
 
-  // Profil imposé par la graine (même dérivation que le Défi du jour).
-  function duelChallengeFor(seed) {
-    return {
-      nationality: NATIONALITIES[hashInt(seed * 5 + 1) % NATIONALITIES.length],
-      position: POSITIONS[hashInt(seed * 5 + 2) % POSITIONS.length],
-      origin: ORIGINS[hashInt(seed * 5 + 3) % ORIGINS.length],
-    };
-  }
+  // Profil imposé par la graine — dérivé dans le MOTEUR (partagé avec la
+  // vérification serveur des duels par pseudo, comme pour le Défi du jour).
+  function duelChallengeFor(seed) { return E.duelChallenge(seed); }
 
   // Résumé compact d'une carrière (ce qui voyage dans le lien).
   function careerSummary(s) {
@@ -1686,57 +1683,7 @@
   // celui du jeu interactif (game.js), sinon le hasard consommé diffère.
   // Ordre par saison : pickEvent → resolveOption → (transfert/prêt) → coup du
   // sort (rng) → playSeason → moments → CDM → transferWindow → advanceYear.
-  function replayDuelCareer(seed, log) {
-    log = log || [];
-    let i = 0;
-    const next = () => (i < log.length ? log[i++] : 0);
-    E.setSeed(seed);
-    const prof = duelChallengeFor(seed);
-    const lifestyle = LIFESTYLES[next()] || LIFESTYLES[0];
-    const entourage = ENTOURAGES[next()] || ENTOURAGES[0];
-    const potCap = E.rollPotential(prof.origin, lifestyle, entourage);
-    const offers = E.academyOffers({ nationality: prof.nationality, origin: prof.origin, lifestyle, entourage, potCap });
-    const club = (offers[next()] || offers[0]).club;
-    const s = E.newCareer({ nationality: prof.nationality, origin: prof.origin, position: prof.position, lifestyle, entourage, potCap, club });
-    let guard = 0;
-    while (!s.careerEnded && !s.retiring && s.age <= E.BALANCE_REF.ageMax && guard++ < 40) {
-      const ev = E.pickEvent(s);
-      if (ev) {
-        const res = E.resolveOption(s, ev.options[next()] || ev.options[0]);
-        if (s.careerEnded) break;
-        if (res.outcome.fx && res.outcome.fx.transfer && !res.outcome.fx.transfer.direct) {
-          const t = E.offersFor(s, res.outcome.fx.transfer);
-          const ch = next();
-          if (t.length && ch >= 0) E.applyTransfer(s, t[ch] || t[0]);
-        } else if (res.outcome.fx && res.outcome.fx.loan) {
-          const l = E.loanOffersFor(s);
-          const ch = next();
-          if (l.length) E.applyLoan(s, l[ch] || l[0]);
-        }
-      }
-      if (s.age <= 18 && E.rng() < E.BALANCE_REF.earlyEndChance) { s.careerEnded = true; s.careerEndReason = "injury"; break; }
-      const report = E.playSeason(s);
-      while (report.pendingMoments.length) {
-        const entry = report.pendingMoments.shift();
-        const opt = entry.moment.options[next()];
-        E.resolveSeasonMoment(s, report, entry, opt ? opt.id : null);
-      }
-      if (report.wc && report.wc.finalPending) {
-        const opt = report.wc.moment.options[next()];
-        E.resolveWcFinal(s, report, opt ? opt.id : null);
-      }
-      if (s.careerEnded) break; // blessure fatale en fin de saison : miroir exact du chemin interactif (offseason → finalize)
-      if (s.retiring || s.age >= E.BALANCE_REF.ageMax) break;
-      const window = E.transferWindow(s, report);
-      if (window) {
-        const ch = next();
-        if (window.offers.length && ch >= 0) E.applyTransfer(s, window.offers[ch] || window.offers[0]);
-        else if (window.contractUp) E.renewContract(s, window);
-      }
-      E.advanceYear(s);
-    }
-    return s;
-  }
+  function replayDuelCareer(seed, log) { return E.replayDuel(seed, log); }
 
   // Résumé d'une entrée de lien : rejeu du journal de choix sous la graine du
   // duel. Sans journal, on ne renvoie rien (plus de résumé transporté).
@@ -1863,7 +1810,9 @@
   }
 
   // Créer un défi : run seedé, profil imposé, SANS rival (on établit un score).
-  async function startDuelCreate() {
+  // targetPseudo (optionnel) : duel par pseudo (envoyé au serveur en fin de partie)
+  // au lieu du duel par lien classique.
+  async function startDuelCreate(targetPseudo) {
     if (readCurrentGame()) {
       const ok = await confirmModal({
         icon: "🆚", title: "Une carrière est en cours",
@@ -1874,15 +1823,17 @@
     }
     const seed = ((Math.random() * 0x7fffffff) >>> 0) || 1;
     const prof = duelChallengeFor(seed);
-    setup = { nationality: prof.nationality, position: prof.position, origin: prof.origin, duelRole: "create", duelSeed: seed, duelChoices: [], entryScreen: "screen-lifestyle" };
+    setup = { nationality: prof.nationality, position: prof.position, origin: prof.origin, duelRole: "create", duelSeed: seed, duelTargetPseudo: targetPseudo || null, duelChoices: [], entryScreen: "screen-lifestyle" };
     E.setSeed(seed);
-    setDuelReminder(`🆚 <strong>Tu crées un défi</strong> — ${prof.position.icon} ${esc(prof.position.name)} · ${flagHtml(prof.nationality)} ${esc(prof.nationality.name)} · ${esc(prof.origin.name)}`);
+    const cible = targetPseudo ? ` vers <strong>${esc(targetPseudo)}</strong>` : "";
+    setDuelReminder(`🆚 <strong>Tu crées un défi</strong>${cible} — ${prof.position.icon} ${esc(prof.position.name)} · ${flagHtml(prof.nationality)} ${esc(prof.nationality.name)} · ${esc(prof.origin.name)}`);
     track("duel_created", { seed });
     showScreen("screen-lifestyle");
   }
 
   // Relever un défi reçu : même graine, on affronte le résumé de l'adversaire.
-  async function acceptDuel(d) {
+  // serverId (optionnel) : duel par pseudo → la réponse part au serveur en fin de partie.
+  async function acceptDuel(d, serverId) {
     if (readCurrentGame()) {
       const ok = await confirmModal({
         icon: "🆚", title: "Une carrière est en cours",
@@ -1900,12 +1851,23 @@
       nationality: prof.nationality, position: prof.position, origin: prof.origin,
       duelRole: "respond", duelSeed: d.s,
       duelRivalSummary: rivalSummary, duelFromLabel: d.f.l, duelFromEntry: d.f,
+      duelServerId: serverId || null,
       duelChoices: [], entryScreen: "screen-lifestyle",
     };
     setDuelReminder(`🆚 <strong>Défi de ${esc(d.f.l)}</strong> — ${prof.position.icon} ${esc(prof.position.name)} · ${flagHtml(prof.nationality)} ${esc(prof.nationality.name)} · ${esc(prof.origin.name)}`);
     track("duel_accepted", { seed: d.s });
     showScreen("screen-lifestyle");
   }
+
+  // Pont pour le module compte (duels par pseudo) : lancer un défi vers un pseudo,
+  // ou relever un défi reçu du serveur (rejeu du journal du défieur pour l'intro).
+  window.OpenElevenGame = {
+    startDuelVsPseudo: (pseudo) => startDuelCreate(pseudo),
+    acceptServerDuel: (row) => acceptDuel(
+      { s: Number(row.seed), f: { l: row.from_label || row.from_pseudo, cl: row.from_choices } },
+      row.id
+    ),
+  };
 
   // Carte de quête pour l'écran dédié.
   function questCardHtml(q, done, tier) {
@@ -2227,6 +2189,14 @@
     if (G.dailyDate && window.OpenElevenAccount && window.OpenElevenAccount.submitDaily) {
       window.OpenElevenAccount.submitDaily(G.dailyDate, (G.choiceLog || []).slice(), score);
     }
+    // Duel par pseudo : envoi automatique (le serveur rejoue + départage).
+    if (G.duel && window.OpenElevenAccount) {
+      const cl = (G.choiceLog || []).slice();
+      if (G.duelRole === "create" && G.duelTargetPseudo && window.OpenElevenAccount.submitDuelCreate)
+        window.OpenElevenAccount.submitDuelCreate({ seed: G.duelSeed, choices: cl, toPseudo: G.duelTargetPseudo, label: G.name });
+      else if (G.duelRole === "respond" && G.duelServerId && window.OpenElevenAccount.submitDuelRespond)
+        window.OpenElevenAccount.submitDuelRespond({ id: G.duelServerId, choices: cl, label: G.name });
+    }
     const storyResult = G.storyId ? recordStoryResult(G.storyId, score) : null;
     const jetonBonus = awardCareerJetons(score);
     track("career_end", {
@@ -2511,8 +2481,15 @@
 
     const duelBtn = $("btn-duel-share");
     if (duelBtn) {
+      // Duel par pseudo (serveur) : l'envoi est automatique en fin de partie →
+      // le bouton devient une confirmation, pas un partage de lien.
+      const serverDuel = G.duel && (G.duelRole === "create" ? !!G.duelTargetPseudo : !!G.duelServerId);
       duelBtn.style.display = (!review && G.duel) ? "" : "none";
-      if (!review && G.duel) duelBtn.textContent = G.duelRole === "respond" ? `↩️ Renvoyer à ${G.duelFromLabel}` : "🆚 Défier un ami";
+      duelBtn.disabled = !!serverDuel;
+      if (!review && G.duel) {
+        if (serverDuel) duelBtn.textContent = G.duelRole === "respond" ? "✅ Réponse envoyée" : `✅ Défi envoyé à ${G.duelTargetPseudo}`;
+        else duelBtn.textContent = G.duelRole === "respond" ? `↩️ Renvoyer à ${G.duelFromLabel}` : "🆚 Défier un ami";
+      }
     }
     const replayBtn = $("btn-replay");
     if (replayBtn) replayBtn.textContent = review ? "🏛️ Retour au Panthéon" : "Rejouer une carrière";
@@ -3246,7 +3223,13 @@
     $("btn-pantheon-back").addEventListener("click", () => showScreen("screen-home"));
     $("btn-shop").addEventListener("click", () => { track("open_shop"); renderShopScreen(); showScreen("screen-shop"); });
     $("btn-shop-back").addEventListener("click", () => showScreen("screen-home"));
-    $("duel-panel").addEventListener("click", startDuelCreate);
+    $("duel-panel").addEventListener("click", () => startDuelCreate());
+    // Bouton « Duels » (par pseudo) : visible seulement si le compte est configuré.
+    const duelsBtn = $("btn-duels");
+    if (duelsBtn && window.OpenElevenAccount && window.OpenElevenAccount.openDuels) {
+      duelsBtn.hidden = false;
+      duelsBtn.addEventListener("click", () => window.OpenElevenAccount.openDuels());
+    }
     $("story-panel").addEventListener("click", () => { track("open_stories"); renderStoryScreen(); showScreen("screen-story"); });
     $("btn-story-back").addEventListener("click", () => showScreen("screen-home"));
     $("btn-duel-share").addEventListener("click", (e) => shareDuel(currentDuelLink(), e.currentTarget));

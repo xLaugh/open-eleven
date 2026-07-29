@@ -407,6 +407,94 @@
     pfBox.querySelector(".acc-x").onclick = () => pfOverlay.classList.remove("on");
   }
 
+  // ============================================================================
+  //  Duels par pseudo (sans lien) + historique
+  //  Envois auto en fin de partie (create/respond) → le serveur rejoue + départage.
+  // ============================================================================
+  async function callDuel(body) {
+    if (!session) return { ok: false };
+    try {
+      const res = await fetch(URL.replace(/\/+$/, "") + "/functions/v1/submit-duel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: ANON, Authorization: "Bearer " + session.access_token },
+        body: JSON.stringify(body),
+      });
+      return await res.json().catch(() => ({ ok: res.ok }));
+    } catch (_) { return { ok: false }; }
+  }
+  function submitDuelCreate(o) { return callDuel({ action: "create", seed: o.seed, choices: o.choices, toPseudo: o.toPseudo, label: o.label }); }
+  function submitDuelRespond(o) { return callDuel({ action: "respond", id: o.id, choices: o.choices, label: o.label }); }
+
+  const duOverlay = document.createElement("div");
+  duOverlay.className = "acc-overlay";
+  duOverlay.innerHTML = '<div class="lb-box" role="dialog" aria-modal="true"></div>';
+  document.body.appendChild(duOverlay);
+  const duBox = duOverlay.querySelector(".lb-box");
+  duOverlay.addEventListener("click", (e) => { if (e.target === duOverlay) duOverlay.classList.remove("on"); });
+  let duTab = "send";
+
+  async function renderDuels() {
+    duBox.innerHTML =
+      '<button class="acc-x" aria-label="Fermer">×</button><h3>⚔️ Duels</h3>' +
+      '<div class="lb-tabs">' +
+      '<button class="lb-tab' + (duTab === "send" ? " on" : "") + '" data-t="send">Défier</button>' +
+      '<button class="lb-tab' + (duTab === "in" ? " on" : "") + '" data-t="in">Reçus</button>' +
+      '<button class="lb-tab' + (duTab === "hist" ? " on" : "") + '" data-t="hist">Historique</button>' +
+      "</div><div class=\"lb-content\"><p class=\"lb-empty\">Chargement…</p></div>";
+    duBox.querySelector(".acc-x").onclick = () => duOverlay.classList.remove("on");
+    duBox.querySelectorAll(".lb-tab").forEach((b) => (b.onclick = () => { duTab = b.dataset.t; renderDuels(); }));
+    const content = duBox.querySelector(".lb-content");
+
+    if (!session) { content.innerHTML = '<p class="lb-empty">Connecte-toi (👤) pour défier des joueurs.</p>'; return; }
+    if (!pseudo) { content.innerHTML = '<p class="lb-empty">Choisis d\'abord un pseudo dans « Mon compte ».</p>'; return; }
+
+    if (duTab === "send") {
+      content.innerHTML =
+        '<p class="acc-sub" style="margin:4px 0 8px">Entre le pseudo d\'un ami. Tu joues ta carrière, ton défi lui est envoyé (même parcours pour vous deux).</p>' +
+        '<input type="text" id="du-pseudo" maxlength="24" placeholder="Pseudo de l\'adversaire" style="width:100%;box-sizing:border-box;margin:0 0 8px;padding:11px 13px;border:1.5px solid rgba(12,45,30,.18);border-radius:10px;font-size:1rem" />' +
+        '<button class="acc-btn primary" id="du-go" style="margin:0">🆚 Lancer le défi</button><p class="acc-msg"></p>';
+      const go = () => {
+        const p = duBox.querySelector("#du-pseudo").value.trim();
+        const m = duBox.querySelector(".acc-msg");
+        if (p.length < 2) { m.textContent = "Pseudo trop court."; m.className = "acc-msg err"; return; }
+        if (p.toLowerCase() === (pseudo || "").toLowerCase()) { m.textContent = "Tu ne peux pas te défier toi-même."; m.className = "acc-msg err"; return; }
+        duOverlay.classList.remove("on");
+        if (window.OpenElevenGame && window.OpenElevenGame.startDuelVsPseudo) window.OpenElevenGame.startDuelVsPseudo(p);
+      };
+      duBox.querySelector("#du-go").onclick = go;
+      return;
+    }
+
+    if (duTab === "in") {
+      let rows = [];
+      try { const { data } = await sb.rpc("duels_incoming"); rows = data || []; } catch (_) {}
+      content.innerHTML = rows.length
+        ? '<ul class="lb-list">' + rows.map((r, i) =>
+            '<li class="lb-row"><span class="lb-name">🆚 <strong>' + esc(r.from_label || r.from_pseudo) + "</strong><br><span class=\"lb-sub\">te défie · " + r.from_score + " pts à battre</span></span>" +
+            '<button class="acc-btn soft du-accept" data-i="' + i + '" style="width:auto;margin:0;padding:8px 12px">Relever</button></li>'
+          ).join("") + "</ul>"
+        : '<p class="lb-empty">Aucun défi en attente.</p>';
+      content.querySelectorAll(".du-accept").forEach((b) => (b.onclick = () => {
+        const r = rows[Number(b.dataset.i)];
+        duOverlay.classList.remove("on");
+        if (window.OpenElevenGame && window.OpenElevenGame.acceptServerDuel) window.OpenElevenGame.acceptServerDuel(r);
+      }));
+      return;
+    }
+
+    // historique
+    let rows = [];
+    try { const { data } = await sb.rpc("duels_history"); rows = data || []; } catch (_) {}
+    content.innerHTML = rows.length
+      ? '<ul class="lb-list">' + rows.map((r) => {
+          const mine = r.i_am, myScore = mine === "from" ? r.from_score : r.to_score, opp = mine === "from" ? r.to_pseudo : r.from_pseudo, oppScore = mine === "from" ? r.to_score : r.from_score;
+          const res = r.winner === "tie" ? '<span style="color:var(--text-1,#567)">Nul</span>' : (r.winner === mine ? '<span style="color:var(--green,#087b4b);font-weight:800">Victoire</span>' : '<span style="color:#b3261e;font-weight:800">Défaite</span>');
+          return '<li class="lb-row"><span class="lb-name">vs <strong>' + esc(opp) + "</strong> <span class=\"lb-sub\">" + myScore + " – " + oppScore + "</span></span><span class=\"lb-pts\">" + res + "</span></li>";
+        }).join("") + "</ul>"
+      : '<p class="lb-empty">Aucun duel terminé pour l\'instant.</p>';
+  }
+  function openDuels() { duTab = "send"; renderDuels(); duOverlay.classList.add("on"); }
+
   // ---- pool de légendes communautaires (invité du mercato) -------------------
   let legendsCache = [];
   async function loadLegends() {
@@ -416,7 +504,10 @@
   loadLegends();
 
   // ---- API publique pour le jeu ----------------------------------------------
-  window.OpenElevenAccount = { submitDaily, openLeaderboard, openProfile, getLegends, pushProfile: pushProfileStats };
+  window.OpenElevenAccount = {
+    submitDaily, openLeaderboard, openProfile, getLegends, pushProfile: pushProfileStats,
+    openDuels, submitDuelCreate, submitDuelRespond,
+  };
 
   // ---- bouton d'accueil -------------------------------------------------------
   if (btn) btn.addEventListener("click", open);

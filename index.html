@@ -30,7 +30,7 @@
 <link rel="preload" href="src/fonts/poppins-400-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="src/fonts/oswald-600-latin.woff2" as="font" type="font/woff2" crossorigin />
 
-<link rel="stylesheet" href="style.css?v=10.13" />
+<link rel="stylesheet" href="style.css?v=10.14" />
 </head>
 <body>
 <div id="app">
@@ -50,6 +50,7 @@
       </div>
       <div class="daily-panel" id="daily-panel"></div>
       <button class="btn-link daily-lb-btn" id="btn-leaderboard" hidden>🏆 Classement mondial</button>
+      <button class="btn-link daily-lb-btn" id="btn-duels" hidden>⚔️ Duels</button>
       <div class="quest-panel" id="quest-panel"></div>
       <div class="duel-panel" id="duel-panel"></div>
       <div class="story-panel" id="story-panel"></div>
@@ -275,13 +276,13 @@
   </div>
 </div>
 
-<script src="data.js?v=10.13"></script>
-<script src="engine.js?v=10.13"></script>
-<script src="game.js?v=10.13"></script>
+<script src="data.js?v=10.14"></script>
+<script src="engine.js?v=10.14"></script>
+<script src="game.js?v=10.14"></script>
 <!-- Compte & sauvegarde cloud (optionnel, désactivé tant que supabase-config.js est vide) -->
-<script src="src/vendor/supabase.js?v=10.13"></script>
-<script src="src/supabase-config.js?v=10.13"></script>
-<script src="account.js?v=10.13"></script>
+<script src="src/vendor/supabase.js?v=10.14"></script>
+<script src="src/supabase-config.js?v=10.14"></script>
+<script src="account.js?v=10.14"></script>
 <script>
   // PWA : installable + chargement instantané au retour + hors-ligne.
   if ("serviceWorker" in navigator) {
