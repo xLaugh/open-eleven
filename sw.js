@@ -9,13 +9,13 @@
    ⚠️ À CHAQUE DÉPLOIEMENT : bumper CACHE (ci-dessous) en même temps
    que le ?v= d'index.html — l'ancien cache est alors purgé.
    ============================================================ */
-const CACHE = "open-eleven-v10.6";
+const CACHE = "open-eleven-v10.7";
 const CORE = [
   "./", "./index.html",
-  "./style.css?v=10.6", "./data.js?v=10.6", "./engine.js?v=10.6", "./game.js?v=10.6",
+  "./style.css?v=10.7", "./data.js?v=10.7", "./engine.js?v=10.7", "./game.js?v=10.7",
   "./site.webmanifest", "./favicon.svg",
   "./src/img/logo-11-mark.png",
-  "./src/img/icon-512.png", "./src/img/og-cover.jpg",
+  "./src/img/icon-512.png", "./src/img/icon-192.png", "./src/img/icon-maskable-512.png", "./src/img/og-cover.jpg",
 ];
 
 self.addEventListener("install", (e) => {
