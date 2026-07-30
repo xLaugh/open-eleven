@@ -9,19 +9,27 @@
    ⚠️ À CHAQUE DÉPLOIEMENT : bumper CACHE (ci-dessous) en même temps
    que le ?v= d'index.html — l'ancien cache est alors purgé.
    ============================================================ */
-const CACHE = "open-eleven-v10.25";
+const CACHE = "open-eleven-v10.26";
 const CORE = [
   "./", "./index.html",
-  "./style.css?v=10.25", "./data.js?v=10.25", "./engine.js?v=10.25", "./game.js?v=10.25",
-  "./src/vendor/supabase.js?v=10.25", "./src/supabase-config.js?v=10.25", "./src/badwords.js?v=10.25", "./account.js?v=10.25",
+  "./style.css?v=10.26", "./data.js?v=10.26", "./engine.js?v=10.26", "./game.js?v=10.26",
+  "./src/vendor/supabase.js?v=10.26", "./src/supabase-config.js?v=10.26", "./src/badwords.js?v=10.26", "./account.js?v=10.26",
   "./site.webmanifest", "./favicon.svg", "./privacy.html",
   "./src/img/logo-11-mark.png",
-  "./src/img/icon-512.png", "./src/img/icon-192.png", "./src/img/icon-maskable-512.png", "./src/img/og-cover.jpg",
+  "./src/img/icon-512.png", "./src/img/icon-192.png", "./src/img/icon-maskable-512.png",
 ];
 
+// Précache TOLÉRANT : addAll() rejette en bloc dès qu'UNE seule URL répond autre
+// chose que 2xx, ce qui fait échouer l'install et jeter le worker — donc plus de
+// hors-ligne, plus d'installation PWA, et plus de purge des anciens caches. C'est
+// exactement ce qui s'est produit avec une entrée de CORE pointant un fichier
+// absent. On met donc chaque asset en cache indépendamment : un asset manquant
+// dégrade le hors-ligne pour LUI SEUL au lieu de tout casser silencieusement.
 self.addEventListener("install", (e) => {
   e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then((c) => Promise.all(CORE.map((u) => c.add(u).catch(() => {}))))
+      .then(() => self.skipWaiting())
   );
 });
 

@@ -11,6 +11,9 @@
 // ============================================================
 import { CORS, json, getEngine, authUser, adminClient, validChoices } from "../_shared/game-engine.ts";
 
+// Fenêtre de rattrapage : au-delà, un défi passé n'entre plus au classement.
+const DAILY_BACKLOG_DAYS = 2;
+
 function utcTodayPlus(days: number): string {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() + days);
@@ -30,14 +33,26 @@ Deno.serve(async (req) => {
   const choices = payload?.choices;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ error: "Date invalide" }, 400);
   if (date > utcTodayPlus(1)) return json({ error: "Date dans le futur" }, 400);
+  // Borne INFÉRIEURE : sans elle, n'importe quelle date passée était acceptée, ce qui
+  // (a) permettait de farmer le classement « Général » (somme sur toutes les dates) en
+  // rejouant des centaines de défis anciens, et (b) neutralisait le rate-limit, dont le
+  // seau est indexé sur la date du défi (il suffisait d'alterner les dates).
+  if (date < utcTodayPlus(-DAILY_BACKLOG_DAYS)) return json({ error: "Ce défi est trop ancien pour entrer au classement." }, 400);
   if (!validChoices(choices)) return json({ error: "Journal de choix invalide" }, 400);
 
   const admin = adminClient();
 
   // Rate-limit AVANT le rejeu (coûteux) : anti brute-force / anti-martelage.
+  // DEUX seaux, car un seul indexé sur la date du défi se contourne en alternant les
+  // dates : un seau GLOBAL sur le jour courant (plafond + cooldown réels), puis un
+  // seau par date de défi (limite les tentatives sur un défi donné).
+  const today = utcTodayPlus(0);
+  const g = await admin.rpc("rate_take", { p_user: user.id, p_bucket: "daily_global", p_day: today, p_cap: 60, p_cooldown_ms: 4000 });
+  if (g.data === "cooldown") return json({ error: "Doucement — attends quelques secondes." }, 429);
+  if (g.data === "cap") return json({ error: "Trop de soumissions aujourd'hui, réessaie demain." }, 429);
   const rl = await admin.rpc("rate_take", { p_user: user.id, p_bucket: "daily", p_day: date, p_cap: 25, p_cooldown_ms: 8000 });
   if (rl.data === "cooldown") return json({ error: "Doucement — attends quelques secondes." }, 429);
-  if (rl.data === "cap") return json({ error: "Trop de tentatives aujourd'hui pour ce défi." }, 429);
+  if (rl.data === "cap") return json({ error: "Trop de tentatives pour ce défi." }, 429);
 
   // REJOUER + RECALCULER le score côté serveur (anti-triche).
   let score: number;

@@ -43,6 +43,19 @@
   function rand(min, max) { return min + rng() * (max - min); }
   function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
   function pick(arr) { return arr[Math.floor(rng() * arr.length)]; }
+  // Tire n éléments distincts (Fisher-Yates partiel). Consomme EXACTEMENT n appels
+  // à rng(), quel que soit le moteur JS.
+  // ⚠️ Remplace un ancien `[...pool].sort(() => rng() - 0.5)` : le nombre d'appels
+  // au comparateur d'un sort() dépend de l'implémentation (V8/TimSort ≠ SpiderMonkey
+  // ≠ JavaScriptCore), donc le déterminisme n'était PAS portable — un joueur Firefox
+  // voyait sa carrière recalculée différemment par le serveur (Deno/V8). En prime, le
+  // mélange par sort() est statistiquement biaisé, et coûtait ~2000 tirages par
+  // mercato sur un pool de 332 clubs contre 1 à 3 ici.
+  function sampleN(arr, n) {
+    const a = arr.slice(), out = [];
+    for (let i = 0; i < n && a.length; i++) out.push(a.splice(Math.floor(rng() * a.length), 1)[0]);
+    return out;
+  }
 
   function weightedRandom(items, weightFn) {
     const getW = weightFn || ((it) => (it.weight != null ? it.weight : it.w));
@@ -2094,8 +2107,7 @@
     }
     if (pool.length === 0) pool = CLUBS_BY_LEVEL[targetLevel].filter((c) => c.id !== s.club.id);
     const count = Math.min(pool.length, randInt(1, 3));
-    const shuffled = [...pool].sort(() => rng() - 0.5).slice(0, count);
-    const offers = shuffled.map((club) => buildOffer(s, club));
+    const offers = sampleN(pool, count).map((club) => buildOffer(s, club));
     // Une clause libératoire rend le joueur plus abordable → plus d'offres sérieuses
     if (s.flags.release_clause) offers.forEach((o) => { o.fee = Math.round(o.fee * 0.75 * 10) / 10; });
     return offers;
@@ -2107,8 +2119,7 @@
     let pool = CLUBS.filter((c) => levels.includes(c.level) && c.id !== s.club.id && !(countryOf(c.countryId) || {}).gulf);
     const domestic = pool.filter((c) => c.countryId === s.club.countryId);
     if (domestic.length >= 2) pool = domestic;
-    const shuffled = [...pool].sort(() => rng() - 0.5).slice(0, Math.min(pool.length, randInt(2, 3)));
-    return shuffled.map((club) => ({ club, loan: true }));
+    return sampleN(pool, Math.min(pool.length, randInt(2, 3))).map((club) => ({ club, loan: true }));
   }
 
   function applyLoan(s, offer) {

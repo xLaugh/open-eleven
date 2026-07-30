@@ -149,7 +149,15 @@
     }
   }
 
-  function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+  // Échappe AUSSI l'apostrophe : plusieurs attributs sont écrits en HTML par
+  // concaténation, et une seule valeur en quotes simples suffirait sinon à sortir
+  // de l'attribut.
+  function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+  // Coercition numérique bornée. `profiles.stats` est un jsonb écrit par le CLIENT
+  // et lu PUBLIQUEMENT : rien de ce qui en sort n'est digne de confiance. Un champ
+  // « numérique » peut donc contenir une chaîne — d'où Number() + bornes avant tout
+  // affichage (même principe que reconstructDuelRival pour les liens de duel).
+  function num(v, max) { const n = Number(v); return Number.isFinite(n) ? Math.min(Math.max(Math.round(n), 0), max) : 0; }
   function traduire(m) {
     if (/Invalid login credentials/i.test(m)) return "E-mail ou mot de passe incorrect.";
     if (/already registered|already been registered/i.test(m)) return "Cet e-mail a déjà un compte. Connecte-toi.";
@@ -400,8 +408,8 @@
   document.body.appendChild(pfOverlay);
   const pfBox = pfOverlay.querySelector(".lb-box");
   pfOverlay.addEventListener("click", (e) => { if (e.target === pfOverlay) pfOverlay.classList.remove("on"); });
-  const medalR = (r) => (r === 1 ? "🥇" : r === 2 ? "🥈" : r === 3 ? "🥉" : "#" + r);
-  const money = (m) => (m >= 1e6 ? (m / 1e6).toFixed(m >= 1e7 ? 0 : 1) + " M€" : m >= 1e3 ? Math.round(m / 1e3) + " k€" : m + " €");
+  const medalR = (r) => (r === 1 ? "🥇" : r === 2 ? "🥈" : r === 3 ? "🥉" : "#" + num(r, 1e9));
+  const money = (m) => { m = num(m, 1e12); return m >= 1e6 ? (m / 1e6).toFixed(m >= 1e7 ? 0 : 1) + " M€" : m >= 1e3 ? Math.round(m / 1e3) + " k€" : m + " €"; };
 
   async function openProfile(who) {
     pfBox.innerHTML = '<button class="acc-x" aria-label="Fermer">×</button><p class="lb-empty">Chargement…</p>';
@@ -416,13 +424,17 @@
     }
     const st = row.stats || {};
     const b = st.best;
+    // TOUT ce qui vient de `stats` est hostile par défaut : chaînes échappées,
+    // nombres coercés et bornés, et les « icônes » tronquées à quelques caractères
+    // (ce sont des emojis, pas du HTML).
     const rankLine = row.rank
-      ? '<div class="lb-me">Classement général : <strong>' + medalR(Number(row.rank)) + "</strong> · " + row.total + ' pts <span class="lb-sub">(' + row.days + " défis)</span></div>"
+      ? '<div class="lb-me">Classement général : <strong>' + medalR(num(row.rank, 1e9)) + "</strong> · " + num(row.total, 1e9) + ' pts <span class="lb-sub">(' + num(row.days, 1e6) + " défis)</span></div>"
       : '<div class="lb-me lb-sub" style="font-weight:400">Pas encore classé au Défi du jour.</div>';
+    const icon = (v) => esc(String(v == null ? "" : v).slice(0, 8));
     const bestLine = b
-      ? '<div class="pf-best"><div class="pf-best-top">' + (b.natFlag || "") + " " + esc(b.name || "—") + "</div>" +
-        '<div class="pf-best-title">' + (b.posIcon || "") + " " + esc(b.title || "") + "</div>" +
-        '<div class="pf-best-stats">🏅 ' + (b.score || 0) + " pts · 📊 " + (b.peakOvr || 0) + " · 💰 " + money(b.money || 0) + "</div></div>"
+      ? '<div class="pf-best"><div class="pf-best-top">' + icon(b.natFlag) + " " + esc(String(b.name == null ? "—" : b.name).slice(0, 40)) + "</div>" +
+        '<div class="pf-best-title">' + icon(b.posIcon) + " " + esc(String(b.title == null ? "" : b.title).slice(0, 80)) + "</div>" +
+        '<div class="pf-best-stats">🏅 ' + num(b.score, 100000) + " pts · 📊 " + num(b.peakOvr, 99) + " · 💰 " + money(b.money) + "</div></div>"
       : '<p class="lb-sub">Aucune carrière partagée.</p>';
     pfBox.innerHTML =
       '<button class="acc-x" aria-label="Fermer">×</button>' +
@@ -430,7 +442,7 @@
       rankLine +
       '<p class="acc-sub" style="margin:12px 0 2px">Meilleure carrière <span class="lb-sub">(vitrine, non vérifiée)</span></p>' +
       bestLine +
-      '<div class="pf-counters"><span>🏆 ' + (st.badges || 0) + " badges</span><span>🔥 " + (st.bestStreak || 0) + " j (série)</span><span>👤 " + (st.careers || 0) + " carrières</span></div>";
+      '<div class="pf-counters"><span>🏆 ' + num(st.badges, 999) + " badges</span><span>🔥 " + num(st.bestStreak, 99999) + " j (série)</span><span>👤 " + num(st.careers, 99999) + " carrières</span></div>";
     pfBox.querySelector(".acc-x").onclick = () => pfOverlay.classList.remove("on");
   }
 

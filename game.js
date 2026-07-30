@@ -31,6 +31,17 @@
     return String(str).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
   }
 
+  // Exécute fn EN DEHORS du flux de hasard semé, puis restaure l'état exact du PRNG.
+  // Indispensable pour tout ce qui est COSMÉTIQUE (le rival IA) pendant un Défi du
+  // jour ou un duel : le serveur rejoue la carrière SANS rival (E.replayRun), donc
+  // le moindre rng() consommé par le rival ferait diverger la carrière du joueur de
+  // celle que le serveur recalcule — et le classement inscrirait un autre score.
+  function offSeed(fn) {
+    const st = E.getSeedState();
+    E.clearSeed();
+    try { return fn(); } finally { E.setSeedState(st); }
+  }
+
   // Année du premier contrat pro. PAS BALANCE.startYear : le mode Histoire
   // impose son époque (« Le Maestro » débute en 1988).
   function careerStartYear() {
@@ -410,7 +421,7 @@
     // consommation de hasard que l'adversaire, donc mêmes épreuves (équité).
     if (setup.duelRole === "respond") R = reconstructDuelRival(setup.duelRivalSummary, setup.duelFromLabel);
     else if (setup.duelRole === "create") R = null;
-    else R = E.newRival(setup.position); // un vrai rival joue au même poste
+    else R = offSeed(() => E.newRival(setup.position)); // un vrai rival joue au même poste
     if (G.storyId && R) R.year = G.year; // le rival vit à la même époque que la légende
     prevOvr = null;
     legendGuest = pickLegendGuest();
@@ -870,7 +881,7 @@
 
 
   function renderRecap(report) {
-    const rivalReport = G.duel ? null : E.rivalSeason(R); // en duel : rival figé, pas de sim
+    const rivalReport = G.duel ? null : offSeed(() => E.rivalSeason(R)); // en duel : rival figé, pas de sim
     const isGk = G.position.id === "gk";
     const trophyLine = report.trophies.length
       ? report.trophies.map((tr) => { const c = COMPETITIONS[tr]; return c ? `${c.icon} ${c.name}` : tr; }).join(" · ")
@@ -2196,7 +2207,7 @@
     clearCurrentGame(); // carrière terminée : plus rien à reprendre
     // Le rival IA termine sa carrière en accéléré (jamais en duel : R est figé/absent)
     let guard = 0;
-    if (!G.duel) { while (!R.careerEnded && R.age <= E.BALANCE_REF.ageMax && guard++ < 30) E.rivalSeason(R); }
+    if (!G.duel) offSeed(() => { while (!R.careerEnded && R.age <= E.BALANCE_REF.ageMax && guard++ < 30) E.rivalSeason(R); });
     saveToPantheon();
     // Met à jour la vitrine publique (meilleure carrière, badges, série) si connecté.
     if (window.OpenElevenAccount && window.OpenElevenAccount.pushProfile) window.OpenElevenAccount.pushProfile();
@@ -3133,7 +3144,7 @@
     if (!snap) { refreshHomeButtons(); return; }
     E.setSeedState(snap.seedState); // restaure le hasard (déterministe pour un défi ; null = Math.random)
     G = relinkCareer(snap.g);
-    R = snap.r ? relinkCareer(snap.r) : (G.duel ? null : E.newRival(G.position));
+    R = snap.r ? relinkCareer(snap.r) : (G.duel ? null : offSeed(() => E.newRival(G.position)));
     legendGuest = snap.legendGuest || null;
     legendGuestUsed = !!snap.legendGuestUsed;
     prevOvr = null;
