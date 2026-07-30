@@ -837,6 +837,75 @@ const LEVELS = {
 };
 const LEVEL_ORDER = ["regional", "d3", "d2", "d1", "elite"];
 
+// --- Double nationalité ---------------------------------------------------
+// Couloirs migratoires réels : un joueur né/formé ici est fréquemment éligible
+// à la sélection d'en face (parents ou grands-parents). La liste est LUE DANS
+// LES DEUX SENS — un Français peut être éligible au Maroc, et l'inverse.
+// Chaque entrée : id de nation → nations partenaires plausibles.
+// Ce n'est pas une base juridique, c'est une table de plausibilité de jeu :
+// l'intérêt est le DILEMME (petite nation où l'on est titulaire et capitaine,
+// contre grande nation où la sélection se mérite mais où tout est possible).
+const DUAL_NATIONALITY = {
+  ma: ["fr", "es", "nl", "be"],
+  dz: ["fr"],
+  tn: ["fr", "it"],
+  sn: ["fr"],
+  ml: ["fr"],
+  ci: ["fr", "be"],
+  cm: ["fr"],
+  cd: ["be", "fr"],
+  ng: ["en"],
+  gh: ["en", "de"],
+  jm: ["en"],
+  tt: ["en"],
+  gy: ["en"],
+  ke: ["en"],
+  za: ["en", "nl"],
+  eg: ["it"],
+  tr: ["de", "nl", "at"],
+  pl: ["de", "en"],
+  hr: ["de", "at", "au"],
+  rs: ["ch", "at", "de"],
+  ba: ["ch", "at", "de", "se"],
+  al: ["ch", "it", "gr"],
+  xk: ["ch", "de", "se"],
+  mk: ["ch", "it"],
+  cv: ["pt", "nl"],
+  ao: ["pt"],
+  br: ["pt", "it", "es", "jp"],
+  ar: ["it", "es"],
+  uy: ["it", "es"],
+  sr: ["nl"],
+  cw: ["nl"],
+  mx: ["us"],
+  pr: ["us"],
+  do: ["us", "es"],
+  ph: ["us", "es"],
+  ht: ["fr", "us", "ca"],
+  ie: ["en"],
+  sco: ["en"],
+  wal: ["en"],
+  nz: ["au"],
+  fj: ["au", "nz"],
+  ws: ["nz", "au"],
+  in: ["en"],
+  pk: ["en"],
+  bd: ["en"],
+  so: ["se", "no", "en"],
+  er: ["se", "no"],
+  iq: ["se", "de"],
+  sy: ["se", "de"],
+  lb: ["fr", "br"],
+  ir: ["de", "se"],
+  am: ["fr"],
+  ge: ["de"],
+  ua: ["pl", "de"],
+  md: ["ro", "it"],
+  ro: ["it", "es"],
+  gr: ["de", "au"],
+  kr: ["us"],
+};
+
 // --- Statut au club (rôle) ------------------------------------------
 // Cran de statut vis-à-vis du coach, du plus faible au plus fort. `pt` = temps
 // de jeu de base (ancre) ; `expect` = note de saison à tenir pour garder le poste.
@@ -2840,6 +2909,28 @@ const EVENTS = [
         { weight: 40, text: "Le grand saut réussi : vous vous imposez chez les cadors.", fx: { t: 4, rep: 8, transfer: { d: 1 } } },
         { weight: 35, text: "Le transfert se fait, mais le niveau est brutal : il va falloir s'accrocher.", fx: { rep: 3, form: -6, transfer: { d: 1 } } },
         { weight: 25, text: "Votre bras de fer pour partir laisse des traces : les supporters vous conspuent.", fx: { rep: -5, mor: -6, transfer: { d: 1 } } },
+      ] },
+    ],
+  },
+  {
+    // DOUBLE NATIONALITÉ — le choix de sélection. Ne se présente qu'aux joueurs
+    // éligibles à deux nations et pas encore appelés en A (cond.dual + cond.nat:false).
+    // Vrai dilemme : les tournois sont pondérés par la force de la nation, mais la
+    // barre de sélection monte avec le niveau du club. Petite nation = titulaire
+    // presque assuré ; grande nation = sélection à mériter, mais Mondial jouable.
+    // Poids élevé : la fenêtre est courte (avant la 1re sélection), le joueur ne doit
+    // pas passer à côté du choix.
+    id: "ev_dual_nationality", cat: "Sélection", icon: "🌍", w: 60,
+    cond: { aMin: 17, aMax: 23, dual: true, nat: false },
+    text: "Deux fédérations vous veulent. {nat} vous suit depuis les catégories de jeunes, mais {dualNat} a fait le déplacement : vos origines vous ouvrent leur porte. Il faut trancher — dès le premier match officiel joué, l'autre sélection se referme définitivement.",
+    options: [
+      { label: "Rester fidèle à {nat}", outcomes: [
+        { weight: 55, text: "Vous confirmez {nat}. Le pays salue la fidélité, et vous devenez un visage du projet.", fx: { rep: 3, mor: 5, natLock: true } },
+        { weight: 45, text: "Vous choisissez {nat} sans hésiter. La fédération vous voit déjà en cadre.", fx: { mor: 4, c: 2, natLock: true } },
+      ] },
+      { label: "Choisir {dualNat}", hint: "Change de sélection", outcomes: [
+        { weight: 50, text: "Vous optez pour {dualNat}. Nouveau maillot, nouvelles ambitions — et une partie du public d'origine qui ne vous le pardonnera pas.", fx: { rep: 4, mor: 2, natSwitch: true } },
+        { weight: 50, text: "Vous rejoignez {dualNat}. La presse d'origine parle de trahison, celle d'accueil d'un renfort de poids.", fx: { rep: 6, mor: -3, natSwitch: true } },
       ] },
     ],
   },
@@ -6461,6 +6552,10 @@ const BALANCE = {
   // de clubs → effet moyen neutre, écarts entre pays conservés.
   countryGrowthRef: 0.82,
   countryMediaRef: 0.6,
+  // Probabilité d'être éligible à une SECONDE sélection, quand la nation figure dans
+  // DUAL_NATIONALITY. Volontairement minoritaire : la double nationalité doit rester
+  // une carrière particulière, pas la norme.
+  dualNatChance: 0.3,
   matchesByLevel: { regional: [30, 38], d3: [33, 41], d2: [36, 44], d1: [40, 48], elite: [44, 54] },
   // Titre de division (ne compte comme trophée national qu'en d1/élite)
   titleChance: { regional: 0.12, d3: 0.1, d2: 0.08, d1: 0.06, elite: 0.3 },
@@ -6916,7 +7011,7 @@ if (typeof module !== "undefined" && module.exports) {
   const dataExports = {
     BRAND, NATIONALITIES, NAME_POOLS, LIFESTYLES, ENTOURAGES, TRAJECTORIES,
     ARCHETYPES, POSITIONS, ORIGINS, COUNTRIES, CONTINENTAL_CUPS, NATIONAL_CUPS, NATIONS_LEAGUE, NL_STAGES, LEVELS, ROLES, ROLE_ESPOIR_MAX_AGE,
-    LEVEL_ORDER, CLUBS, CLUBS_BY_LEVEL, COMPETITIONS, COACH_NAMES, TRAITS,
+    LEVEL_ORDER, DUAL_NATIONALITY, CLUBS, CLUBS_BY_LEVEL, COMPETITIONS, COACH_NAMES, TRAITS,
     AWARDS, KEY_MOMENTS,
     EVENTS, MICRO_EVENTS, RIVAL_NEWS_GOOD, RIVAL_NEWS_BAD, RIVAL_NEWS_AHEAD,
     RIVAL_NEWS_BEHIND, WORLD_NEWS, WC_STAGES, WC_STAGES_48, YOUTH_TIERS, YOUTH_STAGES, OLYMPIC_STAGES, BALANCE, HEADLINES,

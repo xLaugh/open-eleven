@@ -137,7 +137,12 @@
 
   function updateHeader() {
     const country = E.countryOf(G.club.countryId);
-    $("hh-player").innerHTML = `${flagHtml(G.nationality)} ${esc(G.name)}`;
+    // Double nationalité : le second drapeau est affiché TANT QUE le choix n'est pas
+    // tranché, pour que le joueur sache qu'une bascule l'attend. Il disparaît dès que
+    // la décision est prise (ou que la fenêtre se referme).
+    const dual = E.dualNatOf(G);
+    const dualFlag = dual ? ` <span class="dual-nat" title="Éligible à la sélection ${esc(dual.name)}">${flagHtml(dual)}</span>` : "";
+    $("hh-player").innerHTML = `${flagHtml(G.nationality)}${dualFlag} ${esc(G.name)}`;
     $("hh-age").textContent = `${G.age} ans · ${G.year}`;
     const clubImg = G.club.img ? `<img class="club-logo" src="${encodeURI(G.club.img)}" alt="" onerror="this.remove()" />` : "";
     const lvl = E.lvlOf(G, G.club);

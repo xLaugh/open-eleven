@@ -356,8 +356,37 @@
     s.contract.salary = salaryFor(s, opts.club) * 0.3;
     s.transferHistory.push({ age: s.age, toClubName: opts.club.name, countryName: countryOf(opts.club.countryId).name, fee: null, level: lvlOf(s, opts.club) });
     s.role = roleForClub(s, opts.club); // statut au centre de formation (souvent Espoir/Rotation)
+    // Double nationalité : tirée à la création (donc dans le flux semé → rejouable),
+    // mais le CHOIX se fait plus tard, par événement, avant la première sélection A.
+    s.dualNat = rollDualNat(s);
     s.peakOvr = ovr(s);
     return s;
+  }
+
+  // --- Double nationalité ------------------------------------------------------
+  // Tire la SECONDE nationalité à laquelle le joueur est éligible, ou null. La carte
+  // DUAL_NATIONALITY est lue dans les deux sens : un Marocain peut être éligible à la
+  // France, et un Français au Maroc (grands-parents). Consomme au plus 2 rng() et
+  // TOUJOURS dans le même ordre → rejouable.
+  function dualPartnersOf(natId) {
+    const out = [];
+    const direct = DUAL_NATIONALITY[natId];
+    if (direct) out.push(...direct);
+    for (const from in DUAL_NATIONALITY) {
+      if (DUAL_NATIONALITY[from].includes(natId) && !out.includes(from)) out.push(from);
+    }
+    return out.filter((id) => id !== natId);
+  }
+  function rollDualNat(s) {
+    const ids = dualPartnersOf(s.nationality.id);
+    if (!ids.length) { rng(); return null; } // rng consommé même sans partenaire (ordre stable)
+    if (rng() >= BALANCE.dualNatChance) return null;
+    const pickId = ids[Math.floor(rng() * ids.length)];
+    const nat = NATIONALITIES.find((n) => n.id === pickId);
+    return nat ? nat.id : null;
+  }
+  function dualNatOf(s) {
+    return s.dualNat ? NATIONALITIES.find((n) => n.id === s.dualNat) || null : null;
   }
 
   function ovr(s) {
@@ -375,6 +404,11 @@
       // Élision : « de {club/nat/country/name} » → « d'Osaka », « d'Angleterre »…
       .replace(/\bde \{club\}/g, deOf(s.club.name))
       .replace(/\bde \{nat\}/g, deOf(s.nationality.name))
+      // {dualNat} : seconde sélection à laquelle le joueur est éligible (double
+      // nationalité). Vide si aucune — les événements qui l'emploient sont de toute
+      // façon filtrés par cond.dual.
+      .replace(/\bde \{dualNat\}/g, deOf((dualNatOf(s) || {}).name || ""))
+      .replace(/\{dualNat\}/g, (dualNatOf(s) || {}).name || "")
       .replace(/\bde \{country\}/g, deOf(country ? country.name : ""))
       .replace(/\bde \{name\}/g, deOf(s.name))
       .replace(/\{club\}/g, s.club.name)
@@ -430,6 +464,25 @@
     if (fx.team) {
       s.teamRel = clamp(s.teamRel + fx.team, 5, 100);
       chips.push({ label: `${fx.team > 0 ? "+" : ""}${fx.team} Vestiaire`, kind: fx.team > 0 ? "good" : "bad" });
+    }
+    // Bascule de sélection (double nationalité). Irréversible : une fois le choix
+    // fait, l'autre fédération est écartée (s.dualNat vidé), comme dans la réalité
+    // dès qu'on a joué un match officiel A.
+    if (fx.natSwitch) {
+      const target = dualNatOf(s);
+      if (target) {
+        const from = s.nationality;
+        s.nationality = target;
+        s.flags.natSwitched = true;
+        s.natSwitchFrom = from.id;
+        chips.push({ label: `🌍 Sélection : ${target.name}`, kind: "trait" });
+        s.history.push({ age: s.age, text: `Choix international : ${target.name} plutôt que ${from.name}.`, impact: 6 });
+      }
+      s.dualNat = null;
+    }
+    if (fx.natLock) { // on confirme la nation de naissance → l'autre porte se ferme
+      s.dualNat = null;
+      s.flags.natLocked = true;
     }
     if (fx.role) { // ajustement direct du statut au club (ex. « tu restes → tu perds ta place »)
       const before = typeof s.role === "number" ? s.role : 2;
@@ -540,6 +593,9 @@
     if (c.levels && !c.levels.includes(lvlOf(s, s.club))) return false;
     if (c.pos && !c.pos.includes(s.position.id)) return false;
     if (c.origin && s.origin.id !== c.origin) return false;
+    // dual: true → réservé aux joueurs éligibles à une SECONDE sélection, et qui
+    // n'ont pas encore tranché (le choix se verrouille dès la première sélection A).
+    if (c.dual === true && !(s.dualNat && !s.natTeam.active && !s.natTeam.retired)) return false;
     if (c.lifestyle && s.lifestyle.id !== c.lifestyle) return false;
     if (c.entourage && s.entourage.id !== c.entourage) return false;
     const o = ovr(s);
@@ -2021,7 +2077,12 @@
     // Sélection : possible dès 17 ans pour un crack, de plus en plus
     // accessible entre 21 et 23 ans ; la visibilité du niveau compte,
     // et un passage par les Espoirs ouvre des portes.
-    if (!s.natTeam.active && !s.natTeam.retired && s.age >= 17 && seasonInj < 20) {
+    // Double nationalité non tranchée : aucune convocation A tant que le joueur n'a
+    // pas choisi (une première sélection verrouillerait son avenir international sans
+    // qu'il ait décidé). Passé la fenêtre de l'événement, le silence vaut fidélité à
+    // la nation de naissance et la porte se referme. Aucun rng consommé.
+    if (s.dualNat && s.age > 23) { s.dualNat = null; s.flags.natLocked = true; }
+    if (!s.natTeam.active && !s.natTeam.retired && !s.dualNat && s.age >= 17 && seasonInj < 20) {
       const rank = levelRank(lvlOf(s, s.club));
       let ovrNeed, repNeed;
       if (s.age <= 18) { ovrNeed = 81; repNeed = 58; }
@@ -2605,7 +2666,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.27";
+  const ENGINE_VERSION = "10.28";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {
@@ -2618,7 +2679,7 @@
     keyMomentFor, keyMomentSuccess, playKeyMoment, isWorldCupYear,
     playWorldCup, resolveWcFinal, isContinentalYear, playContinental, isNationsLeagueYear, playNationsLeague, isOlympicYear, playOlympics, playingTimeFactor, setSeasonObjective,
     objectiveMet, headlineFor, grantAward, rollSeasonAwards, rollBallon,
-    roleForClub, roleOf,
+    roleForClub, roleOf, dualNatOf, dualPartnersOf,
     playSeason, resolveSeasonMoment, advanceYear, marketValue, salaryFor,
     buildOffer, offersFor, loanOffersFor, applyLoan, transferWindow,
     applyTransfer, renewContract, totalAwards, careerRating, computeCareerScore, visibilityOf,

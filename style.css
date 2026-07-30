@@ -866,6 +866,10 @@ body { color: var(--text-0); }
   }
 }
 
+/* Second drapeau (double nationalité, tant que le choix n'est pas tranché). */
+.dual-nat { opacity: 0.55; }
+.dual-nat::before { content: "/"; margin: 0 1px 0 2px; opacity: 0.7; font-weight: 700; }
+
 /* ---------- Statut au club (rôle) ---------- */
 .role-chip {
   display: inline-block; padding: 1px 8px; border-radius: 999px;
