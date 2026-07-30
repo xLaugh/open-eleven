@@ -11,6 +11,10 @@
   "use strict";
   const KEYS = ["openEleven_current", "destinDeChampion_pantheon", "destinDeChampion_progress"];
   const URL = window.SUPABASE_URL, ANON = window.SUPABASE_ANON_KEY;
+  // Version du moteur envoyée avec chaque journal de choix : le serveur rejoue avec
+  // data.js/engine.js DE CETTE VERSION. Évite qu'un déploiement en cours de journée
+  // fasse vérifier des runs avec un moteur différent de celui qui les a produits.
+  const EV = (window.Engine && window.Engine.ENGINE_VERSION) || "";
   const btn = document.getElementById("btn-account");
 
   // Config absente ou SDK non chargé → mode invité, on masque le bouton.
@@ -286,7 +290,7 @@
       await fetch(URL.replace(/\/+$/, "") + "/functions/v1/submit-daily", {
         method: "POST",
         headers: { "Content-Type": "application/json", apikey: ANON, Authorization: "Bearer " + session.access_token },
-        body: JSON.stringify({ date, choices }),
+        body: JSON.stringify({ date, choices, v: EV }),
       });
     } catch (_) { /* silencieux : ne jamais gêner la fin de partie */ }
   }
@@ -461,8 +465,8 @@
       return await res.json().catch(() => ({ ok: res.ok }));
     } catch (_) { return { ok: false }; }
   }
-  function submitDuelCreate(o) { return callDuel({ action: "create", seed: o.seed, choices: o.choices, toPseudo: o.toPseudo, label: o.label }); }
-  function submitDuelRespond(o) { return callDuel({ action: "respond", id: o.id, choices: o.choices, label: o.label }); }
+  function submitDuelCreate(o) { return callDuel({ action: "create", seed: o.seed, choices: o.choices, toPseudo: o.toPseudo, label: o.label, v: EV }); }
+  function submitDuelRespond(o) { return callDuel({ action: "respond", id: o.id, choices: o.choices, label: o.label, v: EV }); }
 
   const duOverlay = document.createElement("div");
   duOverlay.className = "acc-overlay";

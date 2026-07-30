@@ -42,6 +42,20 @@
     try { return fn(); } finally { E.setSeedState(st); }
   }
 
+  // Verrouille les options de la carte courante et signale si le clic est un
+  // DOUBLON (renvoie true → le handler doit sortir). Les écrans qui poussent dans
+  // G.choiceLog — le journal rejoué par le serveur — doivent impérativement passer
+  // par là : un second clic dupliquerait l'entrée et décalerait tout le journal,
+  // faisant diverger le rejeu (donc le score inscrit au classement).
+  function lockOptions() {
+    const card = $("game-card");
+    if (!card) return false;
+    if (card.dataset.locked === "1") return true;
+    card.dataset.locked = "1";
+    card.querySelectorAll(".opt-btn").forEach((b) => { b.disabled = true; });
+    return false;
+  }
+
   // Année du premier contrat pro. PAS BALANCE.startYear : le mode Histoire
   // impose son époque (« Le Maestro » débute en 1988).
   function careerStartYear() {
@@ -105,6 +119,7 @@
     const card = $("game-card");
     card.classList.remove("tone-great", "tone-good", "tone-neutral", "tone-bad", "tone-terrible", "card-in");
     if (tone) card.classList.add(`tone-${tone}`);
+    card.dataset.locked = "0"; // nouvelle carte → verrou anti-double-clic réarmé
     card.innerHTML = html;
     void card.offsetWidth; // relance l'animation CSS
     card.classList.add("card-in");
@@ -553,6 +568,10 @@
     `);
     $("game-card").querySelectorAll(".opt-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
+        // Verrou anti-double-clic : ce handler pousse dans choiceLog, le journal que
+        // le serveur rejoue. Un double événement (fréquent sur mobile) dupliquerait
+        // l'entrée et DÉCALERAIT tout le journal → rejeu serveur divergent.
+        if (lockOptions()) return;
         if (G.duel || G.dailyDate) G.choiceLog.push(Number(btn.dataset.offer)); // journal de duel
         E.applyLoan(G, offers[Number(btn.dataset.offer)]);
         updateHeader();
@@ -599,6 +618,7 @@
     `);
     $("game-card").querySelectorAll(".opt-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
+        if (lockOptions()) return; // anti-double-clic : protège l'intégrité de choiceLog
         if (G.duel || G.dailyDate) G.choiceLog.push(btn.dataset.stay ? -1 : Number(btn.dataset.offer)); // journal de duel
         if (btn.dataset.stay) {
           if (window && window.contractUp) E.renewContract(G, window);

@@ -114,10 +114,16 @@
   // Visibilité médiatique effective : les championnats du Golfe paient
   // très cher mais exposent deux fois moins (gains de réputation réduits,
   // Ballon d'Or hors de portée — cf. rollBallon).
+  // Visibilité médiatique : le niveau du club, MAIS AUSSI le pays. Un top club
+  // d'un championnat confidentiel n'a pas la même vitrine qu'un club anglais —
+  // c'est ce que porte country.mediaMult (renseigné sur les 212 pays et jusqu'ici
+  // jamais lu, comme growthMult, contMult et nationality.wcWeight).
   function visibilityOf(s) {
     const base = BALANCE.mediaVisibility[lvlOf(s, s.club)];
     const country = countryOf(s.club.countryId);
-    return country && country.gulf ? base * 0.5 : base;
+    if (!country) return base;
+    const m = (country.mediaMult != null ? country.mediaMult : 1) / BALANCE.countryMediaRef;
+    return base * m * (country.gulf ? 0.5 : 1);
   }
   function setClubLevel(s, club, levelId) {
     s.clubLevels[club.id] = levelId;
@@ -136,7 +142,11 @@
   }
 
   // --- Potentiel caché & trajectoire -----------------------------------------
-  const ORIGIN_POT = { formation: 1, sportif: 1, quartier: 2, futsal: 2, tardif: -2 };
+  // NB : une entrée par id de ORIGINS. « prodige » manquait ici et dans
+  // ORIGIN_ACADEMY (oubli lors de l'ajout de cette 6e origine) : l'origine vendue
+  // comme « un cran au-dessus dès le départ » recevait donc un bonus de potentiel
+  // NUL et aucun intérêt des grands centres, contrairement à sa promesse.
+  const ORIGIN_POT = { formation: 1, sportif: 1, quartier: 2, futsal: 2, tardif: -2, prodige: 3 };
 
   function rollPotential(origin, lifestyle, entourage) {
     let cap = 72 + randInt(-4, 14);
@@ -198,6 +208,7 @@
     quartier: { regional: 10, d2: 4, elite: -4 },
     futsal: { d2: 6, d1: 2 },
     tardif: { regional: 16, d2: 2, d1: -8, elite: -8 },
+    prodige: { elite: 12, d1: 6, regional: -12 }, // les grands centres se l'arrachent
   };
   const LIFESTYLE_ACADEMY = { pro: { d1: 4, elite: 4 }, balance: {}, street: { elite: -4 } };
   const ACADEMY_BLURBS = {
@@ -719,7 +730,10 @@
     // l'année où le joueur a l'âge prévu, et le moment décisif de l'histoire
     // remplace la finale générique (cf. STORIES.*.wcFinal).
     const storyFinal = storyWcFinalFor(s);
-    const natW = s.nationality.weight;
+    // wcWeight : force de la nation SPÉCIFIQUEMENT en Coupe du Monde (renseignée sur
+    // les 212 nations, jusqu'ici jamais lue — on utilisait le poids générique). Ça
+    // distingue les nations qui surperforment en Mondial de leur niveau courant.
+    const natW = s.nationality.wcWeight != null ? s.nationality.wcWeight : s.nationality.weight;
     const playerBoost = 0.6 + (ovr(s) / 100) * 0.8 + (hasTrait(s, "clutch") ? 0.15 : 0) + (s.flags.wc_fresh ? 0.1 : 0);
     delete s.flags.wc_fresh;
     // Mondial au format 48 équipes (2026) : un tour de plus (seizièmes) → le
@@ -991,7 +1005,10 @@
     const from = typeof s.role === "number" ? s.role : 2;
     const floor = roleFloor(s); // plus d'« Espoir » passé 20 ans
     let idx = from, reason = null;
-    if (r >= role.expect + 0.6 && s.coachRel >= 60 && idx < 4 && rng() < 0.7) { idx++; reason = "up"; }
+    // Promotion plus exigeante (+0,9 au lieu de +0,6, et 45 % au lieu de 70 %) :
+    // sinon la moindre saison correcte faisait grimper, jusqu'au verrouillage en
+    // Titulaire. Monter d'un cran doit rester un évènement.
+    if (r >= role.expect + 0.9 && s.coachRel >= 60 && idx < 4 && rng() < 0.45) { idx++; reason = "up"; }
     else if ((r <= role.expect - 0.7 || s.coachRel < 32) && idx > floor && rng() < 0.75) { idx--; reason = "down"; }
     else if (idx >= 2 && rng() < BALANCE.role.starSignChance) { idx--; reason = "signing"; }
     if (idx < floor) idx = floor;
@@ -1035,22 +1052,42 @@
   function setSeasonObjective(s) {
     const lvl = lvlOf(s, s.club);
     if (rng() < 0.5) {
+      // La cible est dérivée de l'ESPÉRANCE RÉELLE de production, avec les MÊMES
+      // constantes que playSeason (matchs attendus × rendement du poste × perf), et
+      // surtout pondérée par le temps de jeu que le STATUT au club autorise.
+      // Avant, le « 38 » supposait une saison pleine : un Espoir (pt≈0,12, ~5 matchs)
+      // recevait la même cible qu'un Titulaire — objectif souvent mathématiquement
+      // hors de portée, et chaque échec coûte coachRel/moral, donc du temps de jeu :
+      // une spirale qui frappait précisément les jeunes et les remplaçants.
+      // playingTimeFactor ne consomme aucun rng : sûr à appeler ici.
+      const [mMin, mMax] = BALANCE.matchesByLevel[lvl];
+      const pt = playingTimeFactor(s);
+      const expMatches = ((mMin + mMax) / 2) * pt;
+      const perf = 0.32 + s.stats.t / 160 + (s.form - 60) / 400 + (s.moral - 60) / 600;
       if (s.position.id === "att") {
-        const n = Math.max(6, Math.round(38 * s.position.goalRate * (0.5 + ovr(s) / 220)));
+        const n = Math.max(2, Math.round(expMatches * s.position.goalRate * perf * BALANCE.objectiveSlack.goals));
         return { type: "goals", n, label: `Marquer ${n} buts` };
       }
       if (s.position.id === "gk") {
-        const n = Math.max(6, Math.round(38 * (0.2 + ovr(s) / 320)));
+        const n = Math.max(2, Math.round(expMatches * (0.18 + ovr(s) / 280) * BALANCE.objectiveSlack.cs));
         return { type: "cs", n, label: `${n} clean sheets` };
       }
-      const n = lvl === "elite" ? 7.0 : lvl === "d1" ? 6.8 : 6.5;
+      // Note attendue : la formule de note applique déjà un malus (pt − 0,7) × 0,8 aux
+      // faibles temps de jeu. Exiger une note fixe d'un remplaçant le punissait donc
+      // deux fois — on retire exactement ce malus de la barre.
+      const base = BALANCE.objectiveRating[lvl] || BALANCE.objectiveRating.other;
+      const n = Math.round(Math.max(5.6, base + Math.min(0, (pt - 0.7) * 0.8)) * 10) / 10;
       return { type: "rating", n, label: `Note de saison ≥ ${n.toFixed(1)}` };
     }
+    // Cibles « top N » élargies d'un cran : le classement du club suit désormais la
+    // note du joueur (cf. leaguePos), mais il reste largement tiré au sort — viser
+    // le top 5 d'un randInt(4,14) ne réussissait qu'une fois sur trois, et chaque
+    // échec coûte de la confiance du coach, donc du temps de jeu.
     if (lvl === "elite") return { type: "trophy", label: "Ramener un trophée majeur" };
-    if (lvl === "d1") return { type: "top", n: 6, label: "Accrocher le top 6" };
-    if (lvl === "d2") return { type: "top", n: 5, label: "Jouer la montée (top 5)" };
-    if (lvl === "d3") return { type: "top", n: 6, label: "Jouer la montée (top 6)" };
-    return { type: "top", n: 8, label: "Viser le haut de tableau (top 8)" };
+    if (lvl === "d1") return { type: "top", n: 8, label: "Accrocher le top 8" };
+    if (lvl === "d2") return { type: "top", n: 7, label: "Jouer la montée (top 7)" };
+    if (lvl === "d3") return { type: "top", n: 8, label: "Jouer la montée (top 8)" };
+    return { type: "top", n: 10, label: "Viser le haut de tableau (top 10)" };
   }
 
   function objectiveMet(obj, report) {
@@ -1450,7 +1487,10 @@
       } else {
         tier = 1; reachP = BALANCE.continentalReach.other[lvl] || 0; cup = CONTINENTAL_CUPS[continent] || CONTINENTAL_CUPS.eu;
       }
-      if (rng() < reachP * teamBoost) {
+      // contMult : certains championnats (Pays-Bas, Portugal) placent rarement leurs
+      // clubs en finale européenne malgré un bon niveau interne. Défaut 1.
+      const contM = (countryOf(s.club.countryId) || {}).contMult;
+      if (rng() < reachP * teamBoost * (contM != null ? contM : 1)) {
         report.pendingMoments.push({
           type: "continental_final",
           tier,
@@ -1467,7 +1507,14 @@
     if (report.trophies.includes("league") || report.divisionTitle) report.leaguePos = 1;
     else if (report.playoffRun) report.leaguePos = randInt(2, 4);
     else if (report.relegated) report.leaguePos = lvl === "d1" ? randInt(16, 18) : randInt(17, 19);
-    else report.leaguePos = lvl === "elite" ? randInt(2, 7) : lvl === "d1" ? randInt(2, 12) : randInt(4, 14);
+    else {
+      // Le classement du club n'est plus un pur dé : la saison du joueur pèse. La
+      // moitié des objectifs hors élite est de type « top N » — ils étaient donc
+      // décidés par un tirage sur lequel le joueur n'avait aucune prise. On réutilise
+      // l'écart à la note de référence (même 6.6 que teamBoost) pour décaler le rang.
+      const [lo, hi] = lvl === "elite" ? [2, 7] : lvl === "d1" ? [2, 12] : [4, 14];
+      report.leaguePos = clamp(randInt(lo, hi) - Math.round((rating - 6.6) * 2.4), 1, hi + 2);
+    }
 
     // Autres moments décisifs de la saison (2 maximum par saison).
     // Retrouvailles : uniquement si le match est crédible — même pays
@@ -1646,7 +1693,7 @@
     else if (pt > 0.85) s.moral = clamp(s.moral + 3, 5, 100);
 
     if (s.loan) s.loan.rating = report.rating;
-    s.lastSeason = { clubId: s.club.id, leaguePos: report.leaguePos, promoted: !!report.promoted, relegated: !!report.relegated, rating: report.rating };
+    s.lastSeason = { clubId: s.club.id, leaguePos: report.leaguePos, promoted: !!report.promoted, relegated: !!report.relegated, rating: report.rating, wonLeague: report.trophies.includes("league") };
     reviewRole(s, report); // statut dynamique : promotion / rétrogradation / recrue concurrente
     report.headline = headlineFor(s, report);
     return report;
@@ -1796,7 +1843,12 @@
     // Développement des jeunes : un Espoir joue peu en compétition mais s'ENTRAÎNE
     // au haut niveau → sa progression n'est pas étranglée par le manque de minutes.
     const devPt = s.age <= 21 ? Math.max(pt, 0.5) : pt;
-    const infra = BALANCE.growthInfra[lvlOf(s, s.club)];
+    // Infrastructures : le niveau du club, pondéré par la qualité de formation du
+    // PAYS (country.growthMult). Progresser en Régionale au Bhoutan ne pouvait pas
+    // valoir la Régionale en France — c'est désormais le cas.
+    const ctry = countryOf(s.club.countryId);
+    const gM = ((ctry && ctry.growthMult != null) ? ctry.growthMult : 1) / BALANCE.countryGrowthRef;
+    const infra = BALANCE.growthInfra[lvlOf(s, s.club)] * gM;
     const gap = s.potCap - ovr(s);
     let potDamp = gap <= 0 ? 0.15 : gap <= 4 ? 0.45 : 1;
     if (s.flags.prodigy && s.age <= 20) potDamp = Math.max(potDamp, 0.85); // un prodige ne freine pas jeune
@@ -1899,7 +1951,11 @@
         } else if (ls.relegated && (lvl === "d1" || lvl === "d2" || lvl === "d3")) {
           shiftClubLevel(s, seasonClub, -1);
         } else if (stayed && lvl === "d1") {
-          s.clubMomentum = ls.leaguePos <= 2 ? s.clubMomentum + 1 : 0;
+          // Voie « le club change de dimension ». Exiger leaguePos <= 2 alors que le
+          // classement était un randInt(2,12) rendait cette mécanique quasi morte
+          // (~0,8 % par paire de saisons). Un podium OU un titre de D1 compte.
+          const rose = ls.leaguePos <= 3 || !!ls.wonLeague;
+          s.clubMomentum = rose ? s.clubMomentum + 1 : 0;
           if (s.clubMomentum >= BALANCE.clubRiseSeasons) {
             setClubLevel(s, seasonClub, "elite");
             s.clubMomentum = 0;
@@ -2543,6 +2599,14 @@
   function scoreDaily(dateKey, choices) { return computeCareerScore(replayDaily(dateKey, choices)); }
   function scoreDuel(seed, choices) { return computeCareerScore(replayDuel(seed, choices)); }
 
+  // Version du MOTEUR (règles + données). Envoyée au serveur avec chaque journal de
+  // choix : l'Edge Function charge alors data.js/engine.js DE CETTE VERSION pour
+  // rejouer. Sans ça, un déploiement en cours de journée fait vérifier certains runs
+  // avec l'ancien moteur et d'autres avec le nouveau.
+  // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
+  // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
+  const ENGINE_VERSION = "10.27";
+
   // --- Export ------------------------------------------------------------------
   const Engine = {
     rng, setSeed, clearSeed, getSeedState, setSeedState,
@@ -2561,6 +2625,7 @@
     careerTitle, pickHighlights, buildNarrative, buildUntakenPath,
     newRival, rivalSeason, rivalNewsLine, compareVerdict,
     hashInt, dailyChallenge, dailySeedFor, duelChallenge, replayDaily, replayDuel, scoreDaily, scoreDuel,
+    ENGINE_VERSION,
     BALANCE_REF: BALANCE,
   };
 

@@ -9,7 +9,7 @@
 //  Écrit avec le service_role (contourne RLS) : SEULE voie d'écriture dans
 //  daily_scores. Déploiement : voir SUPABASE_SETUP.md.
 // ============================================================
-import { CORS, json, getEngine, authUser, adminClient, validChoices } from "../_shared/game-engine.ts";
+import { CORS, json, getEngine, authUser, adminClient, validChoices, versionMismatch } from "../_shared/game-engine.ts";
 
 // Fenêtre de rattrapage : au-delà, un défi passé n'entre plus au classement.
 const DAILY_BACKLOG_DAYS = 2;
@@ -54,10 +54,14 @@ Deno.serve(async (req) => {
   if (rl.data === "cooldown") return json({ error: "Doucement — attends quelques secondes." }, 429);
   if (rl.data === "cap") return json({ error: "Trop de tentatives pour ce défi." }, 429);
 
-  // REJOUER + RECALCULER le score côté serveur (anti-triche).
+  // REJOUER + RECALCULER le score côté serveur (anti-triche), avec le moteur de la
+  // VERSION que le client déclare — sinon un déploiement en cours de journée fait
+  // noter certains joueurs avec l'ancien moteur et d'autres avec le nouveau.
   let score: number;
   try {
-    const E = await getEngine();
+    const E = await getEngine(payload?.v);
+    const vm = versionMismatch(E, payload?.v);
+    if (vm) return vm;
     score = E.scoreDaily(date, choices);
   } catch (e) {
     return json({ error: "Vérification impossible", detail: String(e) }, 500);

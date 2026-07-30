@@ -10,7 +10,7 @@
 //  Les scores ne sont JAMAIS pris du client : seuls les choix voyagent.
 //  Déploiement : voir SUPABASE_SETUP.md.
 // ============================================================
-import { CORS, json, getEngine, authUser, adminClient, validChoices } from "../_shared/game-engine.ts";
+import { CORS, json, getEngine, authUser, adminClient, validChoices, versionMismatch } from "../_shared/game-engine.ts";
 
 async function pseudoOf(admin: any, userId: string): Promise<string | null> {
   const { data } = await admin.from("profiles").select("pseudo").eq("user_id", userId).maybeSingle();
@@ -40,7 +40,9 @@ Deno.serve(async (req) => {
   const label = p?.label ? String(p.label).slice(0, 40) : null;
 
   const admin = adminClient();
-  const E = await getEngine();
+  const E = await getEngine(p?.v); // moteur de la version déclarée par le client
+  const vm = versionMismatch(E, p?.v);
+  if (vm) return vm;
 
   if (action === "create") {
     const seed = (Number(p?.seed) | 0) || 1;
@@ -80,17 +82,30 @@ Deno.serve(async (req) => {
     const g = await rateGuard(admin, user.id, "duel_respond", 80, 4000);
     if (g) return g;
 
-    let toScore: number;
-    try { toScore = Math.round(E.scoreDuel(duel.seed, choices)); } catch (e) { return json({ error: "Vérification impossible", detail: String(e) }, 500); }
-    if (!Number.isFinite(toScore) || toScore < 0 || toScore > 1000) return json({ error: "Score hors bornes" }, 422);
+    // Les DEUX journaux sont rejoués MAINTENANT, avec le MÊME moteur. Comparer un
+    // from_score calculé au moment du « create » (donc potentiellement par une autre
+    // version du moteur, avant un rééquilibrage) à un to_score calculé aujourd'hui
+    // départageait deux barèmes différents. Ici, le duel est toujours équitable.
+    let fromScore: number, toScore: number;
+    try {
+      fromScore = Math.round(E.scoreDuel(duel.seed, duel.from_choices || []));
+      toScore = Math.round(E.scoreDuel(duel.seed, choices));
+    } catch (e) { return json({ error: "Vérification impossible", detail: String(e) }, 500); }
+    if (![fromScore, toScore].every((n) => Number.isFinite(n) && n >= 0 && n <= 1000)) {
+      return json({ error: "Score hors bornes" }, 422);
+    }
 
-    const winner = toScore > duel.from_score ? "to" : duel.from_score > toScore ? "from" : "tie";
-    const { error: upErr } = await admin.from("duels").update({
+    const winner = toScore > fromScore ? "to" : fromScore > toScore ? "from" : "tie";
+    // .select() → on récupère les lignes RÉELLEMENT modifiées. Sans ça, une réponse
+    // concurrente qui perd la course anti-'pending' touchait 0 ligne SANS erreur, et
+    // on renvoyait quand même { ok: true } avec un résultat jamais persisté.
+    const { data: upRows, error: upErr } = await admin.from("duels").update({
       to_user: user.id, to_pseudo: myPseudo, to_label: label || myPseudo, to_choices: choices,
-      to_score: toScore, winner, status: "done", answered_at: new Date().toISOString(),
-    }).eq("id", id).eq("status", "pending"); // garde anti-course : reste 'pending'
+      from_score: fromScore, to_score: toScore, winner, status: "done", answered_at: new Date().toISOString(),
+    }).eq("id", id).eq("status", "pending").select("id"); // garde anti-course : reste 'pending'
     if (upErr) return json({ error: "Écriture impossible", detail: upErr.message }, 500);
-    return json({ ok: true, from_score: duel.from_score, to_score: toScore, winner, from_pseudo: duel.from_pseudo });
+    if (!upRows || !upRows.length) return json({ error: "Duel déjà terminé" }, 409);
+    return json({ ok: true, from_score: fromScore, to_score: toScore, winner, from_pseudo: duel.from_pseudo });
   }
 
   return json({ error: "Action inconnue" }, 400);

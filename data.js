@@ -844,11 +844,15 @@ const LEVEL_ORDER = ["regional", "d3", "d2", "d1", "elite"];
 // « Espoir » est réservé aux JEUNES (≤ ROLE_ESPOIR_MAX_AGE) : passé cet âge on
 // n'est plus un pari sur l'avenir, le plancher devient « Sporadique ».
 const ROLES = [
+  // `expect` monte franchement dans le HAUT de l'échelle : avec des attentes trop
+  // basses partout, tout le monde cliquetait vers Titulaire et s'y verrouillait
+  // (67 % des saisons mesurées) — le système à 5 crans n'en avait plus qu'un. Le bas
+  // reste clément (un remplaçant ne doit pas être puni d'être remplaçant).
   { id: "espoir", label: "Espoir", icon: "🌱", pt: 0.12, expect: 5.0, desc: "Un pari sur l'avenir : peu de minutes, mais tu apprends au haut niveau." },
   { id: "sporadique", label: "Sporadique", icon: "🔸", pt: 0.30, expect: 5.5, desc: "Utilisé au compte-gouttes, souvent sur le banc." },
-  { id: "rotation", label: "Rotation", icon: "🔄", pt: 0.52, expect: 5.8, desc: "Dans la rotation : environ une titularisation sur deux." },
-  { id: "important", label: "Important", icon: "⭐", pt: 0.74, expect: 6.0, desc: "Cadre de la rotation, presque toujours sur la feuille." },
-  { id: "titulaire", label: "Titulaire", icon: "👑", pt: 0.93, expect: 6.2, desc: "Indiscutable : tu joues, mais on attend beaucoup de toi." },
+  { id: "rotation", label: "Rotation", icon: "🔄", pt: 0.52, expect: 6.0, desc: "Dans la rotation : environ une titularisation sur deux." },
+  { id: "important", label: "Important", icon: "⭐", pt: 0.74, expect: 6.4, desc: "Cadre de la rotation, presque toujours sur la feuille." },
+  { id: "titulaire", label: "Titulaire", icon: "👑", pt: 0.93, expect: 6.7, desc: "Indiscutable : tu joues, mais on attend beaucoup de toi." },
 ];
 const ROLE_ESPOIR_MAX_AGE = 20; // au-delà, plancher = Sporadique (index 1)
 
@@ -6440,9 +6444,23 @@ const BALANCE = {
   // et probabilité qu'une recrue star débarque à ton poste (te rétrograde).
   role: { margins: [6, 2, -2, -6], starSignChance: 0.14 },
   // Barre de recrutement : OVR minimum pour qu'un club de ce niveau vous SIGNE
-  // quand il s'agit de MONTER d'un cran. Grimper se mérite — un club d'élite ne
-  // recrute qu'un vrai joueur d'élite (82+), pas un bon joueur de D1 en forme.
-  signingBar: { regional: 40, d3: 48, d2: 56, d1: 70, elite: 82 },
+  // quand il s'agit de MONTER d'un cran. Grimper se mérite — mais à 82 la barre
+  // d'élite était au-dessus du peakOvr p90 : 90 % des carrières ne voyaient JAMAIS
+  // l'élite (donc ni Ligue des Champions, ni Ballon d'Or, ni salaires d'élite).
+  signingBar: { regional: 40, d3: 48, d2: 56, d1: 70, elite: 78 },
+  // Marge de l'objectif de club : la cible vaut ce % de l'espérance de production.
+  // Réglé par type, car les deux formules n'ont pas la même dispersion.
+  objectiveSlack: { goals: 0.95, cs: 1.08 },
+  // Barres de note attendue, par niveau. La note de saison part de 5,4 et ne monte
+  // qu'avec l'OVR : exiger 6,5 partout ne réussissait qu'un tiers du temps.
+  objectiveRating: { elite: 6.6, d1: 6.4, other: 6.15 },
+  // Références de normalisation des multiplicateurs de pays. growthMult/mediaMult
+  // sont calibrés « 1 = top championnat » et ne dépassent JAMAIS 1 : les brancher
+  // tels quels appliquait un malus GLOBAL (−18 % croissance, −40 % visibilité) au
+  // lieu de DIFFÉRENCIER les pays. On divise par la moyenne pondérée par le nombre
+  // de clubs → effet moyen neutre, écarts entre pays conservés.
+  countryGrowthRef: 0.82,
+  countryMediaRef: 0.6,
   matchesByLevel: { regional: [30, 38], d3: [33, 41], d2: [36, 44], d1: [40, 48], elite: [44, 54] },
   // Titre de division (ne compte comme trophée national qu'en d1/élite)
   titleChance: { regional: 0.12, d3: 0.1, d2: 0.08, d1: 0.06, elite: 0.3 },
@@ -6520,11 +6538,17 @@ const BALANCE = {
   // --- Ballon d'Or (modèle à points de saison, cf. engine.rollBallon) ---
   // Volontairement RARE : un sacre doit rester un événement, même pour un
   // très grand joueur (cible ~1 carrière sur 5 qui atteint le sommet).
-  ballonMinOvr: 85,
-  ballonMinRep: 73,
-  ballonCap: 0.36, // plafond de proba sur une saison stratosphérique
-  ballonPtsFloor: 3.0, // points de saison en deçà desquels le sacre est hors de portée
-  ballonSlope: 0.042, // pente : proba par point de saison au-dessus du plancher
+  // Lecture de la cible ci-dessus : ~20 % des carrières QUI ATTEIGNENT LE SOMMET,
+  // pas 20 % de toutes les carrières. Avec ~14 % des carrières qui touchent l'élite,
+  // ça vise ≈3 % de sacres sur l'ensemble. Mesuré avant réglage : 0,7 % (soit ~5 %
+  // des carrières d'élite) — les conditions CONJONCTIVES (niveau + OVR + rép + note)
+  // sont chacune rares et se multiplient. Planchers assouplis d'un cran et pente
+  // relevée, le verrou principal restant l'accès à l'élite (cf. signingBar).
+  ballonMinOvr: 83,
+  ballonMinRep: 70,
+  ballonCap: 0.4, // plafond de proba sur une saison stratosphérique
+  ballonPtsFloor: 2.6, // points de saison en deçà desquels le sacre est hors de portée
+  ballonSlope: 0.058, // pente : proba par point de saison au-dessus du plancher
   ballonMomentum: 1.2, // multiplicateur après un 1er ou 2e Ballon d'Or (statut)
   ballonDynasty: 0.2, // multiplicateur à partir du 4e (raréfaction extrême)
   // --- Vie des clubs : montées, descentes, changements de dimension ---
@@ -6564,11 +6588,11 @@ const BALANCE = {
    les événements changent sensiblement.
    ============================================================ */
 const SCORE_PERCENTILES = [
-  63, 71, 83, 88, 90, 92, 93, 94, 95, 96, 97, 98, 99, 99, 100, 101, 101, 102, 102, 103,
-  104, 104, 105, 105, 106, 106, 107, 107, 108, 108, 109, 109, 110, 110, 111, 111, 112, 112, 113, 113,
-  114, 115, 115, 116, 116, 117, 118, 118, 119, 119, 120, 121, 121, 122, 123, 124, 124, 125, 126, 127,
-  128, 129, 130, 130, 131, 132, 134, 135, 136, 137, 138, 140, 141, 143, 144, 146, 147, 149, 151, 153,
-  154, 156, 158, 160, 162, 164, 167, 169, 172, 175, 178, 182, 186, 191, 197, 203, 210, 221, 238
+  63, 72, 83, 87, 90, 92, 93, 94, 95, 96, 97, 98, 99, 99, 100, 101, 101, 102, 103, 103,
+  104, 104, 105, 106, 106, 107, 107, 108, 108, 109, 109, 110, 110, 111, 111, 112, 112, 113, 114, 114,
+  115, 115, 116, 116, 117, 118, 118, 119, 120, 120, 121, 122, 122, 123, 124, 125, 126, 127, 127, 128,
+  129, 130, 131, 133, 134, 135, 136, 137, 139, 140, 141, 143, 144, 146, 147, 149, 150, 152, 154, 155,
+  157, 159, 161, 163, 165, 167, 170, 172, 175, 178, 181, 184, 188, 192, 197, 203, 211, 222, 240
 ];
 
 /* ============================================================
