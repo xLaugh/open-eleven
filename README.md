@@ -22,7 +22,7 @@ Tout commence par la **création de votre joueur** : nationalité, poste, origin
 
 Ce qui vous attend au fil des saisons :
 
-- 🌍 **212 pays**, **1195 clubs**, **212 nationalités** jouables des cinq continents — quasiment toute la planète FIFA — sur 5 divisions (Régional · D3 · D2 · D1 · Élite), chaque nation avec **sa propre pyramide** (le « D1 » d'un petit pays équivaut à la D3 ou au Régional d'un grand championnat)
+- 🌍 **212 pays**, **1195 clubs**, **212 nationalités** jouables des cinq continents — quasiment toute la planète foot — sur 5 divisions (Régional · D3 · D2 · D1 · Élite), chaque nation avec **sa propre pyramide** (le « D1 » d'un petit pays équivaut à la D3 ou au Régional d'un grand championnat)
 - ⚡ Des événements à choix qui font et défont votre carrière
 - 🎯 Des moments décisifs interactifs : penalty de finale, barrage de montée, derby…
 - 💸 Transferts (montants réalistes), prêts, **blessures** (dont graves et fins de carrière brutales), **capitanat**, sélection nationale

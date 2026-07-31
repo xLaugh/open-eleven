@@ -2962,6 +2962,294 @@ const EVENTS = [
     ],
   },
   {
+    // ================================================================
+    // LOT « LES TRAITS SE VIVENT ». cond.trait n'était utilisé que par UN
+    // événement : un joueur pouvait porter « Showman » ou « Fragile » toute sa
+    // carrière sans que le jeu ne le lui rappelle jamais. Un événement par trait,
+    // qui met en scène sa force ET son revers.
+    // ================================================================
+    id: "ev_showman_ad", cat: "Médias", icon: "🎬", w: 16,
+    cond: { aMin: 21, aMax: 34, trait: "showman", minRep: 45 },
+    text: "Une marque de sport veut vous pour sa campagne mondiale : trois jours de tournage, un cachet à six chiffres, et votre visage sur tous les arrêts de bus du pays.",
+    options: [
+      { label: "Tourner la pub, à fond dans le personnage", outcomes: [
+        { weight: 60, text: "La campagne cartonne. Vous devenez un visage connu bien au-delà du football.", fx: { rep: 12, money: 3, c: 4, mor: 5 } },
+        { weight: 40, text: "Le spot est ridicule et tourne en boucle. Le vestiaire ne vous laisse pas respirer.", fx: { rep: 4, money: 3, team: -7, mor: -4 } },
+      ] },
+      { label: "Décliner, je veux qu'on parle de mon jeu", outcomes: [
+        { weight: 55, text: "Le refus fait autant de bruit que la pub. On salue un joueur qui reste un joueur.", fx: { rep: 5, coach: 5, m: 4 } },
+        { weight: 45, text: "L'agence se vexe, votre agent aussi. Une porte se ferme.", fx: { mor: -3, money: -0.3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_loyal_statue", cat: "Supporters", icon: "🗿", w: 15,
+    cond: { aMin: 28, aMax: 40, trait: "loyal", minClubSeasons: 4 },
+    text: "Les supporters lancent une cagnotte pour ériger votre statue devant le stade. Vous jouez encore. Le club, gêné, vous laisse trancher.",
+    options: [
+      { label: "Accepter, ému", outcomes: [
+        { weight: 65, text: "La statue est inaugurée sous les chants du virage. Vous appartenez désormais à l'histoire du club.", fx: { rep: 10, mor: 12, team: 6 } },
+        { weight: 35, text: "Une statue d'un joueur encore actif : la presse nationale ricane pendant des semaines.", fx: { rep: 3, mor: -4 } },
+      ] },
+      { label: "Refuser tant que je joue", outcomes: [
+        { weight: 70, text: "« Quand j'aurai raccroché. » L'humilité de la réponse fait le tour du pays.", fx: { rep: 7, mor: 6, c: 4 } },
+        { weight: 30, text: "La cagnotte est annulée, et certains supporters le prennent comme un rejet.", fx: { mor: -4, team: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_mercenary_offer", cat: "Finance", icon: "💼", w: 16,
+    cond: { aMin: 24, aMax: 36, trait: "mercenary" },
+    text: "Votre réputation vous précède : un club sans histoire mais très riche triple votre salaire. Le projet sportif tient sur une diapositive.",
+    options: [
+      { label: "Prendre l'argent, sans état d'âme", outcomes: [
+        { weight: 60, text: "Contrat signé. Le compte en banque n'a jamais aussi bien joué.", fx: { money: 6, salaryMult: 2.2, rep: -4, transfer: { d: -1 } } },
+        { weight: 40, text: "L'argent tombe, le niveau aussi. Vous vous éteignez doucement, loin des projecteurs.", fx: { money: 6, salaryMult: 2.2, rep: -8, form: -8, transfer: { d: -1 } } },
+      ] },
+      { label: "Refuser, pour une fois", outcomes: [
+        { weight: 50, text: "Vous surprenez tout le monde, à commencer par vous. Le vestiaire vous regarde autrement.", fx: { team: 10, coach: 7, mor: 6, clearFlag: "mercenary" } },
+        { weight: 50, text: "Vous refusez, et le regrettez chaque fin de mois.", fx: { mor: -6, m: 3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_party_night", cat: "Hygiène de vie", icon: "🌃", w: 16,
+    cond: { aMin: 19, aMax: 32, trait: "party" },
+    text: "Veille de match important. Un ami organise une soirée « juste deux heures, tu rentres tôt ». Vous savez très bien comment ça finit d'habitude.",
+    options: [
+      { label: "Y aller, se tenir, rentrer tôt", hint: "Risqué", outcomes: [
+        { weight: 40, text: "Deux heures montre en main. Vous dormez bien et plantez un but le lendemain.", fx: { mor: 8, form: 4 } },
+        { weight: 60, text: "Il est quatre heures du matin quand vous rentrez. Le match est un calvaire, et ça se voit.", fx: { form: -12, coach: -9, dis: -8, rep: -3 } },
+      ] },
+      { label: "Rester chez moi", outcomes: [
+        { weight: 60, text: "Nuit complète, jambes fraîches : vous êtes le meilleur sur le terrain.", fx: { form: 8, dis: 6, coach: 5 } },
+        { weight: 40, text: "Vous ruminez toute la soirée en regardant les stories des autres.", fx: { mor: -5, dis: 4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_glass_specialist", cat: "Blessure", icon: "🩺", w: 17,
+    cond: { aMin: 22, aMax: 36, trait: "glass" },
+    text: "Trop de pépins, trop souvent. Un spécialiste étranger propose une refonte totale de votre préparation — six mois de travail invisible, sans garantie.",
+    options: [
+      { label: "Tout reconstruire avec lui", hint: "Long", outcomes: [
+        { weight: 55, text: "Six mois d'ingratitude, puis un corps qui ne casse plus. Vous récupérez votre carrière.", fx: { p: 7, form: 5, clearFlag: "glass", mor: 8 } },
+        { weight: 45, text: "Le protocole ne prend pas. Vous avez perdu six mois et un peu d'espoir.", fx: { mor: -8, form: -4, money: -1 } },
+      ] },
+      { label: "Continuer à gérer au jour le jour", outcomes: [
+        { weight: 50, text: "Vous apprenez à écouter votre corps mieux que quiconque, et traversez la saison.", fx: { m: 6, dis: 5 } },
+        { weight: 50, text: "Nouvelle rechute, au pire moment de la saison.", fx: { inj: 11, mor: -7 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_ironman_streak", cat: "Records", icon: "🛡️", w: 15,
+    cond: { aMin: 26, aMax: 38, trait: "ironman" },
+    text: "Cent-cinquante matchs consécutifs sans manquer une feuille. Le staff médical vous supplie de souffler une journée ; la presse compte les matchs comme on compte les jours.",
+    options: [
+      { label: "Jouer, encore. La série continue", outcomes: [
+        { weight: 55, text: "La série devient un record du club. Votre nom entre dans les livres.", fx: { rep: 9, mor: 8, m: 4 } },
+        { weight: 45, text: "Le corps finit par dire non, en plein match. La série s'arrête au pire moment.", fx: { inj: 10, mor: -9 } },
+      ] },
+      { label: "Souffler une journée, volontairement", outcomes: [
+        { weight: 65, text: "Un match de repos, et vous revenez neuf pour le sprint final.", fx: { form: 9, p: 3, mor: 3 } },
+        { weight: 35, text: "Votre remplaçant crève l'écran. On vous rappelle que personne n'est irremplaçable.", fx: { role: -1, coach: -5, mor: -6 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_genius_freedom", cat: "Identité de jeu", icon: "🎨", w: 16,
+    cond: { aMin: 20, aMax: 33, trait: "genius" },
+    text: "Le coach vous convoque : « Tu fais des choses que personne ne fait. Mais tu perds trois ballons dangereux par match. Je te laisse libre, ou je te cadre. »",
+    options: [
+      { label: "Réclamer la liberté totale", outcomes: [
+        { weight: 55, text: "Libre, vous devenez injouable. Le championnat entier parle de vos gestes.", fx: { t: 9, rep: 10, mor: 7 } },
+        { weight: 45, text: "Trop de déchet. Le coach reprend la main au bout de dix matchs, et l'expérience laisse des traces.", fx: { coach: -8, role: -1, mor: -5 } },
+      ] },
+      { label: "Accepter d'être cadré", outcomes: [
+        { weight: 60, text: "Discipliné, votre talent devient enfin régulier. Vous jouez tous les matchs.", fx: { m: 7, coach: 9, role: 1, t: 2 } },
+        { weight: 40, text: "Bridé, vous n'êtes plus vous-même. La magie s'éteint.", fx: { t: -4, mor: -7, rep: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_zen_ritual", cat: "Vie perso", icon: "🧘", w: 14,
+    cond: { aMin: 22, aMax: 38, trait: "zen" },
+    text: "Votre calme intrigue. Un magazine veut consacrer un dossier à votre préparation mentale ; plusieurs coéquipiers vous demandent de les initier.",
+    options: [
+      { label: "Ouvrir mes séances au groupe", outcomes: [
+        { weight: 70, text: "Le vestiaire entier y prend goût. L'équipe joue plus sereinement, et on sait à qui elle le doit.", fx: { team: 12, c: 5, coach: 6, mor: 5 } },
+        { weight: 30, text: "Certains se moquent ouvertement. Vous refermez la porte.", fx: { team: -4, m: 4 } },
+      ] },
+      { label: "Garder ça pour moi", outcomes: [
+        { weight: 65, text: "Votre bulle reste intacte, et votre régularité avec elle.", fx: { m: 7, form: 5, dis: 4 } },
+        { weight: 35, text: "On vous trouve distant. Le groupe se resserre sans vous.", fx: { team: -6, m: 4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_clutch_reputation", cat: "Terrain", icon: "🎯", w: 16,
+    cond: { aMin: 23, aMax: 36, trait: "clutch", minRep: 40 },
+    text: "Votre réputation d'homme des grands soirs vous précède. Avant la rencontre décisive, le coach annonce devant le groupe : « Si ça se tend, on donne le ballon au patron. » Tous les regards se tournent vers vous.",
+    options: [
+      { label: "Assumer, c'est mon rôle", outcomes: [
+        { weight: 60, text: "Le match se tend, vous prenez le ballon, et vous le mettez au fond. Encore.", fx: { rep: 10, mor: 10, coach: 7, team: 6 } },
+        { weight: 40, text: "Le poids de l'attente vous paralyse. Ce soir-là, le patron n'a pas répondu.", fx: { rep: -6, mor: -9, form: -5 } },
+      ] },
+      { label: "Renvoyer la responsabilité au collectif", outcomes: [
+        { weight: 55, text: "« On gagnera à onze. » Le message passe, le groupe se soude, et ça marche.", fx: { team: 10, c: 5, mor: 4 } },
+        { weight: 45, text: "Le coach y voit une dérobade de la part de celui qu'il croyait indéboulonnable.", fx: { coach: -7, rep: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_leader_strike", cat: "Crise", icon: "✊", w: 15,
+    cond: { aMin: 24, aMax: 38, trait: "leader" },
+    text: "Trois mois de salaires impayés. Le groupe veut boycotter l'entraînement et vous demande, en tant que capitaine dans l'âme, de porter la parole devant la direction.",
+    options: [
+      { label: "Mener le mouvement", hint: "Exposé", outcomes: [
+        { weight: 50, text: "Les salaires tombent en 48 heures. Le vestiaire vous suivrait n'importe où.", fx: { team: 15, rep: 6, c: 6, money: 1 } },
+        { weight: 50, text: "La direction fait de vous le coupable et vous met au placard.", fx: { coach: -12, role: -1, rep: -3, flag: "listed" } },
+      ] },
+      { label: "Négocier en coulisses, sans esclandre", outcomes: [
+        { weight: 65, text: "Un accord discret est trouvé. Tout le monde y gagne, et personne ne perd la face.", fx: { team: 8, coach: 6, m: 5, money: 0.6 } },
+        { weight: 35, text: "Les promesses n'engagent que ceux qui les écoutent. Rien ne bouge.", fx: { team: -5, mor: -6 } },
+      ] },
+    ],
+  },
+  {
+    // ================================================================
+    // LOT « CONSÉQUENCES DIFFÉRÉES » : fx.sched permet de planter une décision
+    // dont on récolte le fruit des années plus tard. Le procédé n'était presque
+    // pas exploité — c'est pourtant ce qui fait qu'une carrière a une mémoire.
+    // ================================================================
+    id: "ev_investor_promise", cat: "Club", icon: "🏗️", w: 14,
+    cond: { aMin: 21, aMax: 32, levels: ["d2", "d3", "regional"] },
+    text: "Un investisseur rachète le club et promet monts et merveilles : « Dans trois ans, on joue le haut du tableau national. » Il vous propose de prolonger pour être le visage du projet.",
+    options: [
+      { label: "Prolonger et incarner le projet", hint: "Pari", outcomes: [
+        { weight: 100, text: "Vous signez. Le club vous présente comme sa pierre angulaire — rendez-vous dans trois ans.", fx: { rep: 4, mor: 6, salaryMult: 1.25, sched: { id: "ev_investor_verdict", inYears: 3 } } },
+      ] },
+      { label: "Attendre de voir avant de m'engager", outcomes: [
+        { weight: 60, text: "Vous restez prudent. Le temps dira qui avait raison.", fx: { m: 4 } },
+        { weight: 40, text: "L'investisseur retient votre méfiance et se tourne vers d'autres cadres.", fx: { coach: -5, mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_investor_verdict", cat: "Club", icon: "⚖️", w: 1, scheduledOnly: true,
+    text: "Trois ans ont passé depuis la promesse de l'investisseur. L'heure des comptes a sonné, et la presse locale attend le verdict devant les grilles du club.",
+    options: [
+      { label: "Découvrir le verdict", outcomes: [
+        { weight: 40, text: "Promesse tenue : les infrastructures sont sorties de terre, l'effectif a changé de dimension, et le club monte d'un étage.", fx: { clubBoost: 1, mor: 12, rep: 6 } },
+        { weight: 35, text: "Le projet a stagné. Ni catastrophe ni révolution — juste des slogans usés.", fx: { mor: -5, m: 4 } },
+        { weight: 25, text: "L'investisseur a disparu avec la caisse. Le club est rétrogradé administrativement, et vous étiez le visage de tout ça.", fx: { clubBoost: -1, mor: -12, rep: -6, money: -1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_protege_seed", cat: "Vestiaire", icon: "🌱", w: 14,
+    cond: { aMin: 24, aMax: 33 },
+    text: "Un stagiaire de seize ans vous demande timidement de rester après l'entraînement pour travailler ses frappes. Il n'a rien d'exceptionnel, mais il a la faim dans les yeux.",
+    options: [
+      { label: "Rester avec lui, toutes les semaines", outcomes: [
+        { weight: 100, text: "Deux heures de plus chaque semaine, pendant des mois. Personne ne le remarque — sauf lui.", fx: { c: 4, team: 5, mor: 4, sched: { id: "ev_protege_return", inYears: 6 } } },
+      ] },
+      { label: "Décliner, j'ai ma propre carrière à mener", outcomes: [
+        { weight: 60, text: "Vous vous concentrez sur vous. C'est votre droit le plus strict.", fx: { t: 3, form: 3 } },
+        { weight: 40, text: "Son regard déçu vous poursuit plus longtemps que prévu.", fx: { mor: -3, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_protege_return", cat: "Hommage", icon: "🤲", w: 1, scheduledOnly: true,
+    text: "Six ans plus tard, le gamin des frappes du soir est devenu professionnel — et il vient de croiser votre route sur un terrain. Avant le coup d'envoi, il vient vous chercher devant tout le stade.",
+    options: [
+      { label: "L'accueillir comme il se doit", outcomes: [
+        { weight: 55, text: "Il vous cite comme celui qui a tout changé, micro tendu, en direct. Le football entier retient l'histoire.", fx: { rep: 10, mor: 14, c: 5 } },
+        { weight: 45, text: "Retrouvailles chaleureuses et pudiques. Ça ne se voit pas dans les statistiques, mais ça vaut une carrière.", fx: { mor: 10, c: 4, team: 4 } },
+      ] },
+    ],
+  },
+  {
+    // ---- Expatriation : cond.abroad et cond.foreignLang étaient quasi inutilisés,
+    // alors que jouer loin de chez soi est une des grandes histoires du football. ----
+    id: "ev_language_wall", cat: "Vie perso", icon: "🗣️", w: 16,
+    cond: { aMin: 19, aMax: 34, foreignLang: true },
+    text: "Trois mois à l'étranger, et vous ne comprenez toujours pas les consignes tactiques sans traducteur. Le coach commence à s'agacer de devoir répéter.",
+    options: [
+      { label: "Prendre des cours intensifs tous les soirs", outcomes: [
+        { weight: 70, text: "Six mois plus tard, vous parlez en réunion vidéo. Le vestiaire vous adopte pour de bon.", fx: { m: 7, team: 12, coach: 8, c: 4 } },
+        { weight: 30, text: "Les cours s'ajoutent à la charge d'entraînement. Vous êtes épuisé.", fx: { form: -6, m: 4, team: 5 } },
+      ] },
+      { label: "M'appuyer sur un coéquipier qui parle ma langue", outcomes: [
+        { weight: 55, text: "Il devient votre interprète et votre meilleur ami. Vous survivez très bien ainsi.", fx: { team: 7, mor: 5 } },
+        { weight: 45, text: "Vous vous enfermez dans une bulle. Le reste du groupe vous reste étranger.", fx: { team: -8, coach: -5, mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_expat_roots", cat: "Vie perso", icon: "✈️", w: 14,
+    cond: { aMin: 24, aMax: 36, abroad: true, minRep: 30 },
+    text: "Votre famille est restée au pays. Les enfants grandissent sur écran interposé, et la question revient à chaque appel : jusqu'à quand ?",
+    options: [
+      { label: "Les faire venir, coûte que coûte", outcomes: [
+        { weight: 65, text: "Toute la famille s'installe. Vous retrouvez un équilibre, et ça se voit dès le week-end suivant.", fx: { mor: 12, form: 6, money: -1 } },
+        { weight: 35, text: "Le déracinement est dur pour eux. La culpabilité pèse plus lourd que l'absence.", fx: { mor: -7, form: -4, money: -1.5 } },
+      ] },
+      { label: "Chercher un club plus près de chez moi", outcomes: [
+        { weight: 55, text: "Un retour se dessine. Moins prestigieux, mais enfin chez vous.", fx: { mor: 8, transfer: { home: true } } },
+        { weight: 45, text: "Aucune porte ne s'ouvre au pays. Il faudra tenir encore.", fx: { mor: -5, m: 4 } },
+      ] },
+    ],
+  },
+  {
+    // ---- Le sommet : cond.minBallon n'était utilisé qu'une fois. ----
+    id: "ev_ballon_pressure", cat: "Médias", icon: "👑", w: 18,
+    cond: { aMin: 25, aMax: 36, minBallon: 1 },
+    text: "Ballon d'Or en poche, chaque match devient un examen. Un éditorial demande ouvertement si vous n'êtes pas déjà « sur la pente descendante » — après trois matchs sans but.",
+    options: [
+      { label: "Répondre sur le terrain, sans un mot", outcomes: [
+        { weight: 65, text: "Vous enchaînez une série monstrueuse. Le silence était la meilleure réponse.", fx: { rep: 9, form: 8, mor: 7, m: 5 } },
+        { weight: 35, text: "La pression s'installe malgré vous. Le geste devient laborieux.", fx: { form: -8, mor: -7 } },
+      ] },
+      { label: "Recadrer le journaliste publiquement", outcomes: [
+        { weight: 45, text: "Votre sortie fait date. Plus personne n'ose écrire une ligne de travers.", fx: { rep: 6, c: 5, mor: 6 } },
+        { weight: 55, text: "On vous trouve arrogant. La presse entière se ligue contre vous.", fx: { rep: -8, mor: -6, dis: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_record_hunt", cat: "Records", icon: "📈", w: 14,
+    cond: { aMin: 27, aMax: 39, minRep: 45 },
+    text: "Il vous manque quelques réalisations pour effacer un record historique du club. La fin de saison ne compte plus au classement, mais le record, lui, compte pour l'éternité.",
+    options: [
+      { label: "Tout faire pour le record", hint: "Individualiste", outcomes: [
+        { weight: 55, text: "Le record tombe dans les dernières minutes de la saison. Votre nom restera au fronton.", fx: { rep: 11, mor: 10, m: 3 } },
+        { weight: 45, text: "Vous forcez trop, les partenaires le voient, et le record vous échappe de peu.", fx: { team: -8, mor: -7, rep: -2 } },
+      ] },
+      { label: "Jouer collectif, tant pis pour le record", outcomes: [
+        { weight: 70, text: "Vous distribuez au lieu de conclure. Le vestiaire n'oubliera pas ce geste-là.", fx: { team: 12, c: 5, coach: 6, mor: 4 } },
+        { weight: 30, text: "Le record file à un rival, et le regret s'installe pour de bon.", fx: { mor: -6, m: 3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_shirt_number", cat: "Insolite", icon: "🔢", w: 12,
+    cond: { aMin: 20, aMax: 34 },
+    text: "Le numéro mythique du club se libère : celui d'une légende dont le maillot est encore accroché dans tous les bars de la ville. L'intendant vous le propose.",
+    options: [
+      { label: "Prendre le numéro et l'assumer", hint: "Exposé", outcomes: [
+        { weight: 50, text: "Vous le portez si bien que la ville finit par oublier l'ancien. Consécration.", fx: { rep: 10, mor: 8, c: 4 } },
+        { weight: 50, text: "Chaque mauvais match ravive la comparaison. Le maillot pèse une tonne.", fx: { rep: -5, mor: -8, form: -5 } },
+      ] },
+      { label: "Garder le mien, je me construis seul", outcomes: [
+        { weight: 65, text: "Votre numéro à vous, votre histoire à vous. Les supporters respectent la démarche.", fx: { mor: 6, m: 4, rep: 2 } },
+        { weight: 35, text: "L'intendant le donne à un jeune recruté, qui en fait son emblème. Léger pincement.", fx: { mor: -3 } },
+      ] },
+    ],
+  },
+  {
     // ---- Lot « jeunes années » : la tranche 16-21 ans était deux fois moins
     // fournie que la trentaine, alors que c'est la phase qui décide si le joueur
     // s'attache à sa carrière. ----
@@ -6826,6 +7114,24 @@ const BALANCE = {
   // plus vieux qu'un attaquant (moins dépendant de l'explosivité). La valeur
   // ABAISSE la barre d'OVR requise (≈ années de sélection gagnées).
   intlRetainPos: { gk: 8, def: 4, mil: 1, att: 0 },
+  // Barre d'OVR pour être appelé en sélection A, par FORCE DE NATION (à 24 ans et
+  // plus ; les tranches plus jeunes ajoutent natCallAgeOffset). Une petite fédération
+  // appelle des joueurs de niveau moyen faute de mieux ; la France, non.
+  // Table de PALIERS et non formule : la progression voulue n'est pas linéaire
+  // (−2 seulement entre les toutes premières nations, puis des marches plus larges).
+  // Premier palier dont minW est atteint → sa valeur. N'ouvre pas la porte aux
+  // trophées : les tournois restent filtrés par natW élevé à une puissance.
+  natCallBar: [
+    { minW: 0.85, ovr: 78 }, // France, Brésil, Angleterre, Allemagne, Espagne…
+    { minW: 0.55, ovr: 76 }, // Portugal, Nigeria, Croatie, Uruguay, Danemark…
+    { minW: 0.35, ovr: 70 }, // Maroc, Suisse, Ghana, Turquie, Sénégal…
+    { minW: 0.12, ovr: 65 }, // Kosovo, Luxembourg, Haïti, Cap-Vert…
+    { minW: 0, ovr: 60 },    // Saint-Marin, Andorre, Pakistan…
+  ],
+  // Surcoût d'OVR pour être appelé PLUS JEUNE (s'ajoute à la barre de la nation).
+  natCallAgeOffset: { u19: 8, u21: 4, u24: 1 },
+  // Abaissement de la barre de RÉPUTATION selon la faiblesse de la nation.
+  natCallWeightRep: 24,
   // OVR attendu d'un titulaire (plus c'est haut, plus la concurrence est rude)
   expectedLevel: { regional: 46, d3: 49, d2: 55, d1: 67, elite: 80 },
   // Statut au club (rôle) : seuils de marge (OVR − expectedLevel) → cran de rôle,

@@ -395,6 +395,16 @@
     return s.dualNat ? NATIONALITIES.find((n) => n.id === s.dualNat) || null : null;
   }
 
+  // --- Sélection nationale : barre d'OVR selon la force de la nation -----------
+  // Premier palier dont le seuil de poids est atteint. Les paliers sont ordonnés du
+  // plus fort au plus faible dans BALANCE.natCallBar.
+  function natCallBarFor(s) {
+    const w = s.nationality.weight;
+    const bars = BALANCE.natCallBar;
+    for (const t of bars) if (w >= t.minW) return t.ovr;
+    return bars[bars.length - 1].ovr;
+  }
+
   function ovr(s) {
     return Math.round(0.4 * s.stats.t + 0.25 * s.stats.p + 0.2 * s.stats.m + 0.15 * s.stats.c);
   }
@@ -2126,13 +2136,23 @@
     if (!s.natTeam.active && !s.natTeam.retired && !s.dualNat && s.age >= 17 && seasonInj < 20) {
       const rank = levelRank(lvlOf(s, s.club));
       let ovrNeed, repNeed;
-      if (s.age <= 18) { ovrNeed = 81; repNeed = 58; }
-      else if (s.age <= 20) { ovrNeed = 77; repNeed = 52; }
-      else if (s.age <= 23) { ovrNeed = 74; repNeed = 50; }
-      else { ovrNeed = 73; repNeed = 48; }
+      // FORCE DE LA NATION : la barre était la même pour la France et pour Saint-Marin,
+      // alors qu'un international luxembourgeois n'a évidemment pas le niveau d'un
+      // international brésilien. La barre d'OVR vient donc d'une table de paliers
+      // (BALANCE.natCallBar), à laquelle s'ajoute un surcoût si l'on veut être appelé
+      // plus jeune. Ça n'ouvre PAS la porte aux trophées : les tournois restent
+      // filtrés par natW élevé à une puissance.
+      const natW = s.nationality.weight;
+      const natBar = natCallBarFor(s);
+      const off = BALANCE.natCallAgeOffset;
+      if (s.age <= 18) { ovrNeed = natBar + off.u19; repNeed = 58; }
+      else if (s.age <= 20) { ovrNeed = natBar + off.u21; repNeed = 52; }
+      else if (s.age <= 23) { ovrNeed = natBar + off.u24; repNeed = 50; }
+      else { ovrNeed = natBar; repNeed = 48; }
       if (rank === 1) { ovrNeed += 2; repNeed += 8; }
       else if (rank === 0) { ovrNeed += 5; repNeed += 16; }
       if (s.flags.youth_int) repNeed -= 4;
+      repNeed -= Math.round((1 - natW) * BALANCE.natCallWeightRep);
       if (s.rep >= repNeed && ovr(s) >= ovrNeed) {
         s.natTeam.active = true;
         if (s.age <= 18) s.flags.early_cap = true;
@@ -2151,7 +2171,10 @@
       const last = s.seasons[s.seasons.length - 1];
       const recentRating = last ? last.rating : 7;
       const posBonus = BALANCE.intlRetainPos[s.position.id] || 0; // gardien/défenseur : barre abaissée, sélectionnés plus vieux
-      const ovrNeed = BALANCE.intlRetainOvr + (s.age - BALANCE.intlRetainAge) * BALANCE.intlRetainStep - posBonus;
+      // Même logique que pour la première convocation : une petite sélection garde
+      // ses cadres bien plus longtemps, faute d'alternative.
+      const natDrop = BALANCE.natCallBar[0].ovr - natCallBarFor(s);
+      const ovrNeed = BALANCE.intlRetainOvr + (s.age - BALANCE.intlRetainAge) * BALANCE.intlRetainStep - posBonus - natDrop;
       const stillGood = ovr(s) >= ovrNeed && recentRating >= BALANCE.intlRetainRating && playingTimeFactor(s) >= 0.35;
       if (!stillGood) {
         s.natTeam.active = false;
@@ -2707,7 +2730,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.31";
+  const ENGINE_VERSION = "10.32";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {
