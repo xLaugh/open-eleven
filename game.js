@@ -500,6 +500,58 @@
     showScreen(CREATION_ORDER[idx - 1]);
   }
 
+  // --- Tirage au sort de la création ------------------------------------------
+  // Le tirage CLIQUE une carte au hasard plutôt que d'écrire dans `setup` :
+  // il emprunte ainsi exactement le même chemin que le joueur, ce qui préserve
+  // sans effort le journal de duel (duelChoices), le club imposé du mode
+  // Histoire et la restauration de graine de l'écran académie.
+  // Math.random suffit : ces écrans ne consomment jamais le PRNG du moteur.
+  const CREATION_LISTS = {
+    "screen-position": "position-list",
+    "screen-origin": "origin-list",
+    "screen-lifestyle": "lifestyle-list",
+    "screen-entourage": "entourage-list",
+    "screen-academy": "academy-list",
+  };
+  const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+  function clickRandomCard(listId) {
+    const list = $(listId);
+    if (!list) return false;
+    // La carte « ↩ Continents » n'est pas un choix : on l'exclut du tirage.
+    const cards = [...list.querySelectorAll("button")].filter((b) => !b.classList.contains("nat-card-back"));
+    if (!cards.length) return false;
+    pickRandom(cards).click();
+    return true;
+  }
+
+  // Tire au sort le choix de l'écran courant. `confirmName` : en mode « tout
+  // aléatoire », on valide le formulaire de nom au lieu de le re-tirer (sinon
+  // l'enchaînement tournerait en rond sur cet écran).
+  function randomizeCurrentScreen(confirmName) {
+    const active = document.querySelector(".screen.active");
+    const id = active ? active.id : "";
+    if (id === "screen-nationality") {
+      if ($("name-first")) { $(confirmName ? "name-confirm" : "name-shuffle").click(); return true; }
+      // Sous-étape « double nationalité » : les cartes sont de vrais choix
+      if (active.querySelector(".dual-none")) return clickRandomCard("nationality-grid");
+      // Sinon on est sur les continents ou les pays : on tranche directement
+      // une nationalité, ce qu'attend un joueur qui clique sur le dé.
+      showDualPicker(pickRandom(NATIONALITIES));
+      return true;
+    }
+    return clickRandomCard(CREATION_LISTS[id] || "");
+  }
+
+  // Enchaîne les tirages jusqu'au démarrage de la carrière.
+  function randomizeAllCreation() {
+    for (let guard = 0; guard < 15; guard++) {
+      const active = document.querySelector(".screen.active");
+      if (!active || !CREATION_ORDER.includes(active.id)) return; // carrière lancée
+      if (!randomizeCurrentScreen(true)) return; // écran sans choix tirable
+    }
+  }
+
   // --- Démarrage --------------------------------------------------------------
   // Drapeaux préchargés dès l'ouverture du jeu pour la carte canvas :
   // toutes les nations, pas seulement celle de la carrière en cours.
@@ -3416,6 +3468,8 @@
       showScreen("screen-nationality");
     });
     document.querySelectorAll(".creation-back").forEach((b) => b.addEventListener("click", creationBack));
+    document.querySelectorAll(".creation-random").forEach((b) => b.addEventListener("click", () => randomizeCurrentScreen(false)));
+    document.querySelectorAll(".creation-random-all").forEach((b) => b.addEventListener("click", randomizeAllCreation));
     $("btn-resume").addEventListener("click", resumeCareer);
     $("daily-panel").addEventListener("click", startDailyChallenge);
     // Bloc « Compétition en ligne » (Classement + Duels) : révélé seulement si le

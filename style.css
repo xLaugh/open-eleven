@@ -792,6 +792,46 @@ body { color: var(--text-0); }
 .account-fab:active { transform: scale(0.95); }
 .account-fab:focus-visible { outline: 2px solid var(--on-green); outline-offset: 2px; }
 
+/* ---------- Sélecteur de langue ----------
+   Pastille en haut à gauche de l'accueil (symétrique du bouton de compte),
+   avec un petit menu déroulant FR/EN. Reprend les tons "sur fond vert". */
+.lang-switch { position: absolute; top: 10px; left: 6px; z-index: 6; }
+.lang-fab {
+  display: flex; align-items: center; gap: 6px;
+  height: 42px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid var(--on-green-line); background: var(--on-green-panel);
+  color: var(--on-green); font-family: var(--font);
+  font-size: 0.82rem; font-weight: 700; line-height: 1; cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+.lang-fab:hover { background: rgba(255, 255, 255, 0.22); transform: translateY(-1px); }
+.lang-fab:active { transform: scale(0.95); }
+.lang-fab:focus-visible { outline: 2px solid var(--on-green); outline-offset: 2px; }
+
+.lang-menu {
+  position: absolute; top: 50px; left: 0;
+  background: var(--card-bg); border-radius: 14px;
+  box-shadow: 0 6px 20px var(--shadow);
+  padding: 12px 14px; min-width: 148px;
+  animation: fadeIn 0.18s ease;
+}
+.lang-menu[hidden] { display: none; }
+.lang-menu-label {
+  font-family: var(--font-display);
+  font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--text-1); margin: 0 0 8px;
+}
+.lang-options { display: flex; gap: 8px; }
+.lang-opt {
+  flex: 1; padding: 8px 0; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--panel-2);
+  color: var(--text-1); font-family: var(--font);
+  font-size: 0.82rem; font-weight: 700; cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.lang-opt:hover { border-color: var(--green); }
+.lang-opt.active { background: var(--green); border-color: var(--green); color: #fff; }
+
 /* ---------- Compétition en ligne (Classement + Duels) ----------
    Bloc groupé et labellisé sous le Défi du jour, visible seulement si le
    compte Supabase est configuré. Accent doré = features compétitives. */
@@ -1005,16 +1045,65 @@ body { color: var(--text-0); }
   box-shadow: 0 6px 18px var(--shadow);
 }
 .btn-secondary:hover { background: #f2f6f1; }
-/* Retour du tunnel de création : compact, en haut à gauche de l'écran.
-   order:-1 le remonte en tête du flex-column sans toucher au HTML. */
-.creation-back {
+/* Barre du tunnel de création : Retour à gauche, tirage complet à droite.
+   order:-1 la remonte en tête du flex-column sans toucher à l'ordre du HTML. */
+.creation-top {
   order: -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  margin: 0 0 14px;
+}
+.creation-back {
   align-self: flex-start;
   width: auto;
-  margin: 0 0 14px;
+  margin: 0;
   padding: 8px 18px;
   font-size: 0.9rem;
 }
+/* « Tout aléatoire » : doré, pour se distinguer nettement du Retour. */
+.btn-random-all {
+  font-family: var(--font);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--green-deep, #0b3d2c);
+  background: var(--gold);
+  border: none;
+  border-radius: 999px;
+  padding: 9px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px var(--shadow);
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.btn-random-all:hover { filter: brightness(1.08); }
+.btn-random-all:active { transform: scale(0.96); }
+
+/* Titre d'écran + dé de tirage sur la même ligne */
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.title-row .screen-title { margin-bottom: 0; }
+.dice-btn {
+  flex: 0 0 auto;
+  font-size: 1rem;
+  line-height: 1;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.dice-btn:hover { background: rgba(255, 255, 255, 0.24); }
+.dice-btn:active { transform: rotate(20deg) scale(0.92); }
 
 /* ---------- Titres d'écran + étapes de création ---------- */
 .screen-title {
