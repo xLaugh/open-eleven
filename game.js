@@ -771,7 +771,18 @@
     const built = buildTournamentMatches(report, kind);
     const steps = [];
     if (built.groupTeams) steps.push({ type: "group" });
-    built.matches.forEach((m) => steps.push({ type: "match", m }));
+    // Ligue des Sélections : la phase de Ligue (6 journées) est montrée D'UN SEUL
+    // COUP sous forme de tableau, puis on découvre si l'on est qualifié pour le
+    // Final Four. Enchaîner 6 cartes pour une phase sans élimination directe
+    // diluait la tension ; le Final Four, lui, reste match par match.
+    if (kind === "natl") {
+      const league = built.matches.filter((m) => /^Ligue · J/.test(m.label));
+      const ko = built.matches.filter((m) => !/^Ligue · J/.test(m.label));
+      if (league.length) steps.push({ type: "natlLeague", ms: league, qualified: ko.length > 0 });
+      ko.forEach((m) => steps.push({ type: "match", m }));
+    } else {
+      built.matches.forEach((m) => steps.push({ type: "match", m }));
+    }
     let i = 0;
     function next() {
       if (i >= steps.length) { onDone(); return; }
@@ -783,6 +794,32 @@
           <p class="event-text">${flagHtml(G.nationality)} Votre poule pour cette édition :</p>
           <div class="pool-grid">${teams}</div>
           <button class="btn btn-secondary" id="btn-tstep">Coup d'envoi ▶</button>`);
+      } else if (step.type === "natlLeague") {
+        const ms = step.ms;
+        let w = 0, d = 0, l = 0, gf = 0, ga = 0, pg = 0;
+        const rows = ms.map((m) => {
+          if (m.result === "win") w++; else if (m.result === "loss") l++; else d++;
+          gf += m.sf; ga += m.sa; pg += m.pgoals;
+          const cls = m.result === "win" ? "tm-win" : m.result === "loss" ? "tm-loss" : "tm-draw";
+          return `<div class="natl-row">
+            <span class="natl-day">${esc(m.label.replace("Ligue · ", ""))}</span>
+            <span class="natl-opp">${flagHtml(m.opp)} ${esc(m.opp.name)}</span>
+            <span class="natl-score ${cls}">${m.sf} – ${m.sa}</span>
+            <span class="natl-goal">${m.pgoals ? `⚽ ${m.pgoals}` : ""}</span>
+          </div>`;
+        }).join("");
+        const pts = w * 3 + d;
+        const verdict = step.qualified
+          ? `<p class="natl-verdict natl-ok">✅ Qualifié pour le Final Four</p>`
+          : `<p class="natl-verdict natl-out">❌ Éliminé dès la phase de Ligue</p>`;
+        const last = i >= steps.length;
+        showCard(`
+          <div class="card-tag"><span class="card-icon">${icon}</span> ${esc(cupName)} · Phase de Ligue</div>
+          <div class="natl-table">${rows}</div>
+          <p class="natl-sum">${w} V · ${d} N · ${l} D — <strong>${pts} pts</strong> · ${gf}-${ga}${pg ? ` · ⚽ vous : ${pg}` : ""}</p>
+          ${verdict}
+          <button class="btn btn-secondary" id="btn-tstep">${last ? "Résultat ▶" : "Final Four ▶"}</button>`,
+          step.qualified ? "good" : "bad");
       } else {
         const m = step.m;
         const cls = m.result === "win" ? "tm-win" : m.result === "loss" ? "tm-loss" : "tm-draw";
@@ -927,6 +964,7 @@
     if (report.leaguePos === 1) leagueLine = report.divisionTitle ? `🥇 Champion ${E.deOf(E.divShort(report.level, report.countryId))} !` : "🥇 Champion !";
     else if (report.promoted) leagueLine = `${report.leaguePos}ᵉ — 🚀 montée arrachée en barrage !`;
     else if (report.playoffRun) leagueLine = `${report.leaguePos}ᵉ — barrage de montée perdu`;
+    else if (report.survivedPlayoff) leagueLine = `${report.leaguePos}ᵉ — 🛟 maintien arraché en barrage`;
     else if (report.relegated) leagueLine = `${report.leaguePos}ᵉ — 📉 RELÉGATION`;
     else leagueLine = `${report.leaguePos}ᵉ`;
 

@@ -2496,6 +2496,33 @@ const KEY_MOMENTS = {
       failText: "Le ballon file au ras du poteau… Le trophée échappe à {club} d'un souffle. La nuit sera longue.",
     }],
   },
+  // Barrage de MAINTIEN : la relégation ne tombe plus en silence, elle se joue.
+  // Gagner = le club se sauve ; perdre = descente. Même structure que le barrage
+  // de montée (moment décisif interactif), symétrie voulue.
+  relegation_playoff: {
+    field: [{
+      title: "BARRAGE DE MAINTIEN",
+      text: "Barrage de la dernière chance, 1-1 au cumulé, cinquième minute du temps additionnel. Penalty pour {club} : la saison entière, et la survie du club dans la division, tiennent sur ce ballon.",
+      options: [
+        { id: "cold", label: "Frapper franchement, sans trembler", base: 0.55, repWin: 3 },
+        { id: "panenka", label: "Tenter la panenka", hint: "Audacieux", base: 0.38, repWin: 8, repFail: -6 },
+        { id: "corner", label: "Viser le petit filet", base: 0.48, repWin: 4 },
+        { id: "give", label: "Laisser le penalty au capitaine", hint: "Prudent", base: 0.5, repWin: 0 },
+      ],
+      winText: "LE STADE EXPLOSE ! {club} se maintient au bout du suspense — vous avez sauvé la saison de tout un club.",
+      failText: "Le gardien part du bon côté. {club} est relégué, et le silence du stade restera longtemps dans vos oreilles.",
+    }, {
+      title: "BARRAGE DE MAINTIEN",
+      text: "Match retour du barrage, {club} mène d'un but mais recule depuis vingt minutes. Le coach vous demande de prendre le jeu à votre compte pour tuer le match.",
+      options: [
+        { id: "keep", label: "Garder le ballon, faire couler le temps", hint: "Prudent", base: 0.56 },
+        { id: "kill", label: "Porter le ballon et chercher le second but", base: 0.5, repWin: 5 },
+        { id: "press", label: "Ordonner un pressing tout-terrain", hint: "Risqué", base: 0.42, repWin: 7, repFail: -4 },
+      ],
+      winText: "Vous tenez le ballon comme on tient une corde : {club} arrache son maintien, et vous en êtes le patron.",
+      failText: "Le bloc craque dans les dernières minutes. Égalisation, puis le coup de grâce : {club} descend.",
+    }],
+  },
   promo_playoff: {
     field: [{
       title: "BARRAGE DE MONTÉE",
@@ -6556,6 +6583,9 @@ const BALANCE = {
   // DUAL_NATIONALITY. Volontairement minoritaire : la double nationalité doit rester
   // une carrière particulière, pas la norme.
   dualNatChance: 0.3,
+  // Note de saison en dessous de laquelle la relégation est DIRECTE (sans barrage) :
+  // une saison catastrophique ne se rattrape pas sur un match.
+  relegDirectRating: 5.6,
   matchesByLevel: { regional: [30, 38], d3: [33, 41], d2: [36, 44], d1: [40, 48], elite: [44, 54] },
   // Titre de division (ne compte comme trophée national qu'en d1/élite)
   titleChance: { regional: 0.12, d3: 0.1, d2: 0.08, d1: 0.06, elite: 0.3 },

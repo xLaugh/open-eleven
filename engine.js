@@ -1501,7 +1501,9 @@
       // Saison solide sans titre : la montée se joue en barrage (moment décisif)
       report.playoffRun = true;
       report.pendingMoments.push({
-        type: "playoff", label: "Barrage de montée",
+        // Libellé explicite sur la division VISÉE : « Barrage de montée » tout court
+        // laissait croire à une montée depuis la division où l'on est déjà affiché.
+        type: "playoff", label: `Barrage de montée en ${divShort(LEVEL_ORDER[Math.min(LEVEL_ORDER.length - 1, LEVEL_ORDER.indexOf(lvl) + 1)], s.club.countryId)}`,
         winLabel: "MONTÉE !", failLabel: "Échec en barrage",
         moment: keyMomentFor(s, "promo_playoff"),
       });
@@ -1512,9 +1514,21 @@
     if (relegBase && lvl === "d1" && s.club.level === "elite") relegBase *= BALANCE.eliteRelegShield;
     if (!report.promoted && !report.playoffRun && relegBase > 0 &&
         rng() < relegBase * clamp(1 - (rating - 6.3) * 0.35, 0.2, 1.6)) {
-      report.relegated = true;
-      s.moral = clamp(s.moral - 8, 5, 100);
-      s.history.push({ age: s.age, text: `Relégation ${deOf(s.club.name)} en ${s.year} — une saison noire.`, impact: -10 });
+      // La descente ne tombe plus en silence : elle se joue en BARRAGE DE MAINTIEN,
+      // moment décisif interactif — symétrique du barrage de montée. Une saison
+      // vraiment catastrophique reste toutefois sans appel (relégation directe).
+      if (rating <= BALANCE.relegDirectRating) {
+        report.relegated = true;
+        s.moral = clamp(s.moral - 8, 5, 100);
+        s.history.push({ age: s.age, text: `Relégation ${deOf(s.club.name)} en ${s.year} — une saison noire.`, impact: -10 });
+      } else {
+        report.relegationPlayoff = true;
+        report.pendingMoments.push({
+          type: "relegation_playoff", label: "Barrage de maintien",
+          winLabel: "MAINTIEN ARRACHÉ !", failLabel: "Relégation au bout du barrage",
+          moment: keyMomentFor(s, "relegation_playoff"),
+        });
+      }
     }
     // La coupe nationale : atteindre la finale se joue ici, la gagner se
     // joue dans un moment décisif
@@ -1562,6 +1576,9 @@
     // Classement (mise en scène cohérente avec le destin du club)
     if (report.trophies.includes("league") || report.divisionTitle) report.leaguePos = 1;
     else if (report.playoffRun) report.leaguePos = randInt(2, 4);
+    // Barragiste pour le maintien : place de relégable, mais pas encore condamné —
+    // le classement définitif est réaligné si le barrage est perdu.
+    else if (report.relegationPlayoff) report.leaguePos = lvl === "d1" ? randInt(15, 17) : randInt(16, 18);
     else if (report.relegated) report.leaguePos = lvl === "d1" ? randInt(16, 18) : randInt(17, 19);
     else {
       // Le classement du club n'est plus un pur dé : la saison du joueur pèse. La
@@ -1799,6 +1816,24 @@
       } else {
         s.moral = clamp(s.moral - 6, 5, 100);
         s.history.push({ age: s.age, text: `Barrage de montée perdu avec ${s.club.name} (${s.year}).`, impact: -6 });
+      }
+    } else if (entry.type === "relegation_playoff") {
+      // Miroir du barrage de montée : ici c'est la survie du club qui se joue.
+      // lastSeason.relegated est tenu à jour car advanceYear s'en sert pour faire
+      // descendre le club (et le classement final est réaligné sur l'issue).
+      if (res.success) {
+        report.relegated = false;
+        report.survivedPlayoff = true;
+        if (s.lastSeason) s.lastSeason.relegated = false;
+        s.moral = clamp(s.moral + 8, 5, 100);
+        s.rep = clamp(s.rep + 2, 0, 100);
+        s.history.push({ age: s.age, text: `Maintien arraché en barrage avec ${s.club.name} (${s.year}) !`, impact: 8 });
+      } else {
+        report.relegated = true;
+        if (s.lastSeason) s.lastSeason.relegated = true;
+        report.leaguePos = Math.max(report.leaguePos, lvlOf(s, s.club) === "d1" ? 17 : 18);
+        s.moral = clamp(s.moral - 10, 5, 100);
+        s.history.push({ age: s.age, text: `Relégation ${deOf(s.club.name)} au bout du barrage (${s.year}).`, impact: -11 });
       }
     } else if (entry.type === "cup_final") {
       if (res.success) {
@@ -2666,7 +2701,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.28";
+  const ENGINE_VERSION = "10.29";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {

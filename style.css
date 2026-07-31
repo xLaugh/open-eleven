@@ -866,6 +866,24 @@ body { color: var(--text-0); }
   }
 }
 
+/* ---------- Ligue des Sélections : phase de Ligue en un tableau ---------- */
+.natl-table { margin: 12px 0 8px; }
+.natl-row {
+  display: grid; grid-template-columns: 2.4em 1fr auto 2.6em;
+  align-items: center; gap: 8px;
+  padding: 6px 4px; border-bottom: 1px solid rgba(12, 45, 30, 0.08);
+  font-size: 0.92rem;
+}
+.natl-row:last-child { border-bottom: none; }
+.natl-day { color: var(--text-1); font-weight: 700; font-size: 0.8rem; }
+.natl-opp { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.natl-score { font-weight: 800; padding: 1px 8px; border-radius: 999px; }
+.natl-goal { font-size: 0.8rem; color: var(--gold-deep); font-weight: 700; text-align: right; }
+.natl-sum { margin: 6px 0 2px; text-align: center; font-size: 0.9rem; color: var(--text-0); }
+.natl-verdict { margin: 8px 0 2px; text-align: center; font-weight: 800; font-size: 1rem; }
+.natl-verdict.natl-ok { color: var(--green); }
+.natl-verdict.natl-out { color: #b3261e; }
+
 /* Second drapeau (double nationalité, tant que le choix n'est pas tranché). */
 .dual-nat { opacity: 0.55; }
 .dual-nat::before { content: "/"; margin: 0 1px 0 2px; opacity: 0.7; font-weight: 700; }
@@ -1450,9 +1468,9 @@ body { color: var(--text-0); }
 .tourney-match .tm-side { flex: 1; font-weight: 700; font-size: 0.95rem; }
 .tourney-match .tm-side:last-child { text-align: right; }
 .tm-score { font-family: var(--font-display); font-weight: 800; font-size: 1.5rem; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; padding: 2px 12px; border-radius: 10px; white-space: nowrap; }
-.tm-score.tm-win { color: #0a7d4d; background: rgba(10, 125, 77, 0.12); }
-.tm-score.tm-loss { color: #b3261e; background: rgba(179, 38, 30, 0.12); }
-.tm-score.tm-draw { color: var(--text-1, #666); background: rgba(128, 128, 128, 0.12); }
+.tm-score.tm-win, .natl-score.tm-win { color: #0a7d4d; background: rgba(10, 125, 77, 0.12); }
+.tm-score.tm-loss, .natl-score.tm-loss { color: #b3261e; background: rgba(179, 38, 30, 0.12); }
+.tm-score.tm-draw, .natl-score.tm-draw { color: var(--text-1, #666); background: rgba(128, 128, 128, 0.12); }
 .tm-result { text-align: center; font-weight: 700; font-size: 0.9rem; margin: 4px 0 2px; }
 .tm-result.tm-win { color: #0a7d4d; }
 .tm-result.tm-loss { color: #b3261e; }
