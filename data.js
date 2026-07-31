@@ -2962,6 +2962,276 @@ const EVENTS = [
     ],
   },
   {
+    // ---- Lot « jeunes années » : la tranche 16-21 ans était deux fois moins
+    // fournie que la trentaine, alors que c'est la phase qui décide si le joueur
+    // s'attache à sa carrière. ----
+    id: "ev_academy_cut", cat: "Crise", icon: "✂️", w: 16,
+    cond: { aMin: 16, aMax: 18 },
+    text: "Fin de saison au centre : le directeur sportif convoque les familles une par une. Sur trente garçons, huit seront conservés. Votre nom est sur la liste des indécis.",
+    options: [
+      { label: "Doubler les séances, tout donner", hint: "Épuisant", outcomes: [
+        { weight: 45, text: "Vous vous entraînez jusqu'à l'écœurement. Le staff tranche en votre faveur : vous restez.", fx: { p: 5, m: 4, coach: 8, mor: 4 } },
+        { weight: 30, text: "L'effort paie, mais votre corps encaisse mal la charge.", fx: { p: 3, coach: 5, inj: 4 } },
+        { weight: 25, text: "Vous forcez trop, trop vite. Le corps lâche au pire moment.", fx: { inj: 9, mor: -8, coach: -3 } },
+      ] },
+      { label: "Jouer relâché, montrer ce que je sais faire", outcomes: [
+        { weight: 50, text: "Libéré de la pression, vous réalisez vos meilleurs matchs de l'année. Conservé.", fx: { t: 4, mor: 6, coach: 5 } },
+        { weight: 50, text: "Le staff prend votre détachement pour de la nonchalance. Vous passez à deux doigts de la porte.", fx: { coach: -8, mor: -6 } },
+      ] },
+      { label: "Chercher discrètement un autre centre", hint: "Prudent", outcomes: [
+        { weight: 55, text: "Un club voisin vous ouvre ses portes avant même le verdict. Vous partez la tête haute.", fx: { c: 3, transfer: { d: 0, domestic: true } } },
+        { weight: 45, text: "La rumeur remonte au directeur. Conservé, mais on n'oubliera pas que vous cherchiez ailleurs.", fx: { coach: -10, team: -5, rep: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_boarding_homesick", cat: "Vie perso", icon: "🏠", w: 14,
+    cond: { aMin: 16, aMax: 19 },
+    text: "Troisième mois d'internat. Les autres rient dans le couloir ; vous, vous fixez le plafond en pensant à la cuisine de chez vous. Le week-end de permission approche.",
+    options: [
+      { label: "Rentrer au pays quelques jours", outcomes: [
+        { weight: 60, text: "Trois jours chez vous, et vous revenez rechargé comme une batterie neuve.", fx: { mor: 12, form: 5 } },
+        { weight: 40, text: "Le retour est encore plus dur que le départ. Vous traînez ce vague à l'âme des semaines.", fx: { mor: -6, form: -5 } },
+      ] },
+      { label: "Rester et m'accrocher au groupe", outcomes: [
+        { weight: 55, text: "Vous forcez le contact avec les autres pensionnaires. Une bande se forme, et l'internat devient une maison.", fx: { team: 10, mor: 6, c: 3 } },
+        { weight: 45, text: "Vous restez, mais seul dans votre chambre. Les semaines s'étirent.", fx: { mor: -8, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_youth_captain", cat: "Vestiaire", icon: "🅒", w: 13,
+    cond: { aMin: 17, aMax: 20, minTeam: 45 },
+    text: "L'éducateur cherche un capitaine pour les U19. Il hésite entre vous et le meneur de jeu du groupe, plus âgé, plus bavard.",
+    options: [
+      { label: "Me porter candidat", outcomes: [
+        { weight: 50, text: "Le brassard vous va comme un gant : vous parlez peu, mais chaque mot porte.", fx: { c: 5, m: 4, team: 6, trait: "leader" } },
+        { weight: 50, text: "Vous obtenez le brassard, mais le vestiaire vous trouve prématuré. Il faudra le mériter.", fx: { c: 2, team: -4, m: 3 } },
+      ] },
+      { label: "Le laisser à l'autre et me concentrer sur mon jeu", outcomes: [
+        { weight: 60, text: "Libéré des responsabilités, vous explosez techniquement sur la seconde partie de saison.", fx: { t: 6, form: 6 } },
+        { weight: 40, text: "Vous jouez bien, mais l'éducateur note votre absence de leadership dans son rapport.", fx: { t: 3, coach: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_body_transform", cat: "Physique", icon: "💪", w: 14,
+    cond: { aMin: 17, aMax: 21 },
+    text: "Le préparateur physique est formel : votre corps d'adolescent ne tiendra pas le rythme des professionnels. Il propose un programme de renforcement sur mesure pour l'intersaison.",
+    options: [
+      { label: "Suivre le programme à la lettre", outcomes: [
+        { weight: 65, text: "Six semaines de fonte et de proprioception : vous revenez avec un corps d'homme.", fx: { p: 8, m: 3, mor: 3 } },
+        { weight: 35, text: "Vous prenez de la masse, mais perdez en légèreté dans les premiers appuis.", fx: { p: 7, t: -2 } },
+      ] },
+      { label: "Y aller à mon rythme, sans me dénaturer", outcomes: [
+        { weight: 55, text: "Un entre-deux malin : vous gagnez en solidité sans rien perdre de votre toucher.", fx: { p: 4, t: 2 } },
+        { weight: 45, text: "Trop tendre pour le niveau au-dessus. Les duels vous rappellent à l'ordre toute la saison.", fx: { p: 1, form: -5, coach: -3 } },
+      ] },
+      { label: "Refuser, mon jeu repose sur la vitesse", hint: "Risqué", outcomes: [
+        { weight: 40, text: "Vous restez un félin, et votre vitesse devient votre marque de fabrique.", fx: { t: 5, rep: 3 } },
+        { weight: 60, text: "Le corps ne suit pas la cadence : première vraie blessure musculaire.", fx: { inj: 7, p: -2, mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_loan_or_bench", cat: "Mercato", icon: "🔁", w: 20,
+    cond: { aMin: 18, aMax: 22, levels: ["d1", "elite"], nat: false },
+    text: "Le coach est honnête : chez les pros, vous jouerez peu cette saison. Un club de l'échelon inférieur veut vous prêter et promet un rôle central. Rester et gratter des minutes, ou partir et tout jouer ?",
+    options: [
+      { label: "Partir en prêt et jouer", hint: "Temps de jeu", outcomes: [
+        { weight: 60, text: "Prêt accepté. Titulaire dès la première journée, vous vivez enfin une saison pleine.", fx: { mor: 8, loan: true } },
+        { weight: 40, text: "Le prêt se fait, mais le club d'accueil traverse une crise : le rôle promis se discute chaque semaine.", fx: { mor: -2, loan: true } },
+      ] },
+      { label: "Rester et m'imposer ici", hint: "Ambitieux", outcomes: [
+        { weight: 40, text: "Vous grignotez des minutes, puis une place. Le coach finit par compter sur vous.", fx: { role: 1, coach: 7, m: 4, rep: 3 } },
+        { weight: 60, text: "Une saison de banc. Vous vous entraînez au plus haut niveau, mais l'année de jeu est perdue.", fx: { role: -1, mor: -9, t: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_first_agent_pick", cat: "Entourage", icon: "🤝", w: 15,
+    cond: { aMin: 17, aMax: 22 },
+    text: "Deux agents vous courtisent. Le premier est un ancien joueur, discret, qui parle formation et patience. Le second est une figure du marché, costume impeccable, carnet d'adresses inépuisable.",
+    options: [
+      { label: "L'ancien joueur, la voie patiente", outcomes: [
+        { weight: 65, text: "Il refuse deux offres à votre place et vous explique pourquoi. Votre carrière se construit sur du solide.", fx: { m: 6, mor: 4, coach: 4 } },
+        { weight: 35, text: "Sa prudence vous coûte une belle opportunité. Vous commencez à douter de lui.", fx: { m: 3, mor: -4 } },
+      ] },
+      { label: "Le requin du marché", hint: "Ambitieux", outcomes: [
+        { weight: 50, text: "En six mois, votre nom circule dans toute l'Europe et votre salaire double.", fx: { rep: 8, money: 1.5, salaryMult: 1.3 } },
+        { weight: 50, text: "Il vous vend comme un produit. Le vestiaire s'en méfie, et vous aussi.", fx: { rep: 5, team: -8, mor: -5, trait: "mercenary" } },
+      ] },
+    ],
+  },
+  {
+    // ---- Lot « statut au club » : le système de rôle pilote le temps de jeu mais
+    // n'était presque jamais mis en scène par les événements. ----
+    id: "ev_role_talk", cat: "Vestiaire", icon: "🗣️", w: 18,
+    cond: { aMin: 20, aMax: 34, maxCoach: 62 },
+    text: "Trois matchs de suite sur le banc. Vous croisez le coach dans le couloir du centre d'entraînement — c'est maintenant ou jamais pour vider votre sac.",
+    options: [
+      { label: "Exiger des explications, franchement", hint: "Risqué", outcomes: [
+        { weight: 40, text: "Il apprécie le caractère : « Enfin quelqu'un qui a des tripes. » Vous êtes titulaire le week-end suivant.", fx: { role: 1, coach: 8, mor: 7 } },
+        { weight: 60, text: "Il n'a pas aimé le ton. Vous voilà encore un peu plus loin du onze.", fx: { role: -1, coach: -10, mor: -6 } },
+      ] },
+      { label: "Demander calmement ce qu'il attend de moi", outcomes: [
+        { weight: 60, text: "Il détaille deux points précis. Vous les travaillez, il le voit, votre temps de jeu remonte.", fx: { coach: 9, t: 3, mor: 4 } },
+        { weight: 40, text: "Réponse polie et creuse. Rien ne change, sinon votre lucidité sur votre situation.", fx: { m: 3, mor: -3 } },
+      ] },
+      { label: "Me taire et répondre sur le terrain", outcomes: [
+        { weight: 55, text: "Vous êtes le meilleur à chaque entraînement pendant un mois. Le coach cède à l'évidence.", fx: { role: 1, coach: 6, form: 6, m: 3 } },
+        { weight: 45, text: "Vous travaillez en silence, mais personne ne remarque rien. La saison passe.", fx: { m: 4, mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_new_coach_reset", cat: "Club", icon: "🔄", w: 17,
+    cond: { aMin: 19, aMax: 37 },
+    text: "Nouveau coach, nouveau discours : « Ici, personne n'a de place acquise. Tout se rejoue à partir de lundi. » Pour certains c'est une menace, pour d'autres une chance.",
+    options: [
+      { label: "Me vendre dès la première séance", outcomes: [
+        { weight: 50, text: "Vous crevez l'écran pendant la préparation. Le nouveau patron bâtit son équipe autour de vous.", fx: { role: 1, coach: 12, rep: 4, mor: 6 } },
+        { weight: 50, text: "Vous en faites trop, et il n'aime pas les joueurs qui se montrent. Mauvais départ.", fx: { coach: -8, mor: -4 } },
+      ] },
+      { label: "Observer, comprendre son système, puis frapper", hint: "Patient", outcomes: [
+        { weight: 60, text: "Vous décodez ses attentes avant les autres. En trois semaines, vous êtes indispensable à son plan.", fx: { role: 1, m: 5, coach: 8 } },
+        { weight: 40, text: "Le temps que vous compreniez, d'autres ont pris les places. Il faudra attendre.", fx: { role: -1, coach: -3, m: 3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_star_signing_position", cat: "Club", icon: "🌟", w: 16,
+    cond: { aMin: 21, aMax: 34, levels: ["d1", "elite"] },
+    text: "Le club vient de signer une recrue à grand renfort de communication… exactement à votre poste. La presse locale a déjà fait ses comptes : il y a un titulaire de trop.",
+    options: [
+      { label: "Aller au duel, tous les jours", outcomes: [
+        { weight: 45, text: "Vous ne lâchez rien : c'est LUI qui finit sur le banc. Le vestiaire en parle encore.", fx: { role: 1, coach: 8, rep: 6, mor: 8, m: 4 } },
+        { weight: 55, text: "Le club a mis trop d'argent sur lui pour vous choisir. Vous reculez d'un cran.", fx: { role: -1, mor: -7, coach: -3 } },
+      ] },
+      { label: "Proposer au coach de jouer différemment", hint: "Malin", outcomes: [
+        { weight: 55, text: "Vous vous décalez d'un cran et devenez complémentaire. Vous jouez tous les deux.", fx: { t: 4, m: 5, coach: 6 } },
+        { weight: 45, text: "L'idée séduit sur le papier, mais vous perdez vos repères dans ce rôle bâtard.", fx: { form: -7, mor: -4 } },
+      ] },
+      { label: "Demander mon départ", hint: "Radical", outcomes: [
+        { weight: 50, text: "Le club comprend et vous laisse partir vers un projet où vous êtes le patron.", fx: { transfer: { d: -1 }, mor: 4 } },
+        { weight: 50, text: "La direction refuse et prend note de votre manque de patience.", fx: { coach: -7, team: -4, flag: "listed" } },
+      ] },
+    ],
+  },
+  {
+    // ---- Lot « survie du club » : la lutte pour le maintien n'existait que par le
+    // barrage final, jamais dans le vécu de la saison. ----
+    id: "ev_survival_sprint", cat: "Crise", icon: "🔥", w: 17,
+    cond: { aMin: 19, aMax: 38, levels: ["d1", "d2", "d3"] },
+    text: "Cinq journées de la fin, le club est dans la zone rouge. Le président réunit le groupe : primes doublées en cas de maintien, mais l'ambiance est électrique et la presse ne lâche rien.",
+    options: [
+      { label: "Prendre l'équipe sur mon dos", hint: "Exposé", outcomes: [
+        { weight: 45, text: "Vous portez le club dans le money-time. Le maintien porte votre nom, et le stade le sait.", fx: { rep: 10, mor: 10, team: 8, m: 5, trait: "clutch" } },
+        { weight: 55, text: "Vous forcez, vous ratez, et la pression retombe sur vous plus que sur les autres.", fx: { rep: -5, form: -8, mor: -7 } },
+      ] },
+      { label: "Assurer le minimum, ne pas se blesser", hint: "Prudent", outcomes: [
+        { weight: 55, text: "Sobre et propre, vous traversez la fin de saison sans dommage.", fx: { m: 3 } },
+        { weight: 45, text: "Les supporters vous jugent transparent au pire moment. On s'en souviendra.", fx: { rep: -6, team: -6, mor: -4 } },
+      ] },
+      { label: "Souder le vestiaire en dehors du terrain", outcomes: [
+        { weight: 60, text: "Repas, discussions, mise au point entre joueurs : le groupe se resserre et s'en sort.", fx: { team: 12, c: 4, mor: 6 } },
+        { weight: 40, text: "Les clans sont trop installés. Vos efforts se perdent dans les non-dits.", fx: { team: -3, mor: -4, m: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_wage_cut", cat: "Finance", icon: "📉", w: 13,
+    cond: { aMin: 22, aMax: 38, levels: ["d2", "d3", "regional"] },
+    text: "Le club a mal digéré sa saison. La direction convoque les gros salaires : une baisse volontaire aiderait à garder l'effectif compétitif.",
+    options: [
+      { label: "Accepter la baisse", outcomes: [
+        { weight: 65, text: "Votre geste marque les esprits, du vestiaire aux tribunes. Vous devenez un cadre moral du club.", fx: { salaryMult: 0.78, team: 12, coach: 8, rep: 4, trait: "loyal" } },
+        { weight: 35, text: "Vous acceptez, et le club recrute… un joueur mieux payé que vous à votre poste.", fx: { salaryMult: 0.8, mor: -8, coach: 3 } },
+      ] },
+      { label: "Refuser, un contrat est un contrat", outcomes: [
+        { weight: 55, text: "Vous tenez votre position, légitimement. La direction encaisse sans broncher.", fx: { m: 3 } },
+        { weight: 45, text: "L'info fuite dans la presse locale. Les supporters vous désignent comme le symbole du problème.", fx: { rep: -6, team: -7, mor: -5 } },
+      ] },
+    ],
+  },
+  {
+    // ---- Divers : catégories les moins fournies (Identité de jeu, Insolite,
+    // Supporters, Hygiène de vie). ----
+    id: "ev_position_switch_late", cat: "Identité de jeu", icon: "♟️", w: 14,
+    cond: { aMin: 26, aMax: 36, minOvr: 60 },
+    text: "Le coach vous prend à part avec une vidéo : « Tes jambes ne feront pas dix ans de plus, mais ta lecture du jeu, si. Recule d'une ligne, et tu joues jusqu'à 38 ans. »",
+    options: [
+      { label: "Reculer d'un cran, jouer avec la tête", outcomes: [
+        { weight: 65, text: "Le repositionnement est une renaissance : vous voyez le jeu deux temps avant tout le monde.", fx: { m: 9, t: 3, coach: 6, mor: 5 } },
+        { weight: 35, text: "L'adaptation est laborieuse, et vous perdez ce qui faisait votre force sans gagner le reste.", fx: { form: -8, mor: -6, m: 3 } },
+      ] },
+      { label: "Rester à mon poste, c'est mon identité", outcomes: [
+        { weight: 50, text: "Vous tenez votre rang à l'ancienne, sur l'orgueil et le métier.", fx: { m: 4, rep: 3, mor: 4 } },
+        { weight: 50, text: "Les jambes parlent avant l'orgueil. La saison est difficile.", fx: { p: -4, form: -6, coach: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_lucky_socks", cat: "Insolite", icon: "🧿", w: 11,
+    cond: { aMin: 20, aMax: 40 },
+    text: "Depuis six matchs sans défaite, vous enfilez la même paire de chaussettes trouées et empruntez le même couloir. Le kiné menace de les jeter à la machine.",
+    options: [
+      { label: "Défendre mes chaussettes bec et ongles", outcomes: [
+        { weight: 55, text: "Le vestiaire en fait une légende. L'histoire tourne sur les réseaux et vous rend attachant.", fx: { rep: 5, mor: 6, team: 5 } },
+        { weight: 45, text: "On vous chambre sans pitié, et la série s'arrête le week-end suivant.", fx: { mor: -4, form: -3 } },
+      ] },
+      { label: "Laisser tomber, ce n'est que du tissu", outcomes: [
+        { weight: 60, text: "Libéré de vos rituels, vous jouez plus léger que jamais.", fx: { m: 5, form: 4, trait: "zen" } },
+        { weight: 40, text: "Vous y pensez tout le match. Rien ne va.", fx: { form: -6, m: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_ultras_visit", cat: "Supporters", icon: "📣", w: 13,
+    cond: { aMin: 20, aMax: 36, maxForm: 62 },
+    text: "Après trois défaites, une délégation d'ultras franchit les grilles du centre d'entraînement. Ils ne veulent pas des excuses, ils veulent parler aux joueurs.",
+    options: [
+      { label: "Aller les voir seul, sans le service de sécurité", hint: "Courageux", outcomes: [
+        { weight: 55, text: "Une heure debout sous la pluie à les écouter. Vous en ressortez adopté à vie.", fx: { rep: 8, team: 6, mor: 6, c: 4 } },
+        { weight: 45, text: "Le ton monte, les caméras arrivent. Le club vous reproche d'avoir envenimé l'affaire.", fx: { coach: -7, mor: -6, rep: -3 } },
+      ] },
+      { label: "Laisser le capitaine et le club gérer", outcomes: [
+        { weight: 60, text: "La délégation repart calmée. Vous n'avez rien gagné, rien perdu.", fx: { m: 2 } },
+        { weight: 40, text: "Votre absence est remarquée dans le virage. La banderole du week-end porte votre nom.", fx: { rep: -5, mor: -6 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_sleep_science", cat: "Hygiène de vie", icon: "😴", w: 13,
+    cond: { aMin: 20, aMax: 34 },
+    text: "Le club recrute un spécialiste du sommeil. Son verdict est sans appel : vos nuits sont hachées, et ça se voit sur vos fins de match.",
+    options: [
+      { label: "Suivre le protocole complet", hint: "Contraignant", outcomes: [
+        { weight: 70, text: "Couvre-feu numérique, chambre noire, horaires fixes : vous découvrez ce que veut dire être vraiment reposé.", fx: { p: 5, form: 8, dis: 8, mor: 3 } },
+        { weight: 30, text: "Le protocole vous obsède au point de vous empêcher de dormir. Ironique.", fx: { form: -4, m: -2 } },
+      ] },
+      { label: "Écouter poliment et ne rien changer", outcomes: [
+        { weight: 50, text: "Vous continuez comme avant, sans dégât visible cette saison.", fx: { mor: 2 } },
+        { weight: 50, text: "La fatigue chronique s'installe et grignote vos performances mois après mois.", fx: { form: -8, p: -3, dis: -5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_mentor_youngster", cat: "Vestiaire", icon: "🧑‍🏫", w: 15,
+    cond: { aMin: 29, aMax: 40 },
+    text: "Un gamin de dix-sept ans vient d'intégrer le groupe pro. Il joue à votre poste, il est brillant, et il vous regarde comme on regarde une affiche de chambre d'ado.",
+    options: [
+      { label: "Le prendre sous mon aile", outcomes: [
+        { weight: 70, text: "Vous lui apprenez tout. Le club et le vestiaire voient en vous bien plus qu'un joueur.", fx: { c: 7, team: 10, coach: 6, mor: 6, trait: "leader" } },
+        { weight: 30, text: "Vous le formez si bien qu'il vous prend votre place en fin de saison.", fx: { role: -1, c: 5, team: 8, mor: -5 } },
+      ] },
+      { label: "Le tenir à distance, c'est un concurrent", outcomes: [
+        { weight: 45, text: "Vous protégez votre territoire et gardez votre place une saison de plus.", fx: { coach: 3, m: 3, mor: 2 } },
+        { weight: 55, text: "Le vestiaire trouve l'attitude petite. Votre image de cadre en prend un coup.", fx: { team: -9, rep: -4, mor: -4 } },
+      ] },
+    ],
+  },
+  {
     // « Un club a formulé une offre, et VOTRE club l'a acceptée. » La décision est
     // à vous : écouter les propositions (chaque club affiche le STATUT proposé) ou
     // rester. Le cœur de la mécanique de rôle.
@@ -6713,11 +6983,11 @@ const BALANCE = {
    les événements changent sensiblement.
    ============================================================ */
 const SCORE_PERCENTILES = [
-  63, 72, 83, 87, 90, 92, 93, 94, 95, 96, 97, 98, 99, 99, 100, 101, 101, 102, 103, 103,
-  104, 104, 105, 106, 106, 107, 107, 108, 108, 109, 109, 110, 110, 111, 111, 112, 112, 113, 114, 114,
-  115, 115, 116, 116, 117, 118, 118, 119, 120, 120, 121, 122, 122, 123, 124, 125, 126, 127, 127, 128,
-  129, 130, 131, 133, 134, 135, 136, 137, 139, 140, 141, 143, 144, 146, 147, 149, 150, 152, 154, 155,
-  157, 159, 161, 163, 165, 167, 170, 172, 175, 178, 181, 184, 188, 192, 197, 203, 211, 222, 240
+  63, 71, 82, 87, 90, 92, 93, 95, 96, 97, 98, 98, 99, 100, 101, 101, 102, 103, 103, 104,
+  104, 105, 105, 106, 107, 107, 108, 108, 109, 109, 110, 110, 111, 111, 112, 113, 113, 114, 114, 115,
+  115, 116, 117, 117, 118, 118, 119, 120, 120, 121, 122, 122, 123, 124, 125, 126, 126, 127, 128, 129,
+  130, 131, 132, 133, 134, 135, 137, 138, 139, 140, 142, 143, 145, 146, 148, 149, 151, 153, 154, 156,
+  158, 160, 162, 164, 166, 169, 171, 174, 176, 179, 182, 186, 190, 194, 200, 206, 213, 224, 241
 ];
 
 /* ============================================================
