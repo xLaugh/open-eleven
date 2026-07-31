@@ -356,9 +356,15 @@
     s.contract.salary = salaryFor(s, opts.club) * 0.3;
     s.transferHistory.push({ age: s.age, toClubName: opts.club.name, countryName: countryOf(opts.club.countryId).name, fee: null, level: lvlOf(s, opts.club) });
     s.role = roleForClub(s, opts.club); // statut au centre de formation (souvent Espoir/Rotation)
-    // Double nationalité : tirée à la création (donc dans le flux semé → rejouable),
-    // mais le CHOIX se fait plus tard, par événement, avant la première sélection A.
-    s.dualNat = rollDualNat(s);
+    // Double nationalité. Le tirage est TOUJOURS exécuté (même quand le joueur a
+    // choisi lui-même) pour que la consommation de hasard reste identique — c'est ce
+    // qui garde le Défi du jour et les duels rejouables à l'identique.
+    // • Carrière libre : le joueur choisit sa seconde nationalité à la création,
+    //   opts.dualNat l'emporte (null = il n'en veut pas).
+    // • Défi du jour / duel / Histoire : opts.dualNat est absent → le tirage décide,
+    //   comme pour tout le reste du profil imposé.
+    const rolled = rollDualNat(s);
+    s.dualNat = opts.dualNat !== undefined ? (opts.dualNat || null) : rolled;
     s.peakOvr = ovr(s);
     return s;
   }
@@ -2701,7 +2707,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.29";
+  const ENGINE_VERSION = "10.30";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {

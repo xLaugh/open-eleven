@@ -243,7 +243,45 @@
         ? `<img class="nat-flag-img" src="${encodeURI(nat.img)}" alt="${esc(nat.name)}" onerror="this.outerHTML='<span class=nat-flag>${nat.flag}</span>'" />`
         : `<span class="nat-flag">${nat.flag}</span>`;
       card.innerHTML = `${flag}<span class="nat-name">${esc(nat.name)}</span>`;
-      card.addEventListener("click", () => showNameForm(nat));
+      card.addEventListener("click", () => showDualPicker(nat));
+      grid.appendChild(card);
+    });
+  }
+
+  // Sous-étape « seconde nationalité » : le joueur CHOISIT s'il veut une double
+  // nationalité, et laquelle, parmi les nations plausibles (couloirs migratoires).
+  // Elle n'est donc plus imposée par un tirage en carrière libre — le tirage ne
+  // subsiste que là où le profil entier est imposé (Défi du jour, duel, Histoire).
+  // Rappel du dilemme : la sélection choisie plus tard décide des tournois jouables.
+  function showDualPicker(nat) {
+    setup.nationality = nat;
+    const ids = E.dualPartnersOf(nat.id);
+    if (!ids.length) { setup.dualNat = null; showNameForm(nat); return; } // aucune option plausible
+    const grid = $("nationality-grid");
+    grid.innerHTML = "";
+    setNatTitle("Double nationalité");
+    const sub = $("nationality-sub");
+    if (sub) sub.innerHTML = `${flagHtml(nat)} ${esc(nat.name)} — vos origines peuvent vous ouvrir une seconde sélection. Vous trancherez en carrière, avant votre première convocation.`;
+
+    const none = document.createElement("button");
+    none.className = "nat-card dual-none";
+    none.innerHTML = `<span class="nat-flag">🚫</span><span class="nat-name">Aucune</span><span class="nat-count">Une seule sélection</span>`;
+    none.addEventListener("click", () => { setup.dualNat = null; showNameForm(nat); });
+    grid.appendChild(none);
+
+    ids.forEach((id) => {
+      const other = NATIONALITIES.find((n) => n.id === id);
+      if (!other) return;
+      const card = document.createElement("button");
+      card.className = "nat-card";
+      const flag = other.img
+        ? `<img class="nat-flag-img" src="${encodeURI(other.img)}" alt="${esc(other.name)}" onerror="this.outerHTML='<span class=nat-flag>${other.flag}</span>'" />`
+        : `<span class="nat-flag">${other.flag}</span>`;
+      // Le poids Mondial dit d'un coup d'œil si c'est une nation qui va loin.
+      const w = other.wcWeight != null ? other.wcWeight : other.weight;
+      const tier = w >= 0.7 ? "Grande nation" : w >= 0.35 ? "Nation solide" : "Petite nation";
+      card.innerHTML = `${flag}<span class="nat-name">${esc(other.name)}</span><span class="nat-count">${tier}</span>`;
+      card.addEventListener("click", () => { setup.dualNat = id; showNameForm(nat); });
       grid.appendChild(card);
     });
   }
@@ -417,6 +455,9 @@
       lifestyle: setup.lifestyle, entourage: setup.entourage, potCap: setup.potCap, club,
       trajectory: setup.trajectory, startYear: setup.startYear, // mode Histoire : époque + destin imposés
       clubLevels: setup.clubLevels, // mode Histoire : niveaux de clubs d'époque
+      // Seconde nationalité CHOISIE à la création (carrière libre). Absent en Défi
+      // du jour / duel / Histoire → le moteur la tire, comme le reste du profil.
+      dualNat: setup.dualNat,
     });
     if (setup.dailyDate) {
       G.dailyDate = setup.dailyDate; // Défi du jour : aucun avantage (équité)
