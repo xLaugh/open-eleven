@@ -178,6 +178,59 @@
     $("profile-traits").innerHTML = G.traits.length
       ? G.traits.map((id) => { const t = TRAITS[id]; return `<span class="trait-chip" title="${esc(t.desc)}">${t.icon} ${esc(t.name)}</span>`; }).join("")
       : `<span class="trait-none">Aucun trait débloqué pour l'instant</span>`;
+
+    updateProfileTabs();
+  }
+
+  // Onglets Palmarès / Distinctions / Parcours du panneau en direct : mêmes
+  // rubriques que la fiche finale, rafraîchies à chaque saison. On ne dévoile
+  // rien que le joueur ne sache déjà (ni score, ni trajectoire secrète).
+  function updateProfileTabs() {
+    $("profile-trophies").innerHTML = trophyRowsHtml(G);
+
+    // Encadré seulement s'il y a des distinctions : sinon un simple message.
+    const awards = awardRowsHtml(G);
+    const awardsBox = $("profile-awards");
+    awardsBox.classList.toggle("pc-trophies", !!awards);
+    awardsBox.innerHTML = awards
+      || `<p class="trait-none awards-empty">Aucune récompense individuelle. Elles viennent avec les grandes saisons.</p>`;
+
+    const isGk = G.position.id === "gk";
+    const firstClub = CLUBS.find((c) => c.id === G.clubsPlayed[0]);
+    const youthCaps = (G.youth && G.youth.caps) || 0;
+    $("profile-summary").innerHTML = [
+      statRowHtml("Saisons jouées", G.seasons.length),
+      statRowHtml("Club formateur", firstClub ? firstClub.name : "—"),
+      statRowHtml("Matchs joués", G.totals.matches),
+      statRowHtml(isGk ? "Clean sheets" : "Buts marqués", isGk ? G.totals.cleanSheets : G.totals.goals),
+      statRowHtml("Passes décisives", G.totals.assists),
+      ...((G.captainMatches || 0) > 0 ? [statRowHtml("©️ Matchs comme capitaine", G.captainMatches)] : []),
+      statRowHtml("OVR max", G.peakOvr),
+      statRowHtml(`${flagHtml(G.nationality)} Sélections`, G.natTeam.caps),
+      ...(youthCaps > 0 ? [statRowHtml("🎽 Sélections jeunes", youthCaps)] : []),
+      statRowHtml("💰 Gains de carrière", E.fmtMoney(G.money)),
+    ].join("");
+
+    $("profile-path").innerHTML = pathHtml(G);
+  }
+
+  // Bascule d'onglet du panneau de profil (délégation : un seul écouteur).
+  function initProfileTabs() {
+    const tabs = $("profile-tabs");
+    if (!tabs) return;
+    tabs.addEventListener("click", (e) => {
+      const btn = e.target.closest(".ptab");
+      if (!btn) return;
+      const id = btn.dataset.ptab;
+      tabs.querySelectorAll(".ptab").forEach((b) => {
+        const on = b === btn;
+        b.classList.toggle("active", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      $("profile-panel").querySelectorAll(".ppane").forEach((p) => {
+        p.classList.toggle("active", p.id === `ppane-${id}`);
+      });
+    });
   }
 
   // --- Écrans de création ----------------------------------------------------
@@ -2357,6 +2410,95 @@
     return `<div class="stat-row${gold ? " trophy-earned" : ""}"><span class="stat-label">${label}</span><span class="stat-value">${esc(value)}</span></div>`;
   }
 
+  // ---- Rubriques partagées : fiche finale ET panneau de profil en direct ----
+  // Le même palmarès doit se lire en cours de carrière et à la retraite : ces
+  // trois fonctions sont l'unique source de vérité, la fiche finale et le
+  // panneau en jeu s'y branchent tous les deux (aucune duplication).
+
+  // Palmarès complet : compétitions collectives + grandes distinctions.
+  function trophyRowsHtml(s) {
+    const t = s.trophies;
+    // Championnats détaillés par pays et division (France D1, Brésil D2…).
+    // Élite et D1 = même championnat national : on les fusionne.
+    const titleGroups = {};
+    (s.leagueTitlesDetail || []).forEach((x) => {
+      const c = E.countryOf(x.countryId);
+      const divLabel = E.divShort(x.level === "elite" ? "d1" : x.level, x.countryId);
+      const key = `${c ? c.name : x.countryId} · ${divLabel}`;
+      titleGroups[key] = (titleGroups[key] || 0) + 1;
+    });
+    const leagueRows = Object.keys(titleGroups).length
+      ? Object.entries(titleGroups).map(([key, n]) => statRowHtml(`${COMPETITIONS.league.icon} Champion — ${esc(key)}`, n, true))
+      : [statRowHtml(`${COMPETITIONS.league.icon} ${COMPETITIONS.league.name}`, 0, false)];
+
+    // Coupes continentales distinctes (Europe / Amériques / Asie…)
+    const contGroups = {};
+    (s.continentalDetail || []).forEach((x) => { contGroups[x.continent] = (contGroups[x.continent] || 0) + 1; });
+    let contRows;
+    if (Object.keys(contGroups).length) {
+      contRows = Object.entries(contGroups).map(([cont, n]) => {
+        const cup = CONTINENTAL_CUPS[cont] || CONTINENTAL_CUPS.eu;
+        return statRowHtml(`${cup.icon} ${cup.name}`, n, true);
+      });
+    } else if (t.continental > 0) {
+      // Rétrocompatibilité : total connu sans détail → Europe par défaut
+      contRows = [statRowHtml(`${CONTINENTAL_CUPS.eu.icon} ${CONTINENTAL_CUPS.eu.name}`, t.continental, true)];
+    } else {
+      contRows = [statRowHtml(`${CONTINENTAL_CUPS.eu.icon} ${CONTINENTAL_CUPS.eu.name}`, 0, false)];
+    }
+
+    const playerCont = (E.countryOf(s.nationality.homeCountryId) || {}).continent;
+    const ntCup = NATIONAL_CUPS[playerCont];
+    const ntCupRow = ntCup ? [statRowHtml(`${ntCup.icon} ${ntCup.name}`, t.contInt || 0, (t.contInt || 0) > 0)] : [];
+    // Ligue des Sélections : n'a de sens que pour les nations européennes
+    const nlRow = (playerCont === "eu" || (t.natLeague || 0) > 0)
+      ? [statRowHtml(`${NATIONS_LEAGUE.icon} ${NATIONS_LEAGUE.name}`, t.natLeague || 0, (t.natLeague || 0) > 0)]
+      : [];
+    const om = s.olympicMedals || { gold: 0, silver: 0, bronze: 0 };
+    const olyRow = (om.gold + om.silver + om.bronze) > 0
+      ? [statRowHtml("🥇 Jeux Olympiques", `${om.gold ? `🥇${om.gold} ` : ""}${om.silver ? `🥈${om.silver} ` : ""}${om.bronze ? `🥉${om.bronze}` : ""}`.trim(), true)]
+      : [];
+
+    return [
+      statRowHtml(`${COMPETITIONS.worldCup.icon} ${COMPETITIONS.worldCup.name}`, t.worldCup, t.worldCup > 0),
+      ...ntCupRow,
+      ...nlRow,
+      ...olyRow,
+      statRowHtml(`${COMPETITIONS.ballon.icon} ${COMPETITIONS.ballon.name}`, t.ballon, t.ballon > 0),
+      ...(t.ballon === 0 && s.bestBallonRank
+        ? [statRowHtml(`⭐ Meilleur classement Ballon d'Or`, `${s.bestBallonRank}ᵉ`, s.bestBallonRank <= 10)]
+        : []),
+      ...contRows,
+      statRowHtml(`${COMPETITIONS.continental2.icon} ${COMPETITIONS.continental2.name}`, t.continental2 || 0, (t.continental2 || 0) > 0),
+      statRowHtml(`${COMPETITIONS.continental3.icon} ${COMPETITIONS.continental3.name}`, t.continental3 || 0, (t.continental3 || 0) > 0),
+      ...leagueRows,
+      statRowHtml(`${COMPETITIONS.cup.icon} ${COMPETITIONS.cup.name}`, t.cup, t.cup > 0),
+      statRowHtml(`${COMPETITIONS.goldenBoot.icon} ${COMPETITIONS.goldenBoot.name}`, t.goldenBoot, t.goldenBoot > 0),
+    ].join("");
+  }
+
+  // Distinctions individuelles accumulées ("" si aucune).
+  function awardRowsHtml(s) {
+    const entries = Object.entries(s.awardCounts || {}).filter(([id]) => AWARDS[id]);
+    if (!entries.length) return "";
+    return entries
+      .sort((a, b) => b[1] - a[1])
+      .map(([id, n]) => statRowHtml(`${AWARDS[id].icon} ${AWARDS[id].name}`, n > 1 ? `×${n}` : "✓", true))
+      .join("");
+  }
+
+  // Chemin parcouru : chaque étape de la carrière (club, âge, division, prix).
+  function pathHtml(s) {
+    return (s.transferHistory || [])
+      .map((step) => {
+        const tag = step.loan ? ` <span class="loan-tag">Prêt</span>` : step.loanReturn ? ` <span class="loan-tag">Retour de prêt</span>` : "";
+        const stepCid = step.countryId || (COUNTRIES.find((c) => c.name === step.countryName) || {}).id;
+        const lvlTag = step.level ? `<span class="level-tag level-${step.level}">${esc(stepCid ? E.divShort(step.level, stepCid) : LEVELS[step.level].short)}</span>` : "";
+        return `<div class="path-step"><span class="path-age">${step.age} ans</span><span class="path-club">${lvlTag}${esc(step.toClubName)}${tag} <span class="path-country">(${esc(step.countryName)})</span>${step.fee != null ? ` · ${E.fmtMoney(step.fee)}` : ""}</span></div>`;
+      })
+      .join("");
+  }
+
   // Palier de la carte finale, indexé sur la NOTE DE CARRIÈRE :
   // 50-65 bronze · 66-79 argent · 80-85 or · 86-90 bleu · 91+ violet.
   const CARD_TIERS = [
@@ -2461,79 +2603,16 @@
       statRowHtml("💰 Fortune", E.fmtMoney(G.money)),
     ].join("");
 
-    // Championnats détaillés par pays et division (France D1, Brésil D2…)
-    const titleGroups = {};
-    (G.leagueTitlesDetail || []).forEach((x) => {
-      const c = E.countryOf(x.countryId);
-      // Élite et D1 = même championnat national (le top-flight) : on les fusionne
-      // dans le palmarès (« Champion — Espagne · D1 »), sinon un titre gagné dans
-      // un club élite compterait à part d'un titre gagné dans un club D1.
-      const divLabel = E.divShort(x.level === "elite" ? "d1" : x.level, x.countryId);
-      const key = `${c ? c.name : x.countryId} · ${divLabel}`;
-      titleGroups[key] = (titleGroups[key] || 0) + 1;
-    });
-    const leagueRows = Object.keys(titleGroups).length
-      ? Object.entries(titleGroups).map(([key, n]) => statRowHtml(`${COMPETITIONS.league.icon} Champion — ${esc(key)}`, n, true))
-      : [statRowHtml(`${COMPETITIONS.league.icon} ${COMPETITIONS.league.name}`, 0, false)];
-
-    // Coupes continentales distinctes (Europe / Amériques / Asie)
-    const contGroups = {};
-    (G.continentalDetail || []).forEach((x) => { contGroups[x.continent] = (contGroups[x.continent] || 0) + 1; });
-    let contRows;
-    if (Object.keys(contGroups).length) {
-      contRows = Object.entries(contGroups).map(([cont, n]) => {
-        const cup = CONTINENTAL_CUPS[cont] || CONTINENTAL_CUPS.eu;
-        return statRowHtml(`${cup.icon} ${cup.name}`, n, true);
-      });
-    } else if (t.continental > 0) {
-      // Rétrocompatibilité : total connu sans détail → Europe par défaut
-      contRows = [statRowHtml(`${CONTINENTAL_CUPS.eu.icon} ${CONTINENTAL_CUPS.eu.name}`, t.continental, true)];
-    } else {
-      contRows = [statRowHtml(`${CONTINENTAL_CUPS.eu.icon} ${CONTINENTAL_CUPS.eu.name}`, 0, false)];
-    }
-
-    // Championnat continental de sélection, nommé selon le continent du joueur
-    const playerCont = (E.countryOf(G.nationality.homeCountryId) || {}).continent;
-    const ntCup = NATIONAL_CUPS[playerCont];
-    const ntCupRow = ntCup ? [statRowHtml(`${ntCup.icon} ${ntCup.name}`, t.contInt || 0, (t.contInt || 0) > 0)] : [];
-    // Ligue des Sélections : n'a de sens (et n'est jouable) que pour les nations européennes
-    const nlRow = (playerCont === "eu" || (t.natLeague || 0) > 0)
-      ? [statRowHtml(`${NATIONS_LEAGUE.icon} ${NATIONS_LEAGUE.name}`, t.natLeague || 0, (t.natLeague || 0) > 0)]
-      : [];
-    // Médailles olympiques (or / argent / bronze)
-    const om = G.olympicMedals || { gold: 0, silver: 0, bronze: 0 };
-    const olyRow = (om.gold + om.silver + om.bronze) > 0
-      ? [statRowHtml("🥇 Jeux Olympiques", `${om.gold ? `🥇${om.gold} ` : ""}${om.silver ? `🥈${om.silver} ` : ""}${om.bronze ? `🥉${om.bronze}` : ""}`.trim(), true)]
-      : [];
-
-    $("final-trophies").innerHTML = [
-      statRowHtml(`${COMPETITIONS.worldCup.icon} ${COMPETITIONS.worldCup.name}`, t.worldCup, t.worldCup > 0),
-      ...ntCupRow,
-      ...nlRow,
-      ...olyRow,
-      statRowHtml(`${COMPETITIONS.ballon.icon} ${COMPETITIONS.ballon.name}`, t.ballon, t.ballon > 0),
-      ...(t.ballon === 0 && G.bestBallonRank
-        ? [statRowHtml(`⭐ Meilleur classement Ballon d'Or`, `${G.bestBallonRank}ᵉ`, G.bestBallonRank <= 10)]
-        : []),
-      ...contRows,
-      statRowHtml(`${COMPETITIONS.continental2.icon} ${COMPETITIONS.continental2.name}`, t.continental2 || 0, (t.continental2 || 0) > 0),
-      statRowHtml(`${COMPETITIONS.continental3.icon} ${COMPETITIONS.continental3.name}`, t.continental3 || 0, (t.continental3 || 0) > 0),
-      ...leagueRows,
-      statRowHtml(`${COMPETITIONS.cup.icon} ${COMPETITIONS.cup.name}`, t.cup, t.cup > 0),
-      statRowHtml(`${COMPETITIONS.goldenBoot.icon} ${COMPETITIONS.goldenBoot.name}`, t.goldenBoot, t.goldenBoot > 0),
-    ].join("");
+    $("final-trophies").innerHTML = trophyRowsHtml(G);
 
     // Distinctions individuelles accumulées
-    const awardEntries = Object.entries(G.awardCounts).filter(([id]) => AWARDS[id]);
+    const awardsHtml = awardRowsHtml(G);
     const awardsBlock = $("final-awards");
     const awardsLabel = $("final-awards-label");
-    if (awardEntries.length) {
+    if (awardsHtml) {
       awardsBlock.style.display = "";
       awardsLabel.style.display = "";
-      awardsBlock.innerHTML = awardEntries
-        .sort((a, b) => b[1] - a[1])
-        .map(([id, n]) => statRowHtml(`${AWARDS[id].icon} ${AWARDS[id].name}`, n > 1 ? `×${n}` : "✓", true))
-        .join("");
+      awardsBlock.innerHTML = awardsHtml;
     } else {
       awardsBlock.style.display = "none";
       awardsLabel.style.display = "none";
@@ -2543,14 +2622,7 @@
       ? G.traits.map((id) => { const tr = TRAITS[id]; return `<span class="trait-chip">${tr.icon} ${esc(tr.name)}</span>`; }).join("")
       : "";
 
-    $("final-path").innerHTML = G.transferHistory
-      .map((step) => {
-        const tag = step.loan ? ` <span class="loan-tag">Prêt</span>` : step.loanReturn ? ` <span class="loan-tag">Retour de prêt</span>` : "";
-        const stepCid = step.countryId || (COUNTRIES.find((c) => c.name === step.countryName) || {}).id;
-        const lvlTag = step.level ? `<span class="level-tag level-${step.level}">${esc(stepCid ? E.divShort(step.level, stepCid) : LEVELS[step.level].short)}</span>` : "";
-        return `<div class="path-step"><span class="path-age">${step.age} ans</span><span class="path-club">${lvlTag}${esc(step.toClubName)}${tag} <span class="path-country">(${esc(step.countryName)})</span>${step.fee != null ? ` · ${E.fmtMoney(step.fee)}` : ""}</span></div>`;
-      })
-      .join("");
+    $("final-path").innerHTML = pathHtml(G);
 
     // Historique saison par saison : division affichée chaque année,
     // avec montées (⬆) et descentes (⬇) visibles d'un coup d'œil.
@@ -3372,6 +3444,7 @@
     $("quest-panel").addEventListener("click", () => { track("open_quests"); renderQuestScreen(); showScreen("screen-quests"); });
     $("btn-quests-back").addEventListener("click", () => { renderQuestTeaser(); showScreen("screen-home"); });
     $("profile-toggle").addEventListener("click", () => $("profile-panel").classList.toggle("open"));
+    initProfileTabs();
 
     // Le rendu de l'accueil vient APRÈS les gestionnaires, et sous filet : il
     // lit le localStorage, et une donnée corrompue laissait sinon une page

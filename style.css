@@ -1222,6 +1222,43 @@ body { color: var(--text-0); }
   animation: fadeIn 0.25s ease;
 }
 .profile-panel.open { display: block; }
+
+/* Onglets du profil en direct (Statistiques · Palmarès · Distinctions · Parcours) */
+.ptabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.ptab {
+  flex: 1 1 auto;
+  font-family: var(--font);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-1);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+.ptab:hover { border-color: var(--gold); }
+.ptab.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #fff;
+}
+.ppane { display: none; animation: fadeIn 0.2s ease; }
+.ppane.active { display: block; }
+/* Dans le panneau en jeu, les blocs repris de la fiche finale sont plus compacts */
+.ppane .pc-stats,
+.ppane .pc-trophies { margin-bottom: 10px; }
+.ppane .pc-path { margin-bottom: 0; }
+.ppane .pc-section-label { margin-top: 4px; }
+.profile-awards-label { margin-top: 14px; }
+.awards-empty { font-size: 0.76rem; font-style: italic; }
 .pbar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
 .pbar-label { width: 96px; font-size: 0.73rem; color: var(--text-1); }
 .pbar { flex: 1; height: 7px; background: var(--panel-2); border-radius: 999px; overflow: hidden; }

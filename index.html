@@ -201,10 +201,37 @@
       <div class="gauge"><span class="gauge-label">Moral</span><div class="gauge-bar"><div class="gauge-fill gauge-moral" id="gauge-moral-fill"></div></div></div>
     </div>
 
+    <!-- Profil complet en direct : mêmes rubriques que la fiche finale,
+         réparties en onglets pour rester lisibles pendant la partie. -->
     <div class="profile-panel" id="profile-panel">
-      <div id="profile-bars"></div>
-      <p class="profile-meta" id="profile-meta"></p>
-      <div class="profile-traits" id="profile-traits"></div>
+      <div class="ptabs" id="profile-tabs" role="tablist">
+        <button class="ptab active" data-ptab="stats" role="tab" aria-selected="true">Statistiques</button>
+        <button class="ptab" data-ptab="palmares" role="tab" aria-selected="false">Palmarès</button>
+        <button class="ptab" data-ptab="awards" role="tab" aria-selected="false">Distinctions</button>
+        <button class="ptab" data-ptab="path" role="tab" aria-selected="false">Parcours</button>
+      </div>
+
+      <div class="ppane active" id="ppane-stats" role="tabpanel">
+        <div id="profile-bars"></div>
+        <p class="profile-meta" id="profile-meta"></p>
+      </div>
+
+      <div class="ppane" id="ppane-palmares" role="tabpanel">
+        <div class="pc-trophies" id="profile-trophies"></div>
+      </div>
+
+      <div class="ppane" id="ppane-awards" role="tabpanel">
+        <p class="pc-section-label">Traits</p>
+        <div class="profile-traits" id="profile-traits"></div>
+        <p class="pc-section-label profile-awards-label">Distinctions individuelles</p>
+        <div id="profile-awards"></div>
+      </div>
+
+      <div class="ppane" id="ppane-path" role="tabpanel">
+        <div class="pc-stats" id="profile-summary"></div>
+        <p class="pc-section-label">Le chemin parcouru</p>
+        <div class="pc-path" id="profile-path"></div>
+      </div>
     </div>
 
     <div class="age-progress"><div class="age-progress-fill" id="age-progress-fill"></div></div>
