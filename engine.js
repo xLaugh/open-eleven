@@ -759,11 +759,14 @@
   function keyMomentFor(s, momentId) {
     const variants = KEY_MOMENTS[momentId];
     if (!variants) return null;
+    // Repli final sur "field" : une variante de poste oubliée renverrait sinon
+    // un moment vide, et la carte décisive resterait bloquée (aucun bouton).
     let pool = variants[s.position.id]
       || (s.position.id === "gk" ? variants.gk : variants.field)
-      || variants.any;
+      || variants.any
+      || variants.field;
     if (Array.isArray(pool)) pool = pick(pool);
-    return pool;
+    return pool || null;
   }
 
   function keyMomentSuccess(s, option) {

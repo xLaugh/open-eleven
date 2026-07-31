@@ -2522,6 +2522,29 @@ const KEY_MOMENTS = {
       winText: "Vous tenez le ballon comme on tient une corde : {club} arrache son maintien, et vous en êtes le patron.",
       failText: "Le bloc craque dans les dernières minutes. Égalisation, puis le coup de grâce : {club} descend.",
     }],
+    gk: [{
+      title: "BARRAGE DE MAINTIEN",
+      text: "Barrage de la dernière chance, 1-1 au cumulé, cinquième minute du temps additionnel. Penalty contre {club} : la survie du club dans la division tient sur cet arrêt, et sur vos gants seuls.",
+      options: [
+        { id: "read", label: "Lire ses appuis jusqu'au bout", hint: "Patient", base: 0.5 },
+        { id: "early", label: "Partir tôt sur son côté fort", base: 0.44 },
+        { id: "center", label: "Rester au centre", hint: "Culotté", base: 0.4, repWin: 6, repFail: -3 },
+        { id: "mind", label: "Gagner la guerre des nerfs", base: 0.46, repWin: 3, traitWin: "clutch" },
+      ],
+      winText: "L'ARRÊT DU MAINTIEN ! Le stade explose : {club} reste en vie, et toute une ville saura à qui elle le doit.",
+      failText: "Le ballon file sous vos gants. {club} est relégué, et le silence du stade restera longtemps dans vos oreilles.",
+    }, {
+      title: "BARRAGE DE MAINTIEN",
+      text: "Match retour du barrage, {club} mène d'un but mais subit depuis vingt minutes. Le bloc recule sur votre surface : c'est à vous de tenir la baraque jusqu'au bout.",
+      options: [
+        { id: "command", label: "Prendre la surface à la voix", hint: "Autorité", base: 0.56, repWin: 3 },
+        { id: "line", label: "Rester scotché sur votre ligne", hint: "Prudent", base: 0.5 },
+        { id: "sweep", label: "Sortir loin pour couper toutes les passes", hint: "Risqué", base: 0.42, repWin: 7, repFail: -4 },
+        { id: "time", label: "Faire couler le temps sur chaque ballon", base: 0.52, repWin: 2, repFail: -2 },
+      ],
+      winText: "Vous sortez tout : {club} arrache son maintien, et le dernier rempart a porté le club à lui seul.",
+      failText: "Une sortie de trop, un centre au second poteau : le bloc craque et {club} descend.",
+    }],
   },
   promo_playoff: {
     field: [{
