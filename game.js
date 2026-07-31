@@ -18,6 +18,7 @@
   let legendGuest = null;
   let legendGuestUsed = false;
   let reviewingPantheon = false; // fiche du Panthéon consultée (pas une vraie fin de carrière)
+  let profileDirty = true; // le panneau de profil doit être re-rendu à sa prochaine ouverture
 
   // --- Helpers DOM ---------------------------------------------------------
   const $ = (id) => document.getElementById(id);
@@ -164,7 +165,21 @@
     const pct = ((G.age - E.BALANCE_REF.ageMin) / (E.BALANCE_REF.ageMax - E.BALANCE_REF.ageMin)) * 100;
     $("age-progress-fill").style.width = `${pct}%`;
 
-    // Panneau profil (barres de stats)
+    // Panneau profil : rendu paresseux. updateHeader() est appelé à chaque
+    // événement ; reconstruire les quatre onglets alors que le panneau est
+    // fermé serait du travail perdu. On note simplement qu'il a vieilli.
+    profileDirty = true;
+    if ($("profile-panel").classList.contains("open")) renderProfilePanel();
+  }
+
+  // Rendu complet du panneau de profil : mêmes rubriques que la fiche finale.
+  // Appelé à l'ouverture du panneau, puis à chaque changement tant qu'il reste
+  // ouvert. On ne dévoile rien que le joueur ne sache déjà (ni score, ni
+  // percentile, ni trajectoire secrète).
+  function renderProfilePanel() {
+    profileDirty = false;
+
+    // Onglet Statistiques : barres d'attributs, potentiel, contrat, archétype
     const bars = [
       ["Technique", G.stats.t], ["Physique", G.stats.p],
       ["Mental", G.stats.m], ["Charisme", G.stats.c], ["Réputation", G.rep],
@@ -175,17 +190,13 @@
       .join("");
     const stars = E.potStars(G.potCap);
     $("profile-meta").innerHTML = `Potentiel estimé : <span class="pot-stars">${"★".repeat(stars)}${"☆".repeat(5 - stars)}</span> · Contrat : ${E.fmtMoney(G.contract.salary)}/an${G.contract.years > 0 ? `, ${G.contract.years} an${G.contract.years > 1 ? "s" : ""}` : " (dernière année)"}${G.archetype ? `<br/>🧬 <strong>${esc(G.archetype.name)}</strong> — ${esc(G.archetype.effect || G.archetype.desc)}` : ""}`;
+
+    // Onglet Distinctions : traits débloqués
     $("profile-traits").innerHTML = G.traits.length
       ? G.traits.map((id) => { const t = TRAITS[id]; return `<span class="trait-chip" title="${esc(t.desc)}">${t.icon} ${esc(t.name)}</span>`; }).join("")
       : `<span class="trait-none">Aucun trait débloqué pour l'instant</span>`;
 
-    updateProfileTabs();
-  }
-
-  // Onglets Palmarès / Distinctions / Parcours du panneau en direct : mêmes
-  // rubriques que la fiche finale, rafraîchies à chaque saison. On ne dévoile
-  // rien que le joueur ne sache déjà (ni score, ni trajectoire secrète).
-  function updateProfileTabs() {
+    // Onglet Palmarès
     $("profile-trophies").innerHTML = trophyRowsHtml(G);
 
     // Encadré seulement s'il y a des distinctions : sinon un simple message.
@@ -195,6 +206,7 @@
     awardsBox.innerHTML = awards
       || `<p class="trait-none awards-empty">Aucune récompense individuelle. Elles viennent avec les grandes saisons.</p>`;
 
+    // Onglet Parcours : bilan chiffré, puis le chemin club par club
     const isGk = G.position.id === "gk";
     const firstClub = CLUBS.find((c) => c.id === G.clubsPlayed[0]);
     const youthCaps = (G.youth && G.youth.caps) || 0;
@@ -3443,7 +3455,11 @@
     $("btn-duel-share").addEventListener("click", (e) => shareDuel(currentDuelLink(), e.currentTarget));
     $("quest-panel").addEventListener("click", () => { track("open_quests"); renderQuestScreen(); showScreen("screen-quests"); });
     $("btn-quests-back").addEventListener("click", () => { renderQuestTeaser(); showScreen("screen-home"); });
-    $("profile-toggle").addEventListener("click", () => $("profile-panel").classList.toggle("open"));
+    $("profile-toggle").addEventListener("click", () => {
+      // Rendu à l'ouverture seulement, si l'état a changé depuis la dernière fois
+      const open = $("profile-panel").classList.toggle("open");
+      if (open && profileDirty) renderProfilePanel();
+    });
     initProfileTabs();
 
     // Le rendu de l'accueil vient APRÈS les gestionnaires, et sous filet : il

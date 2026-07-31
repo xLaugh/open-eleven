@@ -1251,7 +1251,15 @@ body { color: var(--text-0); }
   color: #fff;
 }
 .ppane { display: none; animation: fadeIn 0.2s ease; }
-.ppane.active { display: block; }
+/* Le panneau s'ouvre au-dessus de la carte d'événement : on plafonne sa
+   hauteur pour qu'un long palmarès ou un parcours de 20 clubs ne la pousse
+   pas hors de l'écran. Le contenu défile dans l'onglet, pas la page. */
+.ppane.active {
+  display: block;
+  max-height: 45vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 /* Dans le panneau en jeu, les blocs repris de la fiche finale sont plus compacts */
 .ppane .pc-stats,
 .ppane .pc-trophies { margin-bottom: 10px; }
