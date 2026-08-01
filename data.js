@@ -7391,6 +7391,7 @@ const ENGINE_TEXT = {
   academyElite: "Centre d'élite — infrastructures de pointe, concurrence féroce",
   academyD1: "Centre professionnel réputé — un cap sérieux vers le haut niveau",
   academyD2: "Club formateur solide — du temps de jeu et de vrais éducateurs",
+  academyD3: "Club modeste mais structuré — peu de moyens, beaucoup de terrain",
   academyRegional: "Club local — l'école de la débrouille, près des vôtres",
 
   // --- Coupe du Monde & Jeux Olympiques (intitulés de phase) ---

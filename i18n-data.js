@@ -72,6 +72,7 @@ window.I18N_DATA = { en: {
  "Centre d'élite — infrastructures de pointe, concurrence féroce": "Elite academy — cutting-edge facilities, fierce competition",
  "Centre professionnel réputé — un cap sérieux vers le haut niveau": "Respected pro academy — a serious step towards the top",
  "Club formateur solide — du temps de jeu et de vrais éducateurs": "Solid youth setup — game time and proper coaching",
+ "Club modeste mais structuré — peu de moyens, beaucoup de terrain": "Modest but well-run club — few resources, plenty of pitch time",
  "Club local — l'école de la débrouille, près des vôtres": "Local club — the school of hard knocks, close to home",
  "En finale !": "In the final!",
  "Votre nation renverse tout sur son passage : LA FINALE ! À 90 minutes du toit du monde.": "Your nation is sweeping everything aside: THE FINAL! Ninety minutes from the top of the world.",

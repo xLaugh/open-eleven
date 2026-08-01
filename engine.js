@@ -214,7 +214,7 @@
   // Clés de ENGINE_TEXT, résolues à l'appel (et non ici) pour que la langue
   // choisie s'applique : le texte est traduit en place au chargement.
   const ACADEMY_BLURBS = {
-    elite: "academyElite", d1: "academyD1", d2: "academyD2", regional: "academyRegional",
+    elite: "academyElite", d1: "academyD1", d2: "academyD2", d3: "academyD3", regional: "academyRegional",
   };
   const academyBlurb = (lvl) => ENGINE_TEXT[ACADEMY_BLURBS[lvl]] || "";
 
