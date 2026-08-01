@@ -1227,7 +1227,7 @@ window.I18N_DATA = { en: {
  "Décliner : « Je ne me sens pas prêt »": "Decline: \"I don't feel ready\"",
  "Prendre le brassard et rester": "Take the armband and stay",
  "Forcer le départ vers le sommet": "Force a move to the top",
- "Rester fidèle à {nat}": "Stay loyal to {nat}",
+ "Rester fidèle : {nat}": "Stay loyal: {nat}",
  "Choisir {dualNat}": "Choose {dualNat}",
  "Tourner la pub, à fond dans le personnage": "Shoot the advert, full into character",
  "Décliner, je veux qu'on parle de mon jeu": "Decline, I want them talking about my football",

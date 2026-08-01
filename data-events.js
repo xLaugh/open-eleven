@@ -357,7 +357,7 @@ const EVENTS = [
     cond: { aMin: 17, aMax: 23, dual: true, nat: false },
     text: "Deux fédérations vous veulent. {nat} vous suit depuis les catégories de jeunes, mais {dualNat} a fait le déplacement : vos origines vous ouvrent leur porte. Il faut trancher — dès le premier match officiel joué, l'autre sélection se referme définitivement.",
     options: [
-      { label: "Rester fidèle à {nat}", outcomes: [
+      { label: "Rester fidèle : {nat}", outcomes: [
         { weight: 55, text: "Vous confirmez {nat}. Le pays salue la fidélité, et vous devenez un visage du projet.", fx: { rep: 3, mor: 5, natLock: true } },
         { weight: 45, text: "Vous choisissez {nat} sans hésiter. La fédération vous voit déjà en cadre.", fx: { mor: 4, c: 2, natLock: true } },
       ] },

@@ -646,8 +646,12 @@
     // Les options conditionnelles (statut, réputation…) ne sont montrées
     // que si le joueur y a accès : les portes de sortie dépendent du vécu.
     const visibleOptions = currentEvent.options.filter((opt) => E.optionEligible(G, opt));
+    // Les LIBELLÉS passent par renderText au même titre que le texte : sans ça,
+    // « Rester fidèle à {nat} » s'affichait tel quel sur le bouton, alors que
+    // l'énoncé au-dessus, lui, était correctement rendu.
+    const rt = (v) => esc(E.renderText(G, v || "", { rival: R ? R.name : null }));
     const optionsHtml = visibleOptions
-      .map((opt) => `<button class="opt-btn" data-opt="${currentEvent.options.indexOf(opt)}">${opt.hint ? `<span class="opt-hint">${esc(opt.hint)}</span>` : ""}${esc(opt.label)}</button>`)
+      .map((opt) => `<button class="opt-btn" data-opt="${currentEvent.options.indexOf(opt)}">${opt.hint ? `<span class="opt-hint">${rt(opt.hint)}</span>` : ""}${rt(opt.label)}</button>`)
       .join("");
     showCard(`
       <div class="card-tag"><span class="card-icon">${currentEvent.icon}</span> ${esc(currentEvent.cat)} · ${G.age} ans</div>
@@ -693,8 +697,12 @@
 
   // --- Moments décisifs (finales, barrages, derbys…) ---------------------------
   function renderKeyMoment(moment, onChoice) {
+    // Même contrat que les événements : libellés et indices rendus, pas
+    // seulement échappés — un {club} dans un libellé s'afficherait sinon
+    // littéralement sur le bouton.
+    const rt = (v) => esc(E.renderText(G, v || ""));
     const optionsHtml = moment.options
-      .map((opt) => `<button class="opt-btn" data-km="${opt.id}">${opt.hint ? `<span class="opt-hint">${esc(opt.hint)}</span>` : ""}${esc(opt.label)}</button>`)
+      .map((opt) => `<button class="opt-btn" data-km="${opt.id}">${opt.hint ? `<span class="opt-hint">${rt(opt.hint)}</span>` : ""}${rt(opt.label)}</button>`)
       .join("");
     showCard(`
       <div class="card-tag"><span class="card-icon">🎯</span> Moment décisif</div>
