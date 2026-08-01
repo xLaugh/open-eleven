@@ -9,6 +9,15 @@
    ============================================================ */
 (function () {
   "use strict";
+  // Texte traduisible. Les libellés injectés dans le DOM sont pris en charge
+  // automatiquement par i18n.js ; T() ne sert donc qu'aux textes qui n'y
+  // passent PAS — les boîtes natives confirm() — et à ceux qui portent des
+  // valeurs. Le gabarit français est la clé : sans traduction, il s'affiche
+  // tel quel.
+  const T = (tpl, vars) => (window.I18N ? window.I18N.t(tpl, vars) : (vars
+    ? Object.keys(vars).reduce((a, k) => a.split("{" + k + "}").join(vars[k] == null ? "" : String(vars[k])), tpl)
+    : tpl));
+
   const KEYS = ["openEleven_current", "destinDeChampion_pantheon", "destinDeChampion_progress"];
   const URL = window.SUPABASE_URL, ANON = window.SUPABASE_ANON_KEY;
   // Version du moteur envoyée avec chaque journal de choix : le serveur rejoue avec
@@ -120,7 +129,7 @@
         const r = await pullSave();
         if (!r.ok) return msg("Échec : " + (r.error && r.error.message || "erreur"), "err");
         if (!r.row || !r.row.data || !Object.keys(r.row.data).length) return msg("Aucune sauvegarde cloud pour l'instant.", "err");
-        if (confirm("Restaurer la sauvegarde cloud ? Cela REMPLACE votre partie locale actuelle.")) { applyLocal(r.row.data); location.reload(); }
+        if (confirm(T("Restaurer la sauvegarde cloud ? Cela REMPLACE votre partie locale actuelle."))) { applyLocal(r.row.data); location.reload(); }
       };
       box.querySelector("#acc-signout").onclick = async () => { await sb.auth.signOut(); msg(""); };
     } else {
@@ -177,7 +186,7 @@
       if (!hasLocalData()) { applyLocal(r.row.data); location.reload(); return; }
       // Local ET cloud existent : laisser choisir.
       if (overlay.classList.contains("on")) {
-        if (confirm("Une sauvegarde cloud existe. La restaurer (remplace la partie locale) ?\n\nOK = restaurer le cloud · Annuler = garder le local et l'envoyer au cloud.")) {
+        if (confirm(T("Une sauvegarde cloud existe. La restaurer (remplace la partie locale) ?\n\nOK = restaurer le cloud · Annuler = garder le local et l'envoyer au cloud."))) {
           applyLocal(r.row.data); location.reload();
         } else { await pushSave(); msg("Partie locale envoyée au cloud ✔", "ok"); }
       }
@@ -372,7 +381,7 @@
         rows = data || [];
         if (session && best != null) {
           const { data: rk } = await sb.rpc("daily_rank", { d: today, sc: best });
-          if (rk && rk[0]) meHtml = '<div class="lb-me">Ta place aujourd\'hui : <strong>' + medal(Number(rk[0].rank)) + "</strong> · " + best + " pts <span class=\"lb-sub\">(sur " + rk[0].players + " joueurs)</span></div>";
+          if (rk && rk[0]) meHtml = '<div class="lb-me">Ta place aujourd\'hui : <strong>' + medal(Number(rk[0].rank)) + "</strong> · " + best + " pts <span class=\"lb-sub\">" + T("(sur {n} joueurs)", { n: rk[0].players }) + "</span></div>";
         } else if (!session) {
           meHtml = '<div class="lb-me lb-sub" style="font-weight:400">Connecte-toi (👤) pour apparaître au classement.</div>';
         } else {
@@ -432,7 +441,7 @@
     // nombres coercés et bornés, et les « icônes » tronquées à quelques caractères
     // (ce sont des emojis, pas du HTML).
     const rankLine = row.rank
-      ? '<div class="lb-me">Classement général : <strong>' + medalR(num(row.rank, 1e9)) + "</strong> · " + num(row.total, 1e9) + ' pts <span class="lb-sub">(' + num(row.days, 1e6) + " défis)</span></div>"
+      ? '<div class="lb-me">Classement général : <strong>' + medalR(num(row.rank, 1e9)) + "</strong> · " + num(row.total, 1e9) + ' pts <span class="lb-sub">' + T("({n} défis)", { n: num(row.days, 1e6) }) + "</span></div>"
       : '<div class="lb-me lb-sub" style="font-weight:400">Pas encore classé au Défi du jour.</div>';
     const icon = (v) => esc(String(v == null ? "" : v).slice(0, 8));
     const bestLine = b
@@ -446,7 +455,7 @@
       rankLine +
       '<p class="acc-sub" style="margin:12px 0 2px">Meilleure carrière <span class="lb-sub">(vitrine, non vérifiée)</span></p>' +
       bestLine +
-      '<div class="pf-counters"><span>🏆 ' + num(st.badges, 999) + " badges</span><span>🔥 " + num(st.bestStreak, 99999) + " j (série)</span><span>👤 " + num(st.careers, 99999) + " carrières</span></div>";
+      '<div class="pf-counters"><span>🏆 ' + num(st.badges, 999) + " badges</span><span>🔥 " + num(st.bestStreak, 99999) + " " + T("j (série)") + "</span><span>👤 " + num(st.careers, 99999) + " " + T("carrières") + "</span></div>";
     pfBox.querySelector(".acc-x").onclick = () => pfOverlay.classList.remove("on");
   }
 
@@ -519,7 +528,7 @@
       try { const { data } = await sb.rpc("duels_incoming"); rows = data || []; } catch (_) {}
       content.innerHTML = rows.length
         ? '<ul class="lb-list">' + rows.map((r, i) =>
-            '<li class="lb-row"><span class="lb-name">🆚 <strong>' + esc(r.from_label || r.from_pseudo) + "</strong><br><span class=\"lb-sub\">te défie · " + r.from_score + " pts à battre</span></span>" +
+            '<li class="lb-row"><span class="lb-name">🆚 <strong>' + esc(r.from_label || r.from_pseudo) + "</strong><br><span class=\"lb-sub\">" + T("te défie · {n} pts à battre", { n: r.from_score }) + "</span></span>" +
             '<button class="acc-btn soft du-accept" data-i="' + i + '" style="width:auto;margin:0;padding:8px 12px">Relever</button></li>'
           ).join("") + "</ul>"
         : '<p class="lb-empty">Aucun défi en attente.</p>';
@@ -539,7 +548,7 @@
     if (out.length) {
       html += '<p class="acc-sub" style="margin:6px 0 4px;font-weight:700">En attente (envoyés)</p><ul class="lb-list">' +
         out.map((r, i) =>
-          '<li class="lb-row"><span class="lb-name">vs <strong>' + esc(r.to_pseudo) + '</strong> <span class="lb-sub">' + r.from_score + " pts · en attente</span></span>" +
+          '<li class="lb-row"><span class="lb-name">vs <strong>' + esc(r.to_pseudo) + '</strong> <span class="lb-sub">' + T("{n} pts · en attente", { n: r.from_score }) + "</span></span>" +
           '<button class="acc-btn danger du-cancel" data-i="' + i + '" style="width:auto;margin:0;padding:7px 10px">Annuler</button></li>'
         ).join("") + "</ul>";
     }

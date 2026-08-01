@@ -150,7 +150,7 @@
     // tranché, pour que le joueur sache qu'une bascule l'attend. Il disparaît dès que
     // la décision est prise (ou que la fenêtre se referme).
     const dual = E.dualNatOf(G);
-    const dualFlag = dual ? ` <span class="dual-nat" title="Éligible à la sélection ${esc(dual.name)}">${flagHtml(dual)}</span>` : "";
+    const dualFlag = dual ? ` <span class="dual-nat" title="${T("Éligible à la sélection {nat}", { nat: esc(dual.name) })}">${flagHtml(dual)}</span>` : "";
     $("hh-player").innerHTML = `${flagHtml(G.nationality)}${dualFlag} ${esc(G.name)}`;
     $("hh-age").textContent = `${G.age} ans · ${G.year}`;
     const clubImg = G.club.img ? `<img class="club-logo" src="${encodeURI(G.club.img)}" alt="" onerror="this.remove()" />` : "";
@@ -767,11 +767,11 @@
     if (window && window.noStay) {
       // Le club ne prolonge pas : aucune option « rester », il FAUT choisir un club.
     } else if (window && window.contractUp) {
-      buttons += `<button class="opt-btn" data-stay="1"><span class="opt-hint">Prolonger</span>Rester à ${esc(G.club.name)} — ${E.fmtMoney(window.renewSalary)}/an</button>`;
+      buttons += `<button class="opt-btn" data-stay="1"><span class="opt-hint">${T("Prolonger")}</span>${T("Rester à {club} — {salary}/an", { club: esc(G.club.name), salary: E.fmtMoney(window.renewSalary) })}</button>`;
     } else if (window) {
       buttons += `<button class="opt-btn" data-stay="1">Rester à ${esc(G.club.name)}</button>`;
     } else if (offers.length === 0) {
-      buttons += `<button class="opt-btn" data-stay="1">Faute d'offre concrète, rester à ${esc(G.club.name)}</button>`;
+      buttons += `<button class="opt-btn" data-stay="1">${T("Faute d'offre concrète, rester à {club}", { club: esc(G.club.name) })}</button>`;
     }
     offers.forEach((offer, i) => {
       const cc = E.countryOf(offer.club.countryId);
@@ -787,7 +787,7 @@
     if (legendGuest && !legendGuestUsed && offers.length) {
       legendGuestUsed = true;
       const src = legendGuest.community ? "légende de la communauté" : "légende de votre Panthéon";
-      legendLine = `<p class="legend-line">🏛️ Dans les tribunes, ${esc(legendGuest.name)}, ${src}, observe votre mercato.</p>`;
+      legendLine = `<p class="legend-line">${T("🏛️ Dans les tribunes, {who}, {src}, observe votre mercato.", { who: esc(legendGuest.name), src })}</p>`;
     }
     showCard(`
       <div class="card-tag"><span class="card-icon">💼</span> Mercato · ${G.age} ans</div>
@@ -1128,7 +1128,7 @@
 
     const microHtml = report.lines.map((l) => `<p class="recap-micro">💬 ${esc(l.text)}</p>`).join("");
     const objHtml = report.objectiveLabel
-      ? `<p class="recap-objective">${report.objectiveMet ? "✅" : "❌"} Objectif du club : ${esc(report.objectiveLabel)}${report.objectiveMet && report.objectiveBonus ? ` <span class="recap-bonus">(prime +${E.fmtMoney(report.objectiveBonus)})</span>` : ""}</p>`
+      ? `<p class="recap-objective">${report.objectiveMet ? "✅" : "❌"} ${T("Objectif du club :")} ${esc(report.objectiveLabel)}${report.objectiveMet && report.objectiveBonus ? ` <span class="recap-bonus">(prime +${E.fmtMoney(report.objectiveBonus)})</span>` : ""}</p>`
       : "";
     const awardIds = report.awards.filter((id) => AWARDS[id]);
     const awardsHtml = awardIds.length
@@ -1171,8 +1171,8 @@
       ${objHtml}
       ${roleChangeHtml}
       ${report.benched ? `<p class="recap-warn">⚠️ Cruellement court en temps de jeu : votre moral en souffre.</p>` : ""}
-      ${report.seasonInjury ? `<p class="recap-warn">🚑 ${esc((E.BALANCE_REF.injury.labels || {})[report.seasonInjury.tier] || "Blessure")} : ${report.seasonInjury.weeks} semaines sur la touche.</p>` : (report.injuryWeeks ? `<p class="recap-warn">🩹 ${report.injuryWeeks} semaines d'infirmerie cette saison.</p>` : "")}
-      ${report.carryInjury ? `<p class="recap-warn">🩼 Toujours en reconstruction : ${report.carryInjury} semaines de retard traînées de la saison passée.</p>` : ""}
+      ${report.seasonInjury ? `<p class="recap-warn">🚑 ${esc((E.BALANCE_REF.injury.labels || {})[report.seasonInjury.tier] || "Blessure")}${T(" : {n} semaines sur la touche.", { n: report.seasonInjury.weeks })}</p>` : (report.injuryWeeks ? `<p class="recap-warn">🩹 ${report.injuryWeeks} semaines d'infirmerie cette saison.</p>` : "")}
+      ${report.carryInjury ? `<p class="recap-warn">${T("🩼 Toujours en reconstruction : {n} semaines de retard traînées de la saison passée.", { n: report.carryInjury })}</p>` : ""}
       ${report.tournamentMissed ? `<p class="recap-warn">😔 Blessé, vous manquez le grand tournoi de votre sélection cette saison.</p>` : ""}
       <p class="recap-money">💰 +${E.fmtMoney(report.income)} (salaire & sponsors)</p>
       ${microHtml}
@@ -1719,7 +1719,7 @@
     const doneToday = d.today === today && d.todayBest != null;
     const alive = d.lastDate === today || d.lastDate === prevDayKey(today);
     const streak = alive ? d.streak : 0;
-    const bestLine = doneToday ? `Ton meilleur aujourd'hui : ${d.todayBest} pts` : "Pas encore tenté aujourd'hui";
+    const bestLine = doneToday ? T("Ton meilleur aujourd'hui : {n} pts", { n: d.todayBest }) : "Pas encore tenté aujourd'hui";
     panel.innerHTML = `
       <div class="hc-head">Défi du jour${streak > 0 ? ` <span class="hc-streak">🔥 ${streak} j</span>` : ""}</div>
       <div class="hc-body">
@@ -2429,7 +2429,7 @@
         </div>
         <div class="perk-side">${side}</div>
       </div>`;
-    }).join("") + `<p class="quest-hint-note">${equippedCount}/${PERK_SLOTS} avantage${equippedCount > 1 ? "s" : ""} équipé${equippedCount > 1 ? "s" : ""} · actifs en carrière normale uniquement.</p>`;
+    }).join("") + `<p class="quest-hint-note">${T(equippedCount > 1 ? "{n}/{max} avantages équipés · actifs en carrière normale uniquement." : "{n}/{max} avantage équipé · actifs en carrière normale uniquement.", { n: equippedCount, max: PERK_SLOTS })}</p>`;
 
     list.querySelectorAll("[data-buy]").forEach((btn) => {
       btn.addEventListener("click", () => { if (buyPerk(btn.dataset.buy)) renderShopScreen(); });
