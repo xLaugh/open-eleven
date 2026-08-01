@@ -780,8 +780,11 @@ body { color: var(--text-0); }
 
 /* Bouton Compte : icône flottante discrète en haut à droite de l'accueil. */
 #screen-home { position: relative; }
+/* Les deux pastilles flottantes encadrent le titre. Un top positif les faisait
+   pendre SOUS lui (leur centre 14px plus bas), d'où l'impression de tassement :
+   -4px aligne leur centre sur celui du titre. Cf. .lang-switch, même valeur. */
 .account-fab {
-  position: absolute; top: 10px; right: 6px; z-index: 6;
+  position: absolute; top: -4px; right: 6px; z-index: 6;
   width: 42px; height: 42px; border-radius: 50%;
   border: 1px solid var(--on-green-line); background: var(--on-green-panel);
   color: var(--on-green); font-size: 1.15rem; line-height: 1; cursor: pointer;
@@ -795,7 +798,7 @@ body { color: var(--text-0); }
 /* ---------- Sélecteur de langue ----------
    Pastille en haut à gauche de l'accueil (symétrique du bouton de compte),
    avec un petit menu déroulant FR/EN. Reprend les tons "sur fond vert". */
-.lang-switch { position: absolute; top: 10px; left: 6px; z-index: 6; }
+.lang-switch { position: absolute; top: -4px; left: 6px; z-index: 6; }
 .lang-fab {
   display: flex; align-items: center; gap: 6px;
   height: 42px; padding: 0 14px; border-radius: 999px;
