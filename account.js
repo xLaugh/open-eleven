@@ -519,6 +519,10 @@
     ".lb-sub{font-size:.8rem;color:var(--text-1,#567);font-weight:400}" +
     ".lb-empty{padding:22px 4px;text-align:center;color:var(--text-1,#567);font-size:.9rem}" +
     ".lb-row[data-pseudo]{cursor:pointer}.lb-row[data-pseudo]:hover{background:rgba(8,123,75,.08);border-radius:8px}" +
+    ".fr-head{margin:14px 0 2px;font-size:.78rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--text-1,#567)}" +
+    ".fr-acts{display:flex;align-items:center;gap:6px;flex-shrink:0}" +
+    ".fr-badge{display:inline-block;min-width:1.5em;padding:1px 5px;border-radius:999px;background:#b3261e;color:#fff;font-size:.72rem;font-weight:800;line-height:1.4}" +
+    ".lb-tab.on .fr-badge{background:#fff;color:var(--green,#087b4b)}" +
     ".pf-best{padding:12px 14px;border-radius:12px;background:var(--panel-2,rgba(8,123,75,.1));border-left:4px solid var(--gold,#d4af37)}" +
     ".pf-best-top{font-weight:800;font-size:1.05rem;color:var(--green-ink,#0b3b26)}" +
     ".pf-best-title{font-size:.9rem;color:var(--text-1,#567);margin:1px 0 6px}" +
@@ -773,21 +777,88 @@
     const found = await resolvePseudo(p);
     if (!found) return { ok: false, error: { message: "Aucun joueur avec ce pseudo." } };
     if (found.user_id === session.user.id) return { ok: false, error: { message: "C'est toi !" } };
-    const { error } = await sb.from("friends").insert({ user_id: session.user.id, friend_id: found.user_id, friend_pseudo: found.pseudo });
+    // S'il nous a déjà invité, on accepte SA demande : deux invitations
+    // croisées resteraient sinon en attente face à face, chacune attendant
+    // l'autre.
+    const mutual = await friendRows((q) => q.eq("user_id", found.user_id).eq("friend_id", session.user.id));
+    if (mutual.length && mutual[0].status === "pending") {
+      const r = await acceptRequest(found.user_id, found.pseudo);
+      if (r.ok) return { ok: true, pseudo: found.pseudo, accepted: true };
+    }
+    // Une demande part en « pending » : elle n'existe pour l'autre qu'une fois
+    // acceptée. Sans ça, on s'ajoutait des « amis » à leur insu et leur nom
+    // apparaissait dans un classement sans qu'ils aient rien demandé.
+    const { error } = await sb.from("friends").insert({
+      user_id: session.user.id, friend_id: found.user_id, friend_pseudo: found.pseudo, status: "pending",
+    });
     if (error) {
-      if (error.code === "23505" || /duplicate/i.test(error.message || "")) return { ok: false, error: { message: found.pseudo + " est déjà dans tes amis." } };
+      if (error.code === "23505" || /duplicate/i.test(error.message || "")) return { ok: false, error: { message: T("{p} est déjà dans tes amis, ou a déjà reçu ton invitation.", { p: found.pseudo }) } };
       return { ok: false, error };
     }
     return { ok: true, pseudo: found.pseudo };
   }
+  // Retirer un ami coupe le lien DANS LES DEUX SENS : une amitié acceptée est
+  // réciproque, la garder d'un côté laisserait un classement bancal.
   async function removeFriend(fid) {
     if (!session) return;
-    try { await sb.from("friends").delete().eq("user_id", session.user.id).eq("friend_id", fid); } catch (_) {}
+    const me = session.user.id;
+    try { await sb.from("friends").delete().eq("user_id", me).eq("friend_id", fid); } catch (_) {}
+    try { await sb.from("friends").delete().eq("user_id", fid).eq("friend_id", me); } catch (_) {}
   }
-  async function listFriends() {
+
+  // `status` n'existe pas tant que la migration SQL n'est pas passée : on
+  // retombe alors sur l'ancien comportement plutôt que de casser la liste.
+  // `legacy` doit refaire le même filtre SANS le statut — sinon le repli
+  // renverrait les mauvaises lignes. Absent = pas d'équivalent avant migration.
+  async function friendRows(where, legacy) {
     if (!session) return [];
-    const { data } = await sb.from("friends").select("friend_id, friend_pseudo, created_at").eq("user_id", session.user.id).order("created_at", { ascending: false });
-    return data || [];
+    const cols = "user_id, friend_id, friend_pseudo, created_at";
+    const { data, error } = await where(sb.from("friends").select(cols + ", status"))
+      .order("created_at", { ascending: false });
+    if (!error) return data || [];
+    if (!/status/i.test(error.message || "") || !legacy) return [];
+    const { data: old } = await legacy(sb.from("friends").select(cols)).order("created_at", { ascending: false });
+    return old || [];
+  }
+  const listFriends = () => friendRows(
+    (q) => q.eq("user_id", session.user.id).eq("status", "accepted"),
+    (q) => q.eq("user_id", session.user.id) // avant la migration, tout lien est un ami
+  );
+  const listOutgoing = () => friendRows((q) => q.eq("user_id", session.user.id).eq("status", "pending"));
+
+  // Demandes reçues. La ligne porte le pseudo de la CIBLE (moi) : celui du
+  // demandeur se lit dans profiles, en lecture publique.
+  async function listIncoming() {
+    const rows = await friendRows((q) => q.eq("friend_id", session.user.id).eq("status", "pending"));
+    if (!rows.length) return [];
+    const { data: profs } = await sb.from("profiles").select("user_id, pseudo").in("user_id", rows.map((r) => r.user_id));
+    const byId = {};
+    (profs || []).forEach((p) => { byId[p.user_id] = p.pseudo; });
+    return rows.map((r) => ({ ...r, from_pseudo: byId[r.user_id] || "Joueur" }));
+  }
+
+  // Accepter valide la demande reçue ET crée le lien réciproque, pour que
+  // l'amitié compte des deux côtés du classement.
+  async function acceptRequest(fromId, fromPseudo) {
+    if (!session) return { ok: false };
+    const me = session.user.id;
+    const { error } = await sb.from("friends").update({ status: "accepted" }).eq("user_id", fromId).eq("friend_id", me);
+    if (error) return { ok: false, error };
+    await sb.from("friends").upsert(
+      { user_id: me, friend_id: fromId, friend_pseudo: fromPseudo, status: "accepted" },
+      { onConflict: "user_id,friend_id" }
+    );
+    return { ok: true };
+  }
+  // Refuser une demande reçue.
+  async function declineRequest(fromId) {
+    if (!session) return;
+    try { await sb.from("friends").delete().eq("user_id", fromId).eq("friend_id", session.user.id); } catch (_) {}
+  }
+  // Annuler une demande qu'on a envoyée.
+  async function cancelRequest(toId) {
+    if (!session) return;
+    try { await sb.from("friends").delete().eq("user_id", session.user.id).eq("friend_id", toId); } catch (_) {}
   }
 
   const frOverlay = document.createElement("div");
@@ -797,8 +868,17 @@
   const frBox = frOverlay.querySelector(".lb-box");
   frOverlay.addEventListener("click", (e) => { if (e.target === frOverlay) frOverlay.classList.remove("on"); });
   let frTab = "today";
+  // Pastille sur l'onglet « Gérer » : sans elle, une demande reçue resterait
+  // invisible tant qu'on n'ouvre pas l'onglet.
+  let frPending = 0;
+  function paintPendingBadge() {
+    const tab = frBox.querySelector('.lb-tab[data-t="manage"]');
+    if (tab) tab.innerHTML = "Gérer" + (frPending ? ' <span class="fr-badge">' + frPending + "</span>" : "");
+  }
 
-  async function renderFriends() {
+  // `msg` : retour à afficher après une action ({ text, cls }), le rendu
+  // reconstruisant tout le panneau.
+  async function renderFriends(msg) {
     frBox.innerHTML =
       '<button class="acc-x" aria-label="Fermer">×</button><h3>👥 Amis</h3>' +
       '<div class="lb-tabs">' +
@@ -809,31 +889,69 @@
       "</div><div class=\"lb-content\"><p class=\"lb-empty\">Chargement…</p></div>";
     frBox.querySelector(".acc-x").onclick = () => frOverlay.classList.remove("on");
     frBox.querySelectorAll(".lb-tab").forEach((b) => (b.onclick = () => { frTab = b.dataset.t; renderFriends(); }));
+    paintPendingBadge();
     const content = frBox.querySelector(".lb-content");
 
     if (!session) { content.innerHTML = '<p class="lb-empty">Connecte-toi (👤) pour gérer tes amis.</p>'; return; }
 
     if (frTab === "manage") {
-      const friends = await listFriends();
+      const [incoming, outgoing, friends] = await Promise.all([listIncoming(), listOutgoing(), listFriends()]);
+      frPending = incoming.length;
+      paintPendingBadge();
+      const nameCell = (p) =>
+        '<span class="lb-name" data-pseudo="' + esc(p || "") + '" style="cursor:pointer">👤 ' + esc(p || "Joueur") + "</span>";
+      const btn = (cls, label, i) =>
+        '<button class="acc-btn ' + cls + '" data-i="' + i + '" style="width:auto;margin:0;padding:6px 10px;font-size:.78rem">' + label + "</button>";
+      const group = (title, rows, html) =>
+        rows.length ? '<p class="fr-head">' + title + "</p><ul class=\"lb-list\">" + rows.map(html).join("") + "</ul>" : "";
+
       content.innerHTML =
-        '<div class="acc-row" style="margin:2px 0 6px"><input type="text" id="fr-pseudo" maxlength="24" placeholder="Ajouter un ami par pseudo" style="margin:0" />' +
-        '<button class="acc-btn soft" id="fr-add" style="width:auto;padding:11px 14px">+ Ajouter</button></div><p class="acc-msg"></p>' +
+        '<div class="acc-row" style="margin:2px 0 6px"><input type="text" id="fr-pseudo" maxlength="24" placeholder="Inviter un ami par pseudo" style="margin:0" />' +
+        '<button class="acc-btn soft" id="fr-add" style="width:auto;padding:11px 14px">Inviter</button></div><p class="acc-msg"></p>' +
+        group("Demandes reçues", incoming, (f, i) =>
+          '<li class="lb-row">' + nameCell(f.from_pseudo) +
+          '<span class="fr-acts">' + btn("soft fr-ok", "Accepter", i) + btn("danger fr-no", "Refuser", i) + "</span></li>") +
+        group("Invitations envoyées", outgoing, (f, i) =>
+          '<li class="lb-row">' + nameCell(f.friend_pseudo) +
+          '<span class="fr-acts"><span class="lb-sub">En attente</span>' + btn("danger fr-cancel", "Annuler", i) + "</span></li>") +
         (friends.length
-          ? '<ul class="lb-list">' + friends.map((f, i) =>
-              '<li class="lb-row"><span class="lb-name" data-pseudo="' + esc(f.friend_pseudo || "") + '" style="cursor:pointer">👤 ' + esc(f.friend_pseudo || "Joueur") + "</span>" +
-              '<button class="acc-btn danger fr-del" data-i="' + i + '" style="width:auto;margin:0;padding:6px 10px;font-size:.78rem">Retirer</button></li>'
-            ).join("") + "</ul>"
-          : '<p class="lb-empty">Aucun ami pour l\'instant. Ajoute un pseudo ci-dessus.</p>');
+          ? group("Amis", friends, (f, i) => '<li class="lb-row">' + nameCell(f.friend_pseudo) + btn("danger fr-del", "Retirer", i) + "</li>")
+          : '<p class="lb-empty">Aucun ami pour l\'instant. Invite un pseudo ci-dessus : il devra accepter ta demande.</p>');
+
+      // Le message survit au re-rendu : il est repeint APRÈS, sinon
+      // renderFriends() l'effacerait aussitôt écrit.
       const m = content.querySelector(".acc-msg");
+      if (msg) { m.textContent = msg.text; m.className = "acc-msg " + msg.cls; }
+
       const doAdd = async () => {
         const r = await addFriend(content.querySelector("#fr-pseudo").value);
-        m.textContent = r.ok ? (r.pseudo + " ajouté ✔") : ((r.error && r.error.message) || "Échec");
-        m.className = "acc-msg " + (r.ok ? "ok" : "err");
-        if (r.ok) renderFriends();
+        if (!r.ok) {
+          m.textContent = (r.error && r.error.message) || T("Échec");
+          m.className = "acc-msg err";
+          return;
+        }
+        renderFriends({
+          text: T(r.accepted ? "Vous êtes maintenant amis avec {p} ✔" : "Invitation envoyée à {p} ✔", { p: r.pseudo }),
+          cls: "ok",
+        });
       };
       content.querySelector("#fr-add").onclick = doAdd;
       content.querySelector("#fr-pseudo").addEventListener("keydown", (e) => { if (e.key === "Enter") doAdd(); });
-      content.querySelectorAll(".fr-del").forEach((b) => (b.onclick = async () => { await removeFriend(friends[Number(b.dataset.i)].friend_id); renderFriends(); }));
+
+      const act = (sel, fn) => content.querySelectorAll(sel).forEach((b) => (b.onclick = async () => {
+        b.disabled = true;
+        renderFriends(await fn(Number(b.dataset.i)));
+      }));
+      act(".fr-ok", async (i) => {
+        const who = incoming[i].from_pseudo;
+        const r = await acceptRequest(incoming[i].user_id, who);
+        return r.ok
+          ? { text: T("Vous êtes maintenant amis avec {p} ✔", { p: who }), cls: "ok" }
+          : { text: T("Échec, réessaie."), cls: "err" };
+      });
+      act(".fr-no", (i) => declineRequest(incoming[i].user_id));
+      act(".fr-cancel", (i) => cancelRequest(outgoing[i].friend_id));
+      act(".fr-del", (i) => removeFriend(friends[i].friend_id));
       content.querySelectorAll("[data-pseudo]").forEach((el) => { if (el.dataset.pseudo) el.onclick = () => openProfile(el.dataset.pseudo); });
       return;
     }
@@ -852,13 +970,20 @@
               '<span class="lb-name">' + esc(r.pseudo || "Joueur") + (r.is_me ? " <span class=\"lb-sub\">(toi)</span>" : "") + "</span>" +
               '<span class="lb-pts">' + val + ' <span class="lb-sub">pts</span>' + sub + "</span></li>";
           }).join("") + "</ul>"
-        : '<p class="lb-empty">Personne n\'a encore joué le défi. Ajoute des amis dans « Gérer ».</p>';
+        : '<p class="lb-empty">Personne n\'a encore joué le défi. Invite des amis dans « Gérer ».</p>';
       content.querySelectorAll(".lb-row[data-pseudo]").forEach((el) => { if (el.dataset.pseudo) el.onclick = () => openProfile(el.dataset.pseudo); });
     } catch (e) {
       content.innerHTML = '<p class="lb-empty">Classement indisponible pour le moment.</p>';
     }
   }
-  function openFriends() { frTab = "today"; renderFriends(); frOverlay.classList.add("on"); }
+  function openFriends() {
+    frTab = "today";
+    renderFriends();
+    frOverlay.classList.add("on");
+    // Compté en arrière-plan : la pastille doit apparaître dès l'ouverture,
+    // sans attendre que l'on aille dans « Gérer ».
+    if (session) listIncoming().then((r) => { frPending = r.length; paintPendingBadge(); }).catch(() => {});
+  }
 
   // ---- pool de légendes communautaires (invité du mercato) -------------------
   let legendsCache = [];
