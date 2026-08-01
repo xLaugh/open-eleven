@@ -1050,26 +1050,18 @@ body { color: var(--text-0); }
 .btn-secondary:hover { background: #f2f6f1; }
 /* Barre du tunnel de création : Retour à gauche, tirage complet à droite.
    order:-1 la remonte en tête du flex-column sans toucher à l'ordre du HTML.
-   Elle SUIT LE DÉFILEMENT : les listes de création (nationalités, clubs) sont
-   longues, et le Retour disparaissait dès les premiers pixels. Le conteneur
-   de défilement est la page — aucun ancêtre n'a d'overflow — donc `sticky` se
-   cale sur le viewport.
-   Le fond est indispensable : la barre occupe toute la largeur du contenu, et
-   sans lui les cartes défileraient à nu dans l'espace entre les deux boutons. */
+   Elle défile AVEC la page : une barre collante imposerait un fond opaque pour
+   masquer les cartes qui passeraient dessous, et ce bandeau sombre tranchait
+   trop avec la pelouse. Essayé, rejeté — ne pas y revenir sans repenser le
+   fond. */
 .creation-top {
   order: -1;
-  position: sticky;
-  top: 0;
-  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  width: 100%;
   margin: 0 0 14px;
-  padding: 10px 0;
-  background: rgba(6, 95, 58, 0.88);
-  backdrop-filter: blur(7px);
-  -webkit-backdrop-filter: blur(7px);
 }
 .creation-back {
   align-self: flex-start;
@@ -1085,13 +1077,6 @@ body { color: var(--text-0); }
 .screen-back {
   order: -1;
   align-self: flex-start;
-  /* Reste à l'écran quand on descend : le Panthéon, les badges et la boutique
-     défilent longtemps, et le Retour se perdait tout en haut. Pastille isolée,
-     donc pas besoin de fond de barre — .btn-secondary est déjà opaque et
-     porte une ombre, ce qui la détache du contenu qui glisse derrière. */
-  position: sticky;
-  top: 10px;
-  z-index: 10;
   width: auto;
   margin: 0 0 14px;
   padding: 8px 18px;
