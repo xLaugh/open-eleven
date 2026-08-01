@@ -485,6 +485,11 @@
     "Enregistrement…": "Saving…",
     "Les deux mots de passe ne correspondent pas.": "The two passwords do not match.",
     "Mot de passe mis à jour ✔": "Password updated ✔",
+
+    // --- Conflit de sauvegarde entre appareils ---
+    "Une sauvegarde plus récente existe sur un autre appareil ({date}).\n\nOK = l'écraser avec cette partie · Annuler = ne rien changer (vous pourrez la récupérer avec « Restaurer depuis le cloud »).": "A more recent save exists on another device ({date}).\n\nOK = overwrite it with this game · Cancel = change nothing (you can retrieve it with “Restore from the cloud”).",
+    "Sauvegarde annulée : le cloud n'a pas été modifié.": "Save cancelled: the cloud was left untouched.",
+    "Une sauvegarde plus récente existe sur un autre appareil ({date}). Votre progression locale n'a pas été envoyée.": "A more recent save exists on another device ({date}). Your local progress was not uploaded.",
   };
 
   const DICT = { en: EN };

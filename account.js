@@ -65,19 +65,55 @@
   function applyLocal(data) {
     KEYS.forEach((k) => { if (data && typeof data[k] === "string") localStorage.setItem(k, data[k]); });
   }
-  async function pushSave() {
+  /* Écriture concurrente : la sauvegarde est un blob unique remplacé en entier.
+     Sans précaution, jouer sur un second appareil écrase silencieusement la
+     progression du premier. On garde donc la date de la version connue, et on
+     n'écrit QUE si le serveur en est toujours là (verrouillage optimiste).
+     `cloudStamp` = updated_at de la dernière version qu'on a lue ou écrite.
+     null = on ignore où en est le serveur → il faut relire avant d'écrire. */
+  let cloudStamp = null;
+  let conflictInfo = null; // { serverStamp } quand une écriture a été refusée
+
+  async function serverStamp() {
+    const { data } = await sb.from("saves").select("updated_at").eq("user_id", session.user.id).maybeSingle();
+    return data ? data.updated_at : null;
+  }
+
+  // `force` : écrase sciemment la version distante (choix explicite du joueur).
+  async function pushSave(force) {
     if (!session) return { ok: false };
     lastPush = Date.now();
-    const { error } = await sb.from("saves").upsert(
-      { user_id: session.user.id, data: collectLocal(), updated_at: new Date().toISOString() },
-      { onConflict: "user_id" }
-    );
-    return { ok: !error, error };
+    const uid = session.user.id;
+    const now = new Date().toISOString();
+    const payload = { user_id: uid, data: collectLocal(), updated_at: now };
+
+    if (!force) {
+      const remote = await serverStamp();
+      // Une version distante existe et n'est pas celle qu'on connaît :
+      // quelqu'un (un autre appareil) a écrit entre-temps.
+      if (remote && cloudStamp !== remote) {
+        conflictInfo = { serverStamp: remote };
+        return { ok: false, conflict: true, serverStamp: remote };
+      }
+    }
+    const { error } = await sb.from("saves").upsert(payload, { onConflict: "user_id" });
+    if (error) return { ok: false, error };
+    cloudStamp = now;
+    conflictInfo = null;
+    return { ok: true };
   }
+
   async function pullSave() {
     if (!session) return { ok: false };
     const { data, error } = await sb.from("saves").select("data, updated_at").eq("user_id", session.user.id).maybeSingle();
+    // Lire, c'est se resynchroniser : on repart de la version du serveur.
+    if (!error && data) cloudStamp = data.updated_at;
     return { ok: !error, row: data, error };
+  }
+
+  // Date lisible pour départager deux versions dans l'interface.
+  function stampLabel(iso) {
+    try { return new Date(iso).toLocaleString(); } catch (e) { return String(iso || ""); }
   }
 
   // ---- UI (modale injectée) ---------------------------------------------------
@@ -101,7 +137,8 @@
     ".acc-mail{font-weight:700;color:var(--green-ink,#0b3b26);word-break:break-all}" +
     ".acc-row{display:flex;gap:8px}.acc-row .acc-btn{margin-top:0}" +
     ".acc-link{display:block;width:100%;margin-top:10px;padding:4px;background:none;border:none;cursor:pointer;font-family:inherit;font-size:.82rem;color:var(--text-1,#567);text-decoration:underline}" +
-    ".acc-link:hover{color:var(--green,#087b4b)}";
+    ".acc-link:hover{color:var(--green,#087b4b)}" +
+    ".acc-warn{margin:0 0 12px;padding:9px 11px;border-radius:10px;background:rgba(179,38,30,.08);border:1px solid rgba(179,38,30,.3);color:#8c2018;font-size:.8rem;line-height:1.35}";
   document.head.appendChild(style);
 
   const overlay = document.createElement("div");
@@ -124,6 +161,11 @@
         '<button class="acc-x" aria-label="Fermer">×</button>' +
         "<h3>Mon compte</h3>" +
         '<p class="acc-sub">Connecté : <span class="acc-mail">' + esc(session.user.email || "") + "</span></p>" +
+        // Une sauvegarde automatique refusée ne doit pas passer inaperçue :
+        // le joueur doit savoir que le cloud diverge, et pouvoir trancher.
+        (conflictInfo
+          ? '<p class="acc-warn">⚠️ ' + T("Une sauvegarde plus récente existe sur un autre appareil ({date}). Votre progression locale n'a pas été envoyée.", { date: esc(stampLabel(conflictInfo.serverStamp)) }) + "</p>"
+          : "") +
         '<p class="acc-sub" style="margin:0 0 4px">Pseudo au classement mondial :</p>' +
         '<div class="acc-row"><input type="text" id="acc-pseudo" maxlength="24" placeholder="Ton pseudo" value="' + esc(pseudo || "") + '" style="margin:0" />' +
         '<button class="acc-btn soft" id="acc-savepseudo" style="width:auto;padding:11px 14px">OK</button></div>' +
@@ -137,7 +179,20 @@
         const r = await savePseudo(box.querySelector("#acc-pseudo").value);
         msg(r.ok ? "Pseudo enregistré ✔" : (r.error && r.error.message) || "Échec", r.ok ? "ok" : "err");
       };
-      box.querySelector("#acc-push").onclick = async () => { msg("Sauvegarde…"); const r = await pushSave(); msg(r.ok ? "Sauvegarde envoyée au cloud ✔" : "Échec : " + (r.error && r.error.message || "erreur"), r.ok ? "ok" : "err"); };
+      box.querySelector("#acc-push").onclick = async () => {
+        msg(T("Sauvegarde…"));
+        let r = await pushSave();
+        if (r.conflict) {
+          // Version distante plus récente : on ne l'écrase pas sans un accord
+          // explicite, et on montre sa date pour que le choix soit éclairé.
+          const ok = confirm(T("Une sauvegarde plus récente existe sur un autre appareil ({date}).\n\nOK = l'écraser avec cette partie · Annuler = ne rien changer (vous pourrez la récupérer avec « Restaurer depuis le cloud »).",
+            { date: stampLabel(r.serverStamp) }));
+          if (!ok) return msg("Sauvegarde annulée : le cloud n'a pas été modifié.", "err");
+          r = await pushSave(true);
+        }
+        msg(r.ok ? "Sauvegarde envoyée au cloud ✔" : "Échec : " + (r.error && r.error.message || "erreur"), r.ok ? "ok" : "err");
+        renderModal();
+      };
       box.querySelector("#acc-profile").onclick = async () => {
         if (!pseudo) return msg("Choisis d'abord un pseudo ci-dessus.", "err");
         await pushProfileStats(); close(); openProfile(pseudo);
@@ -281,7 +336,7 @@
       if (overlay.classList.contains("on")) {
         if (confirm(T("Une sauvegarde cloud existe. La restaurer (remplace la partie locale) ?\n\nOK = restaurer le cloud · Annuler = garder le local et l'envoyer au cloud."))) {
           applyLocal(r.row.data); location.reload();
-        } else { await pushSave(); msg("Partie locale envoyée au cloud ✔", "ok"); }
+        } else { await pushSave(true); msg("Partie locale envoyée au cloud ✔", "ok"); } // choix explicite → on écrase
       }
     } else {
       await pushSave(); // pas de cloud → on y met le local
@@ -321,7 +376,7 @@
     // En récupération, on ne déclenche PAS la réconciliation locale/cloud :
     // le joueur n'est là que pour changer son mot de passe.
     if (event === "SIGNED_IN" && !recoveryMode) { onFreshLogin(); loadPseudo().then(() => { renderModal(); pushProfileStats(); }); }
-    if (event === "SIGNED_OUT") pseudo = null;
+    if (event === "SIGNED_OUT") { pseudo = null; cloudStamp = null; conflictInfo = null; }
   });
   // On tente d'abord la récupération : si le hash porte un jeton, il ouvre
   // directement l'écran « nouveau mot de passe » plutôt que la session normale.
