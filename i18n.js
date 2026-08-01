@@ -477,9 +477,27 @@
     if (SUPPORTED.includes(saved)) lang = saved;
   } catch (e) { /* stockage indisponible : on reste en français */ }
 
-  // `vars` : valeurs à injecter dans les marqueurs {…} du gabarit. Elles sont
-  // substituées DANS LES DEUX LANGUES — un gabarit non traduit reste donc
-  // parfaitement lisible en français.
+  /* `vars` : valeurs à injecter dans les marqueurs {…} du gabarit. Elles sont
+     substituées DANS LES DEUX LANGUES — un gabarit non traduit reste donc
+     parfaitement lisible en français.
+
+     ⚠️ SÉCURITÉ — CONTRAT D'ÉCHAPPEMENT ⚠️
+     Les valeurs sont insérées TELLES QUELLES, sans échappement. C'EST À
+     L'APPELANT d'échapper toute donnée non maîtrisée :
+
+         T("Bravo {who} !", { who: esc(pseudo) })     ✅
+         T("Bravo {who} !", { who: pseudo })          ❌ XSS stocké
+
+     Pourquoi ne pas échapper ici d'office ? Parce que T() sert AUSSI à des
+     textes posés via .textContent (écrans de création, boutons) : un
+     échappement systématique y afficherait « &amp; » en toutes lettres. Et
+     plusieurs appels injectent volontairement du HTML (drapeaux via flagHtml,
+     <strong>, étoiles de potentiel).
+
+     La règle est donc la même que partout ailleurs dans ce projet : on échappe
+     à la source, au moment où l'on manipule la donnée. Un pseudo, un nom de
+     joueur, un libellé venant d'un lien de duel ou du serveur ne doivent
+     JAMAIS arriver ici sans esc(). */
   function translate(str, vars) {
     let out = str;
     if (lang !== "fr") {

@@ -2042,7 +2042,7 @@ body { color: var(--text-0); }
   padding-top: 4px;
   border-top: 1px dashed var(--line);
 }
-#btn-badges-back { align-self: center; }
+/* (l'alignement du Retour est géré par .screen-back — en haut à gauche) */
 
 /* ---------- Écran Panthéon ---------- */
 /* Barre de tri du Panthéon : chips sélectionnables (une seule active). */
@@ -2084,4 +2084,4 @@ body { color: var(--text-0); }
 .pantheon-clickable:active { transform: scale(0.99); }
 .pantheon-see { margin: 8px 0 0; font-size: 0.74rem; font-weight: 600; color: var(--green-ink); opacity: 0.75; }
 .pantheon-empty { text-align: center; color: var(--on-green-soft); font-style: italic; margin-top: 40px; }
-#btn-pantheon-back { align-self: center; }
+/* (l'alignement du Retour est géré par .screen-back — en haut à gauche) */

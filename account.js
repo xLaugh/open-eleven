@@ -14,6 +14,9 @@
   // passent PAS — les boîtes natives confirm() — et à ceux qui portent des
   // valeurs. Le gabarit français est la clé : sans traduction, il s'affiche
   // tel quel.
+  // ⚠️ Les valeurs sont insérées SANS échappement. Ici plus qu'ailleurs, la
+  // donnée vient du SERVEUR (pseudos, libellés de duel) : passer par esc() à
+  // l'appel. Cf. le contrat détaillé dans i18n.js.
   const T = (tpl, vars) => (window.I18N ? window.I18N.t(tpl, vars) : (vars
     ? Object.keys(vars).reduce((a, k) => a.split("{" + k + "}").join(vars[k] == null ? "" : String(vars[k])), tpl)
     : tpl));

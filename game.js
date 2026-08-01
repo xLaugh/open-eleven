@@ -27,6 +27,9 @@
   // traduction, il s'affiche tel quel. Les {marqueurs} sont remplacés dans les
   // deux langues, donc le français reste correct même sans i18n.js chargé.
   //   T("Série de {n} jours", { n: 7 })
+  // ⚠️ Les valeurs sont insérées SANS échappement : toute donnée non maîtrisée
+  // (pseudo, nom de joueur, libellé venant d'un lien de duel ou du serveur)
+  // doit passer par esc() À L'APPEL. Cf. le contrat détaillé dans i18n.js.
   const T = (tpl, vars) => (window.I18N ? window.I18N.t(tpl, vars) : (vars
     ? Object.keys(vars).reduce((a, k) => a.split("{" + k + "}").join(vars[k] == null ? "" : String(vars[k])), tpl)
     : tpl));
