@@ -33,7 +33,97 @@ const KEY_MOMENTS = {
       ],
       winText: "Le retour est réussi : les jambes répondent, la tête aussi. Vous revoilà sur les terrains, plus déterminé que jamais.",
       failText: "Rechute cruelle : le corps lâche encore. Le chemin du retour s'allonge, et le doute s'installe.",
-    }],
+    },
+      {
+        title: "LE CHEMIN DU RETOUR",
+        text: "Quatrième mois de rééducation. Le groupe s'entraîne de l'autre côté du mur ; ici, il n'y a que le vélo et votre respiration. Vos tests stagnent depuis trois semaines : mêmes chiffres, même douleur sourde.",
+        options: [
+          {
+            id: "basics",
+            label: "Tout reprendre depuis les gammes, sans regarder le calendrier",
+            hint: "Discipliné",
+            base: 0.82,
+            recover: 13,
+            setback: 3,
+            repWin: 0,
+            failText: "Trois semaines de plus pour rien : la courbe reste plate, et plus personne au club n'ose avancer de date de retour."
+          },
+          {
+            id: "youth",
+            label: "Reprendre les oppositions avec les jeunes du centre",
+            hint: "Humble",
+            base: 0.68,
+            recover: 10,
+            setback: 7,
+            repWin: 2,
+            traitWin: "leader"
+          },
+          {
+            id: "night",
+            label: "Doubler les séances en salle, seul, le soir",
+            hint: "Têtu",
+            base: 0.56,
+            recover: 7,
+            setback: 12,
+            repWin: 4,
+            repFail: -3,
+            failText: "Le staff finit par comprendre d'où vient l'inflammation. Vos horaires sont surveillés, votre parole vaut moins, et la douleur s'est réinstallée."
+          },
+          {
+            id: "contact",
+            label: "Passer aux appuis et aux impacts à pleine charge dès demain",
+            hint: "Impatient",
+            base: 0.44,
+            recover: 5,
+            setback: 16,
+            repWin: 7,
+            repFail: -5
+          }
+        ],
+        winText: "Un matin, sans prévenir, les chiffres repartent. Le plateau cède, la douleur sourde s'efface, et vous passez devant la porte de la salle de soins sans même ralentir.",
+        failText: "La zone lâche à la première vraie charge. Nouvelle imagerie, nouveau protocole, et quatre mois de travail à refaire depuis le début."
+      },
+      {
+        title: "LE CHEMIN DU RETOUR",
+        text: "Des mois d'arrêt, et la douleur revient dès que vous forcez. Le chirurgien montre le tendon abîmé : réopérer, c'est repartir de zéro sur un genou neuf. Le staff de {club}, lui, veut vous revoir sur la pelouse le plus tôt possible.",
+        options: [
+          {
+            id: "conserve",
+            label: "Suivre le staff et reprendre sans opérer",
+            hint: "Prudent",
+            base: 0.84,
+            recover: 7,
+            setback: 3,
+            repWin: 0
+          },
+          {
+            id: "surgery",
+            label: "Vous faire réopérer et repartir de zéro",
+            hint: "Radical",
+            base: 0.62,
+            recover: 18,
+            setback: 9,
+            repWin: 3,
+            winText: "Le genou neuf tient. Le retour aura pris des mois de plus que prévu, mais vous rejouez sans rien surveiller : le pire est vraiment derrière vous."
+          },
+          {
+            id: "inject",
+            label: "Revenir infiltré, sans attendre le feu vert",
+            hint: "Douloureux",
+            base: 0.46,
+            recover: 4,
+            setback: 15,
+            repWin: 6,
+            repFail: -4,
+            traitWin: "clutch",
+            winText: "Vous rejouez des semaines avant tout le monde, piqûre après piqûre. Le vestiaire sait ce que ce retour vous a coûté — et le genou, lui, tient bon.",
+            failText: "Le produit ne masque plus rien. On vous arrête en pleine séance, et le bistouri que vous refusiez finit par décider à votre place."
+          }
+        ],
+        winText: "La douleur s'en va, pour de bon. Vous ne guettez plus la sensation à chaque appui : vous rejouez, sans y penser.",
+        failText: "Le genou décide seul : la douleur revient plus tôt et plus fort, et la date de retour recule encore de plusieurs semaines."
+      }
+    ],
   },
   wc_final: {
     field: [{
@@ -59,7 +149,8 @@ const KEY_MOMENTS = {
       winText: "L'ACTION D'UNE VIE !!! Le but qui offre la Coupe du Monde à votre nation — les images repasseront pendant un siècle !",
       failText: "L'action s'éteint dans la défense adverse… puis le contre fatal tombe côté opposé. Champions du monde : les autres.",
     }],
-    mil: {
+    mil: [
+      {
       title: "FINALE DE LA COUPE DU MONDE",
       text: "116e minute, 2-2. La dernière vraie possession du match arrive dans vos pieds, au milieu du terrain. Tout le monde est cuit — sauf vous, peut-être.",
       options: [
@@ -71,7 +162,95 @@ const KEY_MOMENTS = {
       winText: "VOTRE geste décide de la finale ! Champion du monde en dictant le tempo jusqu'à la dernière seconde !",
       failText: "La perte de balle de trop… le contre adverse est fatal. Le milieu de terrain porte la défaite sur ses épaules.",
     },
-    def: {
+      {
+        title: "FINALE DE LA COUPE DU MONDE",
+        text: "23e minute, 0-0, et vous avez déjà perdu trois ballons faciles. La finale est trop grande : vos jambes le savent, le stade aussi. Sur la ligne de touche, le sélectionneur vient de demander à un remplaçant de s'échauffer.",
+        options: [
+          {
+            id: "simple",
+            label: "Tout jouer en une touche, le temps de respirer",
+            hint: "Sobre",
+            base: 0.78,
+            repWin: 1
+          },
+          {
+            id: "press",
+            label: "Aller arracher un ballon très haut, à la rage",
+            hint: "Rage",
+            base: 0.62,
+            repWin: 3,
+            repFail: -2,
+            failText: "Vous arrivez une demi-seconde trop tard : carton jaune, et le sélectionneur ne prend plus le risque de vous garder. Remplacé à l'heure de jeu, vous vivez la défaite depuis le banc, une serviette sur la tête."
+          },
+          {
+            id: "demand",
+            label: "Réclamer chaque ballon, quitte à en reperdre",
+            hint: "Culot",
+            base: 0.54,
+            repWin: 5,
+            repFail: -3,
+            traitWin: "clutch"
+          },
+          {
+            id: "switch",
+            label: "Renverser le jeu d'un long ballon pour réveiller le stade",
+            hint: "Panache",
+            base: 0.44,
+            repWin: 8,
+            repFail: -5,
+            traitWin: "showman",
+            winText: "Le renversement traverse tout le terrain et réveille quatre-vingt mille personnes d'un coup. À partir de cette minute, la finale passe par votre pied : CHAMPIONS DU MONDE."
+          }
+        ],
+        winText: "Le fil se renoue, le remplaçant se rassoit, et vous jouez cette finale jusqu'à la dernière seconde. Elle finira du bon côté : CHAMPIONS DU MONDE.",
+        failText: "Vous ne trouvez jamais votre finale. Remplacé à l'heure de jeu, vous vivez la défaite depuis le banc, une serviette sur la tête."
+      },
+      {
+        title: "FINALE DE LA COUPE DU MONDE",
+        text: "68e minute, 1-1 : votre défenseur central est expulsé. Vingt-deux minutes à jouer à dix contre onze, en finale de Coupe du Monde. Le sélectionneur cherche votre regard depuis sa ligne — c'est au milieu qu'il faut tout refaire.",
+        options: [
+          {
+            id: "drop",
+            label: "Reculer d'un cran et boucher le trou en défense",
+            hint: "Sacrifice",
+            base: 0.76,
+            repWin: 1
+          },
+          {
+            id: "hold",
+            label: "Garder le ballon le plus longtemps possible",
+            hint: "Maîtrise",
+            base: 0.64,
+            repWin: 3,
+            repFail: -2
+          },
+          {
+            id: "lead",
+            label: "Replacer toute l'équipe à la voix et tenir le bloc",
+            hint: "Patron",
+            base: 0.56,
+            repWin: 6,
+            repFail: -3,
+            traitWin: "leader"
+          },
+          {
+            id: "go",
+            label: "Aller chercher le but tout de suite, à dix",
+            hint: "Folie",
+            base: 0.42,
+            repWin: 10,
+            repFail: -6,
+            traitWin: "showman",
+            winText: "Personne n'attend ça d'une équipe à dix : le but tombe dans la foulée, et le stade met dix secondes à y croire. CHAMPIONS DU MONDE, à dix contre onze.",
+            failText: "Vous montez tous, et le contre traverse un terrain vide. Le but adverse tombe à la 74e, et cette fois il n'y a plus personne derrière. La finale se perd à dix."
+          }
+        ],
+        winText: "Le trou se referme si vite que l'infériorité numérique ne se voit jamais. La finale se termine du bon côté : CHAMPIONS DU MONDE, à dix contre onze.",
+        failText: "L'équipe se coupe en deux, le but adverse tombe à la 79e, et il n'y a plus assez de jambes pour revenir. La finale se perd à dix."
+      }
+    ],
+    def: [
+      {
       title: "FINALE DE LA COUPE DU MONDE",
       text: "119e minute, 2-2. Leur attaquant star part seul au but — vous êtes le dernier rempart de toute une nation.",
       options: [
@@ -83,7 +262,94 @@ const KEY_MOMENTS = {
       winText: "L'INTERVENTION D'UNE VIE ! Vous sauvez la nation, puis le titre arrive aux tirs au but : CHAMPIONS DU MONDE !",
       failText: "Battu sur l'action décisive… Le but tombe, et la finale s'écroule dans votre dos. Cruel, injuste, inoubliable.",
     },
-    gk: {
+      {
+        title: "FINALE DE LA COUPE DU MONDE",
+        text: "87e minute, 0-0, et l'arbitre accorde enfin un corner. Le sélectionneur vous fait signe de monter : vous avez la taille, et il ne reste presque plus rien à jouer. Quatre-vingt mille personnes se lèvent d'un seul mouvement.",
+        options: [
+          {
+            id: "stay",
+            label: "Rester en couverture et penser au contre adverse",
+            hint: "Discipline",
+            base: 0.74,
+            repWin: 0,
+            winText: "Le corner ne donne rien, mais le contre non plus : vous êtes seul au bon endroit, et vous le coupez avant qu'il ne parte. La finale ira au bout, et elle finira bien : CHAMPIONS DU MONDE.",
+            failText: "Le corner ne donne rien, et sur le contre qui suit, vous êtes une foulée trop loin. Le but tombe dans la minute, et la finale s'achève sans que vous soyez monté une seule fois."
+          },
+          {
+            id: "first",
+            label: "Attaquer le premier poteau à la déviation",
+            hint: "Timing",
+            base: 0.58,
+            repWin: 4,
+            repFail: -2
+          },
+          {
+            id: "far",
+            label: "Se cacher au second poteau et surgir seul",
+            hint: "Ruse",
+            base: 0.5,
+            repWin: 6,
+            repFail: -3
+          },
+          {
+            id: "bully",
+            label: "Aller défier le gardien dans ses six mètres",
+            hint: "Culotté",
+            base: 0.4,
+            repWin: 9,
+            repFail: -5,
+            traitWin: "showman",
+            winText: "Le gardien ne sort jamais : il vous a dans le dos et il le sait. Le ballon traîne dans les six mètres, et il finit au fond. CHAMPIONS DU MONDE."
+          }
+        ],
+        winText: "Le ballon finit au fond à trois minutes de la fin, et plus personne ne recolle. Le titre mondial se gagne sur une tête de défenseur : CHAMPIONS DU MONDE.",
+        failText: "Le corner ne donne rien, et la finale bascule un peu plus tard du mauvais côté. Vice-champions du monde : un titre que personne ne vient fêter."
+      },
+      {
+        title: "FINALE DE LA COUPE DU MONDE",
+        text: "101e minute, votre sélection mène 2-1 et ne touche plus un ballon sur dix. En face, tout part dans votre surface, et le bloc recule de dix mètres à chaque vague. La ligne défensive attend un ordre : le vôtre.",
+        options: [
+          {
+            id: "waste",
+            label: "Casser le rythme et geler chaque seconde",
+            hint: "Cynique",
+            base: 0.7,
+            repWin: 1
+          },
+          {
+            id: "deep",
+            label: "Reculer à cinq et tout défendre dans la surface",
+            hint: "Bunker",
+            base: 0.6,
+            repWin: 4,
+            repFail: -2
+          },
+          {
+            id: "aerial",
+            label: "Prendre chaque duel aérien, un par un",
+            hint: "Duel",
+            base: 0.52,
+            repWin: 6,
+            repFail: -3
+          },
+          {
+            id: "trap",
+            label: "Remonter le bloc de vingt mètres et jouer le hors-jeu",
+            hint: "Audace",
+            base: 0.44,
+            repWin: 9,
+            repFail: -5,
+            traitWin: "leader",
+            winText: "Le bloc remonte de vingt mètres comme un seul homme : trois attaquants se retrouvent en position de hors-jeu, drapeau levé. Ils ne repasseront plus votre ligne : CHAMPIONS DU MONDE.",
+            failText: "Le bloc remonte d'un pas trop tard, le drapeau ne se lève pas, et l'égalisation tombe à la 104e. Les tirs au but font le reste : ce pari-là, on vous le ressortira toute votre vie."
+          }
+        ],
+        winText: "La dernière vague meurt sur vos épaules, et le coup de sifflet arrive enfin. CHAMPIONS DU MONDE : les vingt dernières minutes, c'est vous qui les avez tenues.",
+        failText: "La ligne craque à la 118e, l'égalisation tombe, et tout s'effondre aux tirs au but. Vous étiez à quelques secondes de l'éternité."
+      }
+    ],
+    gk: [
+      {
       title: "FINALE DE LA COUPE DU MONDE",
       text: "Séance de tirs au but de la finale. 4-4 : le dernier tireur adverse s'avance. S'il rate, vous êtes champions du monde. Tout repose sur vos gants.",
       options: [
@@ -95,6 +361,95 @@ const KEY_MOMENTS = {
       winText: "QUEL ARRÊT !!! Vous détournez le tir et disparaissez sous une marée de coéquipiers : CHAMPIONS DU MONDE grâce à VOUS !",
       failText: "Le ballon file à l'opposé de votre plongeon. La plus cruelle des loteries vient de choisir son camp.",
     },
+      {
+        title: "FINALE DE LA COUPE DU MONDE",
+        text: "82e minute, vous menez 1-0. Faute à vingt mètres, légèrement décalée sur votre droite : leur meilleur tireur pose déjà le ballon et fixe votre lucarne. Le mur se forme et attend que vous le placiez.",
+        options: [
+          {
+            id: "wall",
+            label: "Dresser un mur de cinq et couvrir votre poteau",
+            hint: "Sûr",
+            base: 0.72,
+            repWin: 2
+          },
+          {
+            id: "shift",
+            label: "Décaler le mur d'un pas et guetter l'enroulé",
+            hint: "Malin",
+            base: 0.62,
+            repWin: 3,
+            repFail: -2
+          },
+          {
+            id: "bait",
+            label: "Découvrir votre premier poteau pour l'inviter à frapper là",
+            hint: "Piège",
+            base: 0.5,
+            repWin: 6,
+            repFail: -3,
+            traitWin: "clutch",
+            winText: "Il frappe précisément là où vous l'avez laissé croire, et vous êtes déjà parti. La parade est presque insultante : CHAMPIONS DU MONDE, sur une cage inviolée."
+          },
+          {
+            id: "solo",
+            label: "Renoncer au mur et tout jouer à la lecture",
+            hint: "Folie",
+            base: 0.38,
+            repWin: 11,
+            repFail: -6,
+            traitWin: "showman",
+            winText: "Sans mur, vous partez à l'instant exact où son pied touche le ballon, et vous allez le chercher sous la barre. Cette image tournera pendant cinquante ans : CHAMPIONS DU MONDE.",
+            failText: "Sans mur, la frappe part plein axe et vous êtes déjà lancé de l'autre côté : 1-1 à la 83e. La finale se perdra aux tirs au but, et c'est ce mur absent que l'on montrera en boucle."
+          }
+        ],
+        winText: "La frappe ne trouve jamais le chemin de vos filets, et ce coup franc restera le dernier frisson de la finale. CHAMPIONS DU MONDE, sur une cage inviolée.",
+        failText: "Le ballon passe exactement là où vous ne l'attendiez pas : 1-1 à la 83e. La finale ira jusqu'aux tirs au but, et ils tourneront du mauvais côté."
+      },
+      {
+        title: "FINALE DE LA COUPE DU MONDE",
+        text: "91e minute : la prolongation démarre à peine, 1-1. Un ballon passe par-dessus votre défense et leur attaquant file au duel. Vous sortez de votre surface à pleine vitesse — le premier au ballon décidera peut-être de la finale.",
+        options: [
+          {
+            id: "clear",
+            label: "Dégager de volée le plus loin possible",
+            hint: "Sûr",
+            base: 0.74,
+            repWin: 1
+          },
+          {
+            id: "shield",
+            label: "Prendre le duel épaule contre épaule et l'emmener vers la touche",
+            hint: "Costaud",
+            base: 0.6,
+            repWin: 3,
+            repFail: -2
+          },
+          {
+            id: "slide",
+            label: "Se coucher dans un tacle glissé plein axe",
+            hint: "Risqué",
+            base: 0.48,
+            repWin: 7,
+            repFail: -4,
+            traitWin: "clutch",
+            failText: "Vous prenez l'homme et pas le ballon : rouge direct. Votre équipe finit la prolongation à dix, avec un remplaçant dans les cages, et la finale lui échappe avant même les tirs au but."
+          },
+          {
+            id: "relay",
+            label: "Contrôler sous la semelle et lancer le contre d'une seule ouverture",
+            hint: "Folie",
+            base: 0.38,
+            repWin: 11,
+            repFail: -7,
+            traitWin: "showman",
+            winText: "Vous l'effacez sous la semelle, relevez la tête, et votre ouverture traverse soixante mètres jusqu'à l'attaquant lancé. Le stade n'a jamais vu un gardien faire ça en finale : CHAMPIONS DU MONDE.",
+            failText: "Votre semelle glisse d'un rien, il vous prend le ballon dans les pieds et pousse dans la cage vide. Le geste était magnifique une demi-seconde plus tôt ; il sera revu au ralenti pendant vingt ans."
+          }
+        ],
+        winText: "Vous êtes au ballon avant lui, et la finale repart dans l'autre sens. La demi-heure qui suit ne verra plus une seule occasion adverse : CHAMPIONS DU MONDE, avec un gardien en état de grâce.",
+        failText: "Il vous prend le ballon d'un demi-pas et pousse dans la cage vide. Il restera une demi-heure pour recoller, et elle s'écoulera sans rien donner."
+      }
+    ],
   },
   cup_final: {
     field: [{
@@ -285,7 +640,8 @@ const KEY_MOMENTS = {
     }],
   },
   old_club: {
-    any: {
+    any: [
+      {
       title: "RETROUVAILLES",
       text: "Premier match contre votre ancien club depuis votre départ. Tribunes partagées entre applaudissements et sifflets — chaque ballon que vous touchez fait monter le volume.",
       options: [
@@ -296,7 +652,101 @@ const KEY_MOMENTS = {
       winText: "Match plein face à votre passé : même vos anciens supporters finissent par applaudir. Le plus beau des points finaux.",
       failText: "Trop d'émotion, pas assez de jeu : votre ancien public savoure, le nouveau s'interroge.",
     },
-    gk: {
+      {
+        title: "RETROUVAILLES",
+        text: "26e minute, 0-0. En face de vous, le vieux défenseur qui vous a tout appris à l'entraînement : averti depuis dix minutes, une cheville bandée depuis l'échauffement, et plus la vitesse de ses vingt ans. Depuis sa zone technique, votre entraîneur hurle de l'attaquer encore et encore — au deuxième carton, il saute. Le ballon arrive dans votre pied.",
+        options: [
+          {
+            id: "spare",
+            label: "Servir l'autre côté et le laisser tranquille",
+            hint: "Loyal",
+            base: 0.66,
+            repWin: 1,
+            winText: "Le ballon file de l'autre côté et le but tombe au bout de l'action. Votre ancien mentor a parfaitement compris ce que vous veniez de refuser de faire : au coup de sifflet, il vous cherche dans le rond central pour vous serrer contre lui."
+          },
+          {
+            id: "duel",
+            label: "Le prendre de vitesse, ballon devant, sans l'accrocher",
+            hint: "Franc",
+            base: 0.54,
+            repWin: 4,
+            repFail: -2
+          },
+          {
+            id: "orders",
+            label: "Suivre la consigne et le harceler jusqu'au carton",
+            hint: "Cynique",
+            base: 0.46,
+            repWin: 7,
+            repFail: -4,
+            winText: "Le second carton tombe avant la demi-heure. Votre ancien mentor sort la tête basse sous les sifflets de son propre virage, son équipe termine à dix et {club} déroule. Vous avez gagné le match et perdu un ami dans la même soirée.",
+            failText: "C'est vous que l'arbitre finit par avertir : le vieux renard a encaissé sans broncher, puis obtenu la faute au meilleur moment. Le stade se moque de vous, et votre entraîneur vous change de côté dès la pause."
+          },
+          {
+            id: "nutmeg",
+            label: "Le petit pont, sous les yeux de son banc",
+            hint: "Cruel",
+            base: 0.38,
+            repWin: 10,
+            repFail: -6,
+            traitWin: "showman",
+            winText: "Le ballon passe entre ses jambes et le stade entier lâche le même cri. Vous centrez dans la foulée, {club} ouvre le score, et l'image du petit pont tournera en boucle toute la semaine.",
+            failText: "Il referme les jambes au dernier centième et le ballon reste coincé sous sa semelle. Tout un stade éclate de rire pendant que vous vous relevez, et votre entraîneur vous change de côté dès la pause."
+          }
+        ],
+        winText: "L'action va jusqu'au bout : {club} ouvre le score dans la minute qui suit et votre côté ne se referme plus de la soirée. Sur le banc d'en face, on change de système avant la demi-heure pour éteindre l'incendie.",
+        failText: "Le vieux renard vous avait lu avant même que vous décidiez : il coupe la trajectoire, récupère et relance le contre qui fait mal. À la pause, votre entraîneur vous change de côté sans un mot d'explication."
+      },
+      {
+        title: "RETROUVAILLES",
+        text: "87e minute, 1-1, penalty pour {club}. Le tireur attitré est sorti à l'heure de jeu et le ballon vous reste dans les mains. En face, votre ancien gardien replace ses gants sans se presser : six saisons à vous arrêter chaque matin à l'entraînement, il connaît votre course d'élan, votre respiration, votre côté. Il vous sourit — il sait que vous savez.",
+        options: [
+          {
+            id: "give",
+            label: "Rendre le ballon au capitaine",
+            hint: "Prudent",
+            base: 0.62,
+            repWin: 0,
+            winText: "Le capitaine prend le ballon et le met au fond sans trembler. {club} repart avec la victoire, et votre ancien gardien vous cherche du regard en se relevant : vous n'êtes pas tombé dans le piège, et il le sait.",
+            failText: "Le capitaine s'élance et votre ancien gardien plonge du bon côté, comme s'il avait lu le scénario des semaines à l'avance. Le match s'achève sur 1-1, et tout le monde a vu qui n'a pas voulu du ballon."
+          },
+          {
+            id: "switch",
+            label: "Changer de côté au dernier appui",
+            hint: "Bluff",
+            base: 0.52,
+            repWin: 4,
+            repFail: -2,
+            traitWin: "clutch"
+          },
+          {
+            id: "usual",
+            label: "Frapper là où il vous attend, plein pied",
+            hint: "Défi",
+            base: 0.44,
+            repWin: 7,
+            repFail: -4,
+            winText: "Vous frappez exactement là où il vous attendait, et la puissance suffit : ses gants effleurent le cuir sans le dévier. {club} repart avec la victoire, et il reste longtemps assis à fixer ses paumes.",
+            failText: "Il part du bon côté sans même feindre l'hésitation : il vous attendait là depuis six ans. Le match s'achève sur 1-1, et son virage scande votre nom comme une insulte jusqu'au bout."
+          },
+          {
+            id: "panenka",
+            label: "Tenter la panenka sous ses yeux",
+            hint: "Cruel",
+            base: 0.36,
+            repWin: 11,
+            repFail: -7,
+            traitWin: "showman",
+            winText: "La balle piquée retombe doucement derrière lui, à l'endroit exact qu'il venait de quitter. {club} repart avec la victoire, et cette image-là fera le tour du pays avant la fin de la nuit.",
+            failText: "Il ne bouge pas d'un centimètre. La balle piquée retombe dans ses gants comme un cadeau et il la garde serrée contre lui en vous regardant, longtemps. Le stade rit, le match s'achève sur 1-1, et il vous faudra des mois pour faire taire cette image."
+          }
+        ],
+        winText: "Le ballon finit au fond et le stade se tait d'un coup. Votre ancien gardien reste assis dans sa cage, incapable de se relever : {club} tient son but d'avance jusqu'au bout et repart avec la victoire.",
+        failText: "Le ballon ne rentre pas. Votre ancien gardien se relève en hurlant vers son virage, le stade entier avec lui, et le match s'achève sur ce goût-là : 1-1, et l'impression d'avoir laissé filer la seule vraie occasion de la soirée."
+      }
+    ],
+    gk: [
+      {
       title: "RETROUVAILLES",
       text: "Premier match contre votre ancien club depuis votre départ. Les attaquants d'en face connaissent chacune de vos habitudes — et l'ancien public guette la moindre erreur de gant.",
       options: [
@@ -307,6 +757,93 @@ const KEY_MOMENTS = {
       winText: "Cage inviolée face à votre passé : même vos anciens supporters finissent par applaudir. Le plus beau des points finaux.",
       failText: "Trop d'émotion, pas assez de gants : votre ancien public savoure, le nouveau s'interroge.",
     },
+      {
+        title: "RETROUVAILLES",
+        text: "34e minute, 0-0. Vos anciens partenaires viennent presser à cinq sur votre relance : ils ont répété ce piège avec vous pendant des saisons et connaissent chacune de vos manies. Une passe en retrait vous revient dans les pieds, deux attaquants lancés à dix mètres, et le virage siffle déjà.",
+        options: [
+          {
+            id: "clear",
+            label: "Tout envoyer devant sans discuter",
+            hint: "Sûr",
+            base: 0.78,
+            repWin: 0,
+            failText: "Le dégagement part trop plat et revient aussitôt dans l'axe : le but tombe sur la deuxième vague, à trente mètres de vous. Vos anciens partenaires savourent, et il ne vous reste qu'à aller chercher le ballon au fond de vos filets."
+          },
+          {
+            id: "wide",
+            label: "Chercher le latéral d'une passe tendue",
+            hint: "Propre",
+            base: 0.6,
+            repWin: 2
+          },
+          {
+            id: "chip",
+            label: "Lober le pressing d'une louche vers le milieu",
+            hint: "Audacieux",
+            base: 0.5,
+            repWin: 5,
+            repFail: -3,
+            winText: "La louche passe au-dessus de cinq maillots et retombe pile dans la course du milieu. {club} repart à quatre contre trois, et le pressing d'en face ne remontera plus jamais aussi haut de la soirée."
+          },
+          {
+            id: "dribble",
+            label: "Éliminer le premier attaquant d'un crochet",
+            hint: "Culot",
+            base: 0.42,
+            repWin: 8,
+            repFail: -5,
+            traitWin: "showman",
+            winText: "Le crochet passe à dix centimètres du tacle et tout le stade retient son souffle. Vous servez le milieu dans la foulée, {club} repart lancé dans le dos du bloc, et sur le banc d'en face on n'en revient pas d'avoir été pris à son propre jeu."
+          }
+        ],
+        winText: "Le ballon ressort de la zone de danger et le piège se referme sur du vide. {club} respire, remonte son bloc de vingt mètres, et le pressing d'en face n'aura plus jamais la même conviction de la soirée.",
+        failText: "Le ballon est perdu aux abords de votre surface et le but tombe dans la foulée. Vos anciens partenaires savourent : ils vous ont piégé avec votre propre mode d'emploi, et il ne vous reste qu'à aller chercher le ballon au fond de vos filets."
+      },
+      {
+        title: "RETROUVAILLES",
+        text: "90e+4, {club} mène d'un but. Dernier corner pour votre ancien club, et son gardien remonte dans votre surface : c'est le gamin que vous avez formé là-bas, celui qui a hérité de votre place et de votre numéro. Le ballon part vers le premier poteau, et les six mètres deviennent un champ de bataille.",
+        options: [
+          {
+            id: "line",
+            label: "Rester sur votre ligne et assurer le rebond",
+            hint: "Sage",
+            base: 0.72,
+            repWin: 1,
+            failText: "Vous restez cloué sur votre ligne pendant que la mêlée décide à votre place : le ballon rebondit devant vos pieds et votre ancien protégé le pousse au fond du bout du pied. Vous n'avez pas bougé d'un mètre, et c'est exactement ce qu'on vous reprochera pendant des semaines."
+          },
+          {
+            id: "punch",
+            label: "Sortir au poing et dégager la surface à la voix",
+            hint: "Autorité",
+            base: 0.6,
+            repWin: 3,
+            repFail: -2,
+            traitWin: "leader"
+          },
+          {
+            id: "hold",
+            label: "Monter au-dessus de votre ancien protégé pour capter",
+            hint: "Duel",
+            base: 0.5,
+            repWin: 6,
+            repFail: -3,
+            traitWin: "clutch"
+          },
+          {
+            id: "counter",
+            label: "Capter et lancer le contre, la cage d'en face est vide",
+            hint: "Panache",
+            base: 0.38,
+            repWin: 11,
+            repFail: -6,
+            traitWin: "showman",
+            winText: "Vous captez et vous lancez l'ailier dans la seconde. Cinquante mètres plus loin, il pousse le ballon dans une cage abandonnée : {club} enfonce le clou au bout du temps additionnel, et votre ancien protégé n'a même pas eu le temps de faire demi-tour."
+          }
+        ],
+        winText: "Le danger est écarté et l'arbitre siffle dans la foulée. {club} tient sa victoire, et votre ancien protégé vient serrer vos gants avant même de quitter la surface : ce soir, l'élève a appris quelque chose de plus.",
+        failText: "Le ballon vous échappe d'un rien et finit au fond dans la mêlée : votre ancien protégé, buteur au bout du temps additionnel, court vers son virage en fusion. Vous restez à genoux dans vos six mètres, longtemps après le coup de sifflet final."
+      }
+    ],
   },
   continental_final: {
     field: [{
@@ -342,7 +879,94 @@ const KEY_MOMENTS = {
       ],
       winText: "REPOUSSÉ ! Vous offrez le sacre continental à {club} d'une claire-voie légendaire : le héros du continent, c'est vous !",
       failText: "Le ballon file au ras du poteau… Le trophée échappe à {club} d'un souffle. La nuit sera longue.",
-    }],
+    },
+      {
+        title: "FINALE CONTINENTALE",
+        text: "84e minute, {club} mène 1-0 en finale continentale. Vous repoussez une première frappe à bout portant, et le ballon reste là, vivant, à trois mètres de votre ligne, au milieu de six paires de jambes. Personne ne sait où il va rebondir.",
+        options: [
+          {
+            id: "smother",
+            label: "Se jeter dessus et l'étouffer sous vous",
+            hint: "Instinct",
+            base: 0.68,
+            repWin: 2
+          },
+          {
+            id: "clear",
+            label: "Le repousser du pied, n'importe où",
+            hint: "Panique utile",
+            base: 0.74,
+            repWin: 1,
+            failText: "Le dégagement part sur un attaquant à l'entrée de la surface, qui remet dedans avant que vous soyez relevé. L'égalisation tombe, puis le second : le trophée continental repart dans leurs bagages."
+          },
+          {
+            id: "freeze",
+            label: "Rester debout et couvrir la trajectoire",
+            hint: "Sang-froid",
+            base: 0.56,
+            repWin: 5,
+            repFail: -3,
+            traitWin: "clutch"
+          },
+          {
+            id: "grab",
+            label: "Le cueillir à une main dans la forêt de crampons",
+            hint: "Folie",
+            base: 0.4,
+            repWin: 9,
+            repFail: -6,
+            traitWin: "showman",
+            winText: "Vos doigts se referment dessus au ras du sol, sous trois semelles. L'arbitre siffle la faute, le stade souffle, et plus rien ne passera : {club} soulève la coupe continentale.",
+            failText: "Une semelle arrive avant vos doigts et le ballon file au fond. {club} ne s'en remet pas : la coupe continentale se joue sans vous jusqu'au coup de sifflet, et se perd."
+          }
+        ],
+        winText: "Le ballon meurt enfin dans vos gants, et cette mêlée aura été la dernière alerte de la finale. {club} tient son trophée continental.",
+        failText: "Le ballon franchit la ligne dans la confusion la plus totale. {club} ne reviendra jamais : la coupe continentale leur échappe, à six minutes du sacre."
+      },
+      {
+        title: "FINALE CONTINENTALE",
+        text: "84e minute, 1-1 en finale continentale. Un ballon perdu au milieu, et leur attaquant avale déjà trente mètres dans le dos de tout le monde. Personne ne reviendra sur lui : entre son ballon et le trophée, il n'y a plus que vous, et deux secondes pour décider.",
+        options: [
+          {
+            id: "angle",
+            label: "Reculer en fermant l'angle",
+            hint: "Métier",
+            base: 0.64,
+            repWin: 1
+          },
+          {
+            id: "smother",
+            label: "Sortir dans ses pieds",
+            hint: "Instinct",
+            base: 0.56,
+            repWin: 3,
+            repFail: -2
+          },
+          {
+            id: "trap",
+            label: "Lui ouvrir un côté et plonger dessus",
+            hint: "Piège",
+            base: 0.46,
+            repWin: 6,
+            repFail: -3,
+            traitWin: "clutch"
+          },
+          {
+            id: "sweep",
+            label: "Sortir de la surface et couper sa course",
+            hint: "Va-tout",
+            base: 0.38,
+            repWin: 8,
+            repFail: -5,
+            traitWin: "showman",
+            winText: "Le ballon file en touche à vingt-cinq mètres de votre but et le stade met une seconde entière à comprendre ce qu'il vient de voir. La finale reste entière : {club} la gagnera plus tard dans la nuit, et votre sortie tournera en boucle jusqu'à l'été.",
+            failText: "Il vous efface d'un crochet à vingt-cinq mètres et n'a plus qu'à pousser le ballon dans le but vide. 1-2, {club} ne reviendra pas, et l'on ne retiendra de votre finale que cette course de trop."
+          }
+        ],
+        winText: "L'action meurt devant vous, et la finale reste entière. {club} finira par faire sauter le verrou avant la fin de la nuit et soulèvera la coupe continentale — mais c'est cette seconde-là que le continent rejouera en boucle.",
+        failText: "Le ballon finit au fond de vos filets. 1-2 à six minutes de la fin, {club} jette ses dernières forces sans jamais retrouver le chemin du but : la coupe continentale s'envole sur une seule course."
+      }
+    ],
   },
   // Barrage de MAINTIEN : la relégation ne tombe plus en silence, elle se joue.
   // Gagner = le club se sauve ; perdre = descente. Même structure que le barrage
@@ -418,7 +1042,8 @@ const KEY_MOMENTS = {
       winText: "LE BUT DE LA MONTÉE ! Des larmes partout, des abonnés à vie : {club} change de division grâce à vous !",
       failText: "Le gardien gagne son duel… et le barrage se perd dans la foulée. Toute une ville rentre en silence.",
     }],
-    mil: {
+    mil: [
+      {
       title: "BARRAGE DE MONTÉE",
       text: "Barrage décisif, 87e, 1-1. Le match est haché, le stade au bord de l'implosion — et le ballon revient toujours vers vous.",
       options: [
@@ -430,7 +1055,92 @@ const KEY_MOMENTS = {
       winText: "C'est vous qui débloquez le barrage ! {club} MONTE, guidé par son métronome !",
       failText: "Le verrou ne saute jamais… et le barrage se perd aux tirs au but. Si près, si loin.",
     },
-    def: {
+      {
+        title: "BARRAGE DE MONTÉE",
+        text: "Mi-temps du barrage, 0-0, et un vestiaire où plus personne n'ose parler. Leur meneur a touché deux fois plus de ballons que n'importe qui, {club} n'a jamais conservé le ballon plus de dix secondes d'affilée, et l'entraîneur pose la question à voix haute : qu'est-ce qu'on change pour la seconde période ?",
+        options: [
+          {
+            id: "mark",
+            label: "Vous proposer pour le prendre en individuelle",
+            hint: "Sacrifice",
+            base: 0.66,
+            repWin: 2
+          },
+          {
+            id: "deep",
+            label: "Reculer d'un cran, verrouiller l'axe et jouer le contre",
+            hint: "Calculateur",
+            base: 0.56,
+            repWin: 4,
+            repFail: -2
+          },
+          {
+            id: "press",
+            label: "Imposer un pressing haut de tout le milieu, quitte à s'épuiser",
+            hint: "Ambitieux",
+            base: 0.46,
+            repWin: 7,
+            repFail: -3,
+            failText: "Le pressing tient vingt minutes, puis les jambes lâchent. Les espaces s'ouvrent partout, et {club} laisse filer le barrage dans le dernier quart d'heure."
+          },
+          {
+            id: "lead",
+            label: "Demander le brassard du jeu et prendre la direction du milieu",
+            hint: "Patron",
+            base: 0.38,
+            repWin: 10,
+            repFail: -5,
+            traitWin: "leader",
+            winText: "Tout passe par vous pendant quarante-cinq minutes, jusqu'à ce qu'ils finissent par courir après le ballon : {club} déroule et MONTE."
+          }
+        ],
+        winText: "La seconde période n'a plus rien à voir : leur meneur sort du match, {club} passe devant et ne recule plus jusqu'au coup de sifflet. La montée est au bout.",
+        failText: "Rien ne change. Il continue de servir tout le monde, {club} recule mètre après mètre, et le barrage s'achève sans que vous ayez jamais eu la main sur ce match."
+      },
+      {
+        title: "BARRAGE DE MONTÉE",
+        text: "Le barrage est mal engagé : 0-1 à l'heure de jeu, et les tribunes commencent à siffler leurs propres joueurs. Trente minutes pour renverser une saison entière, dans un entrejeu où {club} perd tous les duels.",
+        options: [
+          {
+            id: "simple",
+            label: "Sécuriser chaque ballon et refaire circuler proprement",
+            hint: "Sage",
+            base: 0.7,
+            repWin: 1
+          },
+          {
+            id: "tempo",
+            label: "Accélérer chaque ballon, une touche, toujours vers l'avant",
+            hint: "Rythme",
+            base: 0.56,
+            repWin: 4,
+            repFail: -2
+          },
+          {
+            id: "box",
+            label: "Attaquer la surface à chaque occasion, quitte à déserter l'entrejeu",
+            hint: "Risqué",
+            base: 0.44,
+            repWin: 7,
+            repFail: -4,
+            failText: "Vous êtes dans leur surface au moment où le contre part de la vôtre : le 0-2 tombe, et le barrage est plié bien avant la fin."
+          },
+          {
+            id: "show",
+            label: "Défier leur défense en un-contre-un dès que vous touchez le ballon",
+            hint: "Folie",
+            base: 0.36,
+            repWin: 10,
+            repFail: -6,
+            traitWin: "showman"
+          }
+        ],
+        winText: "Le stade se rallume en dix minutes, le bloc adverse recule, puis craque : {club} renverse le barrage et MONTE.",
+        failText: "Rien ne prend jamais. Le match s'éteint, les sifflets reviennent, et {club} quitte le barrage condamné à une saison de plus dans la même division."
+      }
+    ],
+    def: [
+      {
       title: "BARRAGE DE MONTÉE",
       text: "Barrage décisif, {club} mène 1-0 à la 89e. Leur avant-centre déborde votre côté, dernier duel avant la délivrance.",
       options: [
@@ -442,7 +1152,95 @@ const KEY_MOMENTS = {
       winText: "TENU ! Le duel est gagné, le coup de sifflet libère tout un peuple : {club} MONTE sur votre intervention !",
       failText: "Le duel est perdu, l'égalisation tombe… et la montée s'évapore dans la nuit. Le vestiaire est un cimetière.",
     },
-    gk: {
+      {
+        title: "BARRAGE DE MONTÉE",
+        text: "94e minute du barrage, 0-0. Dernier corner pour {club}, et même votre gardien traverse le terrain pour venir grossir la mêlée dans la surface. Vous êtes le plus grand du groupe : tout le stade cherche votre numéro des yeux.",
+        options: [
+          {
+            id: "stay",
+            label: "Rester au point de repli pour couvrir le contre",
+            hint: "Discipline",
+            base: 0.68,
+            repWin: 2,
+            repFail: -2,
+            winText: "Le corner est repoussé et leur contre part à toute vitesse, droit sur le seul homme resté en arrière. Vous coupez tout, et {club} force la décision dans les prolongations : la montée est là.",
+            failText: "Le contre file quand même dans votre dos, plein axe, et personne ne revient. {club} tombe à la dernière seconde de son barrage, sans même avoir droit aux prolongations."
+          },
+          {
+            id: "screen",
+            label: "Bloquer leur gardien pour libérer un coéquipier",
+            hint: "Malin",
+            base: 0.56,
+            repWin: 4,
+            repFail: -2,
+            failText: "L'arbitre a tout vu : faute sur le gardien, coup franc pour eux, et le corner ne donne rien. Tout le monde repart pour les prolongations, dont {club} ne sortira pas vainqueur : la montée attendra encore un an."
+          },
+          {
+            id: "far",
+            label: "Surgir au second poteau et croiser la tête",
+            hint: "Instinct",
+            base: 0.44,
+            repWin: 7,
+            repFail: -3,
+            traitWin: "clutch"
+          },
+          {
+            id: "volley",
+            label: "Tenter la reprise acrobatique dans la mêlée",
+            hint: "Folie",
+            base: 0.34,
+            repWin: 12,
+            repFail: -7,
+            traitWin: "showman"
+          }
+        ],
+        winText: "Le ballon finit au fond dans un chaos indescriptible, l'arbitre siffle dans la foulée : {club} MONTE sur le dernier ballon de sa saison !",
+        failText: "Le ballon passe au-dessus de tout le monde et l'arbitre renvoie les vingt-deux pour les prolongations. {club} n'en aura plus les jambes, et la montée s'en va au bout de la nuit."
+      },
+      {
+        title: "BARRAGE DE MONTÉE",
+        text: "Match retour du barrage, à l'extérieur, dans un chaudron où plus personne ne s'entend. Vingtième minute : {club} n'a pas tenu trois passes et la ligne recule sur chaque long ballon. Autour de vous, les plus jeunes ont déjà les jambes lourdes.",
+        options: [
+          {
+            id: "deep",
+            label: "Faire reculer tout le monde et défendre très bas",
+            hint: "Prudent",
+            base: 0.68,
+            repWin: 1
+          },
+          {
+            id: "voice",
+            label: "Replacer chacun à la voix, ballon après ballon",
+            hint: "Patron",
+            base: 0.58,
+            repWin: 4,
+            repFail: -2,
+            traitWin: "leader"
+          },
+          {
+            id: "line",
+            label: "Remonter la ligne de dix mètres et jouer le hors-jeu",
+            hint: "Culotté",
+            base: 0.48,
+            repWin: 6,
+            repFail: -3,
+            failText: "Le piège se referme deux fois, puis s'ouvre en grand : le drapeau reste baissé, leur avant-centre part seul, et {club} court après le score jusqu'au bout de la soirée."
+          },
+          {
+            id: "step",
+            label: "Sortir de la ligne pour agresser leur meneur dès qu'il touche le ballon",
+            hint: "Va-tout",
+            base: 0.38,
+            repWin: 9,
+            repFail: -5
+          }
+        ],
+        winText: "La tempête passe, le chaudron s'éteint peu à peu, et {club} finit par relever la tête : la montée se gagne sur la pelouse adverse.",
+        failText: "La ligne craque à la première vraie accélération, puis une deuxième fois. {club} court après le match toute la soirée, et la montée reste dans l'autre camp."
+      }
+    ],
+    gk: [
+      {
       title: "BARRAGE DE MONTÉE",
       text: "Tirs au but du barrage décisif. Un arrêt et {club} monte. Le tireur adverse pose son ballon, le stade retient son souffle derrière vos gants.",
       options: [
@@ -454,6 +1252,90 @@ const KEY_MOMENTS = {
       winText: "L'ARRÊT DE LA MONTÉE ! Vous voilà héros éternel de {club} : la ville entière connaîtra vos gants par cœur !",
       failText: "Le tir vous transperce. Le silence du stade dit tout : la montée s'échappe au pire moment.",
     },
+      {
+        title: "BARRAGE DE MONTÉE",
+        text: "Barrage décisif, 74e minute, 1-1. Un ballon passe par-dessus votre défense et leur avant-centre part au duel, plein axe. Vous êtes avancé de quelques mètres devant votre ligne, seul face à cette course, et le stade entier se lève d'un bloc.",
+        options: [
+          {
+            id: "back",
+            label: "Reculer vite et défendre votre ligne",
+            hint: "Sûr",
+            base: 0.66,
+            repWin: 1
+          },
+          {
+            id: "angle",
+            label: "Avancer pas à pas pour réduire l'angle",
+            hint: "Métier",
+            base: 0.56,
+            repWin: 4,
+            repFail: -2
+          },
+          {
+            id: "feet",
+            label: "Plonger dans ses pieds à l'entrée de la surface",
+            hint: "Courage",
+            base: 0.46,
+            repWin: 7,
+            repFail: -4,
+            traitWin: "clutch"
+          },
+          {
+            id: "out",
+            label: "Sortir hors de votre surface pour le devancer de la tête",
+            hint: "Folie",
+            base: 0.36,
+            repWin: 10,
+            repFail: -6,
+            failText: "Il vous devance à vingt-cinq mètres de vos buts et pousse le ballon dans la cage vide sans même presser le pas. {club} ne s'en relèvera pas, et la montée part avec cette image."
+          }
+        ],
+        winText: "Le danger est écarté d'un souffle, le stade repart de plus belle, et {club} passe devant dans la foulée pour décrocher la montée.",
+        failText: "Il gagne son duel et le ballon finit au fond. {club} pousse jusqu'au bout sans jamais y revenir : la montée s'envole sur une seule action."
+      },
+      {
+        title: "BARRAGE DE MONTÉE",
+        text: "Cinq minutes à tenir : {club} mène 1-0 et ce but vaut la montée. En face, tout part dans votre surface — longues touches, centres à répétition, leur défenseur central monté en pointe. Le vieux stade tremble à chaque ballon.",
+        options: [
+          {
+            id: "line",
+            label: "Rester sur votre ligne et laisser vos défenseurs dégager",
+            hint: "Prudent",
+            base: 0.66,
+            repWin: 1
+          },
+          {
+            id: "time",
+            label: "Garder le ballon quelques secondes de trop à chaque prise",
+            hint: "Cynique",
+            base: 0.6,
+            repWin: 2,
+            repFail: -3,
+            failText: "L'arbitre en a assez : jaune pour antijeu, et trois minutes de plus affichées au tableau. {club} craque dans ce temps volé, et regarde l'autre monter à sa place."
+          },
+          {
+            id: "press",
+            label: "Diriger le marquage à la voix et coller un homme sur leur géant",
+            hint: "Patron",
+            base: 0.52,
+            repWin: 5,
+            repFail: -3,
+            traitWin: "leader"
+          },
+          {
+            id: "claim",
+            label: "Sortir loin dans la mêlée pour capter chaque centre",
+            hint: "Autorité",
+            base: 0.44,
+            repWin: 8,
+            repFail: -5,
+            traitWin: "clutch"
+          }
+        ],
+        winText: "Le déluge passe au-dessus de vous sans jamais rentrer. Au coup de sifflet final, c'est le gardien que l'on porte en triomphe : {club} MONTE.",
+        failText: "Un centre de trop, une main qui tremble : l'égalisation tombe dans les arrêts de jeu, et {club} s'écroule dans les prolongations qui suivent. C'est l'autre qui monte."
+      }
+    ],
   },
 };
 
