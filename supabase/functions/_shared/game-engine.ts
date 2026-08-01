@@ -40,25 +40,46 @@ export async function getEngine(version?: string): Promise<any> {
   // no-store : sans ça un CDN intermédiaire peut servir un data.js périmé bien
   // après le déploiement, et le serveur note avec un moteur que plus personne n'a.
   const opts: RequestInit = { cache: "no-store" };
-  const [dataSrc, engineSrc] = await Promise.all([
-    fetch(`${base}/data.js${q}`, opts).then((r) => {
-      if (!r.ok) throw new Error(`data.js${q} → HTTP ${r.status}`);
-      return r.text();
-    }),
-    fetch(`${base}/engine.js${q}`, opts).then((r) => {
-      if (!r.ok) throw new Error(`engine.js${q} → HTTP ${r.status}`);
-      return r.text();
-    }),
+
+  // ⚠️ data.js a été découpé : les gros catalogues (clubs, moments décisifs,
+  // événements) vivent dans des fichiers à part. Ils DOIVENT être évalués AVANT
+  // lui — son bloc d'export les recense, et sa cale `require()` ne s'active
+  // qu'en Node, jamais ici : sans ce chargement, l'export lève un ReferenceError
+  // et plus aucun score n'est validé.
+  const requis = async (f: string) => {
+    const r = await fetch(`${base}/${f}${q}`, opts);
+    if (!r.ok) throw new Error(`${f}${q} → HTTP ${r.status}`);
+    return r.text();
+  };
+  // Tolérants au 404 : un déploiement ANTÉRIEUR au découpage n'a qu'un data.js
+  // monolithique. Le serveur doit continuer de le rejouer sans broncher, sinon
+  // redéployer la fonction et le site dans le mauvais ordre casse la validation.
+  const facultatif = async (f: string) => {
+    try {
+      const r = await fetch(`${base}/${f}${q}`, opts);
+      return r.ok ? await r.text() : "";
+    } catch { return ""; }
+  };
+  const [clubsSrc, momentsSrc, eventsSrc, dataSrc, engineSrc] = await Promise.all([
+    facultatif("data-clubs.js"), facultatif("data-moments.js"), facultatif("data-events.js"),
+    requis("data.js"), requis("engine.js"),
   ]);
 
   const g: any = globalThis;
-  // data.js : son bloc d'export s'active quand `module` existe → pose les données
-  // sur `global` (= globalThis ici) : NATIONALITIES, LEVELS, BALANCE, etc.
-  const dataMod: any = { exports: {} };
-  new Function("global", "module", "exports", "window", dataSrc)(g, dataMod, dataMod.exports, undefined);
+  // Chaque fichier reçoit un `module` : son bloc d'export s'active et pose les
+  // données sur `global` (= globalThis ici) — NATIONALITIES, LEVELS, BALANCE…
+  const evaluer = (src: string) => {
+    if (!src) return { exports: {} } as any;
+    const m: any = { exports: {} };
+    new Function("global", "module", "exports", "window", src)(g, m, m.exports, undefined);
+    return m;
+  };
+  evaluer(clubsSrc);
+  evaluer(momentsSrc);
+  evaluer(eventsSrc);
+  evaluer(dataSrc);
   // engine.js : IIFE qui lit ces globals et pose module.exports = Engine.
-  const engMod: any = { exports: {} };
-  new Function("global", "module", "exports", "window", engineSrc)(g, engMod, engMod.exports, undefined);
+  const engMod = evaluer(engineSrc);
   if (!engMod.exports || typeof engMod.exports.scoreDaily !== "function" || typeof engMod.exports.scoreDuel !== "function") {
     throw new Error("Moteur chargé sans scoreDaily/scoreDuel — version déployée trop ancienne ?");
   }
