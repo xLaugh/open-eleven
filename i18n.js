@@ -180,6 +180,114 @@
 
     // Sélecteur de langue
     "Langue": "Language",
+
+    // Écrans dynamiques rendus par game.js
+    "Nouvelle carrière": "New career",
+    "En commencer une nouvelle effacera définitivement votre carrière actuelle. Vous pouvez la reprendre depuis l'accueil.": "Starting a new one will permanently erase your current career. You can resume it from the home screen.",
+    "Votre décision est prise : reste à choisir la destination.": "Your mind is made up: now to choose the destination.",
+    "Mais aucune offre concrète n'arrive sur la table.": "But no concrete offer lands on the table.",
+    "📅 Masquer le détail des saisons": "📅 Hide the season-by-season detail",
+    "Résultat ▶": "Result ▶",
+    "Défaite": "Defeat",
+    "16es de finale": "Round of 32",
+    "8es de finale": "Round of 16",
+    "Quart de finale": "Quarter-final",
+    "C'EST QUI ?": "WHO IS IT?",
+    "le défi": "the challenge",
+    "Quête accomplie": "Quest completed",
+    "Quêtes accomplies": "Quests completed",
+    "20 quêtes accomplies": "20 quests completed",
+    "Série de 365 jours": "365-day streak",
+    "· ✨ meilleur score du jour": "· ✨ best score of the day",
+    "· 👑 légende battue": "· 👑 legend beaten",
+    " · 👑 légende battue": " · 👑 legend beaten",
+    "légende de la communauté": "community legend",
+    "légende de votre Panthéon": "legend from your Hall of Fame",
+    "Une blessure sévère, diagnostiquée trop tard, met un terme brutal à votre carrière naissante.": "A severe injury, diagnosed too late, brings a brutal end to your fledgling career.",
+    "En pleine force de l'âge, le verdict médical est sans appel : vous ne rejouerez plus au haut niveau. Une carrière fauchée en plein vol.": "In your prime, the medical verdict is final: you will never play at the top level again. A career cut down in full flight.",
+    "Le diagnostic est tombé, implacable : votre carrière s'arrête avant d'avoir vraiment éclos. Le sport est parfois d'une cruauté inouïe.": "The diagnosis is in, and it is merciless: your career ends before it ever truly blossomed. Sport can be unspeakably cruel.",
+    "🆚 Je te défie sur Open Eleven — même profil, mêmes épreuves. Fais mieux que moi !": "🆚 I challenge you on Open Eleven — same profile, same trials. Do better than me!",
+
+    // Gabarits paramétrés (T) — les {marqueurs} doivent être repris tels quels
+    "{flag} Sélections": "{flag} Caps",
+    "{icon} {cont} — le pays qui vous verra grandir.": "{icon} {cont} — the country that will watch you grow up.",
+    "{flag} {nat} — vos origines peuvent vous ouvrir une seconde sélection. Vous trancherez en carrière, avant votre première convocation.": "{flag} {nat} — your roots may open a second national team to you. You will decide during your career, before your first call-up.",
+    "{nat} — écrivez votre nom, ou laissez le hasard décider.": "{nat} — write your name, or let chance decide.",
+    "Les recruteurs ont observé votre profil.<br/>Potentiel estimé : {stars}": "Scouts have been watching you.<br/>Estimated potential: {stars}",
+    "prêt d'une saison": "one-season loan",
+
+    "{pos}ᵉ — 🚀 montée arrachée en barrage !": "{pos}th — 🚀 promotion snatched in the play-offs!",
+    "{pos}ᵉ — barrage de montée perdu": "{pos}th — promotion play-off lost",
+    "{pos}ᵉ — 🛟 maintien arraché en barrage": "{pos}th — 🛟 survival snatched in the play-off",
+    "{pos}ᵉ — 📉 RELÉGATION": "{pos}th — 📉 RELEGATED",
+    "🛒 Une recrue de renom débarque à votre poste : vous voilà <strong>{role}</strong>.": "🛒 A big-name signing arrives in your position: you are now <strong>{role}</strong>.",
+    "📈 Le coach vous promeut : nouveau statut <strong>{role}</strong>.": "📈 The manager promotes you: new status <strong>{role}</strong>.",
+    "📉 Vous perdez du galon : statut <strong>{role}</strong>.": "📉 You lose your standing: status <strong>{role}</strong>.",
+    " · ⚽ vous : {n}": " · ⚽ you: {n}",
+    " · ⚽ vous : {n} but": " · ⚽ you: {n} goal",
+    " · ⚽ vous : {n} buts": " · ⚽ you: {n} goals",
+
+    "{icon} Défi de la semaine : {name}": "{icon} Challenge of the week: {name}",
+    "{icon} Défi légendaire : {name}": "{icon} Legendary challenge: {name}",
+    "🧊 Joker consommé : un jour manqué, série sauvée ({n} en réserve)": "🧊 Joker used: a day missed, streak saved ({n} left)",
+    "🧊 7 jours de plus : +1 joker de série ({n}/2 en réserve)": "🧊 7 more days: +1 streak joker ({n}/2 in reserve)",
+    "🔥 Palier de série {days} jours : +{jetons} 🪙 !": "🔥 {days}-day streak milestone: +{jetons} 🪙!",
+    "Série de <strong>{n} jour</strong> en cours 🔥": "<strong>{n}-day</strong> streak running 🔥",
+    "Série de <strong>{n} jours</strong> en cours 🔥": "<strong>{n}-day</strong> streak running 🔥",
+    "Série de {days} jours (+{jetons} 🪙)": "{days}-day streak (+{jetons} 🪙)",
+    "Série de {n} jours": "{n}-day streak",
+    " · 🔥 série de {n} jours": " · 🔥 {n}-day streak",
+
+    "🗓️ <strong>Défi du jour</strong> — {profile}": "🗓️ <strong>Daily Challenge</strong> — {profile}",
+    "Votre record : {n} pts": "Your best: {n} pts",
+    "🗓️ Défi du jour — {n} pts": "🗓️ Daily Challenge — {n} pts",
+    "🗓️ Défi du {date} — {n} pts (défi expiré : hors classement du jour, série intacte)": "🗓️ Challenge of {date} — {n} pts (expired: outside today's ranking, streak intact)",
+    "Débloquer (🪙 {n} jetons)": "Unlock (🪙 {n} tokens)",
+
+    "Duel au sommet : {a} et {b} se tiennent dans un mouchoir ({sa} – {sb}).": "A duel at the top: {a} and {b} are neck and neck ({sa} – {sb}).",
+    "{win} l'emporte sur {lose} ({a} – {b}).": "{win} comes out on top of {lose} ({a} – {b}).",
+    "🆚 <strong>Tu crées un défi</strong>{cible} — {profile}": "🆚 <strong>You are creating a duel</strong>{cible} — {profile}",
+    "🆚 <strong>Défi de {who}</strong> — {profile}": "🆚 <strong>Duel from {who}</strong> — {profile}",
+    "✅ Défi envoyé à {who}": "✅ Duel sent to {who}",
+    "↩️ Renvoyer à {who}": "↩️ Send back to {who}",
+
+    "Débloqué avec {name} ({flag} {pos}, carrière {from}-{to})": "Unlocked with {name} ({flag} {pos}, career {from}-{to})",
+    "Nouveau badge débloqué : {names}": "New badge unlocked: {names}",
+    "{done}/{total} badges · {n} carrière jouée": "{done}/{total} badges · {n} career played",
+    "{done}/{total} badges · {n} carrières jouées": "{done}/{total} badges · {n} careers played",
+
+    "Retraite à {age} ans": "Retired at {age}",
+    "Carrière écourtée à {age} ans": "Career cut short at {age}",
+    "🌍 Meilleure carrière que {p} % des destins simulés": "🌍 A better career than {p}% of simulated destinies",
+    "🪙 +{n} jeton pour la boutique": "🪙 +{n} token for the shop",
+    "🪙 +{n} jetons pour la boutique": "🪙 +{n} tokens for the shop",
+    "👑 {n} pts — vous avez fait MIEUX que la légende ({base} pts) !": "👑 {n} pts — you did BETTER than the legend ({base} pts)!",
+    "{icon} {n} pts — la légende reste devant ({base} pts). Réécrivez l'histoire.": "{icon} {n} pts — the legend stays ahead ({base} pts). Rewrite history.",
+
+    "Potentiel estimé : {stars} · Contrat : {salary}/an{left}": "Estimated potential: {stars} · Contract: {salary}/yr{left}",
+    ", {n} an restant": ", {n} year left",
+    ", {n} ans restants": ", {n} years left",
+    " (dernière année)": " (final year)",
+    "<br/>🧬 <strong>{name}</strong> — {effect}": "<br/>🧬 <strong>{name}</strong> — {effect}",
+    " · {flag} {n} sélection": " · {flag} {n} cap",
+    " · {flag} {n} sélections": " · {flag} {n} caps",
+    ", {g} but": ", {g} goal",
+    ", {g} buts": ", {g} goals",
+    "🎽 Sélections jeunes{tiers}": "🎽 Youth caps{tiers}",
+    "{n}× Coupe du Monde": "{n}× World Cup",
+    "{n}× Coupe des Champions": "{n}× Champions Cup",
+    "▶️ Reprendre {what}— {name}, {age} ans{club}": "▶️ Resume {what}— {name}, {age}{club}",
+    "le défi ": "the challenge ",
+    "l'histoire ": "the story ",
+    "{n} carrière vécue · record : {best} pts": "{n} career played · best: {best} pts",
+    "{n} carrières vécues · record : {best} pts": "{n} careers played · best: {best} pts",
+    "{n}× Champion": "{n}× League title",
+    "{n} clean sheets": "{n} clean sheets",
+    "{n} buts": "{n} goals",
+    "⚽ {name}, {pos} — « {title} » (note de carrière {rating}, {perf}).": "⚽ {name}, {pos} — “{title}” (career rating {rating}, {perf}).",
+    " Palmarès : {list}.": " Honours: {list}.",
+    " Écris ta légende sur {game} !": " Write your own legend on {game}!",
+    "Aucune série en cours — lancez-vous !": "No streak running — get started!",
   };
 
   const DICT = { en: EN };
@@ -191,15 +299,25 @@
     if (SUPPORTED.includes(saved)) lang = saved;
   } catch (e) { /* stockage indisponible : on reste en français */ }
 
-  function translate(str) {
-    if (lang === "fr") return str;
-    const table = DICT[lang];
-    if (!table) return str;
-    const key = str.trim();
-    const hit = table[key];
-    if (hit === undefined) return str; // pas de traduction → français conservé
-    // On restitue les espaces/retours à la ligne qui entouraient le texte
-    return str.replace(key, hit);
+  // `vars` : valeurs à injecter dans les marqueurs {…} du gabarit. Elles sont
+  // substituées DANS LES DEUX LANGUES — un gabarit non traduit reste donc
+  // parfaitement lisible en français.
+  function translate(str, vars) {
+    let out = str;
+    if (lang !== "fr") {
+      const table = DICT[lang];
+      const key = str.trim();
+      const hit = table && table[key];
+      // On restitue les espaces/retours à la ligne qui entouraient le texte
+      if (hit !== undefined) out = str.replace(key, hit);
+    }
+    if (vars) {
+      for (const k in vars) {
+        const v = vars[k] == null ? "" : String(vars[k]);
+        out = out.split("{" + k + "}").join(v);
+      }
+    }
+    return out;
   }
 
   /* --- Traduction du CONTENU du jeu (data.js) --------------------------------
@@ -260,6 +378,9 @@
       typeof COUNTRIES !== "undefined" ? COUNTRIES : null,
       typeof NATIONALITIES !== "undefined" ? NATIONALITIES : null,
       typeof STREAK_MILESTONES !== "undefined" ? STREAK_MILESTONES : null,
+      // BALANCE est surtout numérique, mais porte les libellés de blessure
+      // (BALANCE.injury.labels), affichés dans l'historique de carrière.
+      typeof BALANCE !== "undefined" ? BALANCE : null,
     ].filter(Boolean);
   }
 
@@ -277,7 +398,20 @@
         const hit = table[v.trim()];
         if (hit !== undefined) { node[k] = hit; dataStats.done++; }
         else if (/[A-Za-zÀ-ÿ]{3,}/.test(v)) dataStats.missing++;
-      } else if (v && typeof v === "object") translateDataNode(v, table, seen);
+      } else if (v && typeof v === "object") {
+        // Une table nommée « labels » est une table de LIBELLÉS : ses clés sont
+        // des identifiants techniques (knock, severe…) et toutes ses valeurs
+        // sont affichées au joueur. Ex. BALANCE.injury.labels.
+        if (k === "labels" && !Array.isArray(v)) {
+          for (const lk of Object.keys(v)) {
+            const lv = v[lk];
+            if (typeof lv !== "string" || lv.length < 2) continue;
+            const hit = table[lv.trim()];
+            if (hit !== undefined) { v[lk] = hit; dataStats.done++; }
+            else if (/[A-Za-zÀ-ÿ]{3,}/.test(lv)) dataStats.missing++;
+          }
+        } else translateDataNode(v, table, seen);
+      }
     }
   }
 
@@ -287,6 +421,19 @@
     if (!table) return; // pack absent → le contenu reste en français
     const seen = new WeakSet();
     for (const struct of dataStructures()) translateDataNode(struct, table, seen);
+
+    // ENGINE_TEXT est une table plate dont les PROPRIÉTÉS sont des
+    // identifiants (natSwitch, captain…), pas des clés de texte : le parcours
+    // générique ci-dessus l'ignorerait. On traduit donc toutes ses valeurs.
+    if (typeof ENGINE_TEXT !== "undefined" && ENGINE_TEXT) {
+      for (const k of Object.keys(ENGINE_TEXT)) {
+        const v = ENGINE_TEXT[k];
+        if (typeof v !== "string") continue;
+        const hit = table[v.trim()];
+        if (hit !== undefined) { ENGINE_TEXT[k] = hit; dataStats.done++; }
+        else dataStats.missing++;
+      }
+    }
   }
 
   // --- Traduction du DOM ----------------------------------------------------

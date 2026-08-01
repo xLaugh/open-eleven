@@ -23,6 +23,14 @@
   // --- Helpers DOM ---------------------------------------------------------
   const $ = (id) => document.getElementById(id);
 
+  // Texte d'interface traduisible. Le gabarit FRANÇAIS est la clé : sans
+  // traduction, il s'affiche tel quel. Les {marqueurs} sont remplacés dans les
+  // deux langues, donc le français reste correct même sans i18n.js chargé.
+  //   T("Série de {n} jours", { n: 7 })
+  const T = (tpl, vars) => (window.I18N ? window.I18N.t(tpl, vars) : (vars
+    ? Object.keys(vars).reduce((a, k) => a.split("{" + k + "}").join(vars[k] == null ? "" : String(vars[k])), tpl)
+    : tpl));
+
   function showScreen(id) {
     document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
     $(id).classList.add("active");
@@ -189,7 +197,15 @@
       .map(([label, v]) => `<div class="pbar-row"><span class="pbar-label">${label}</span><div class="pbar"><div class="pbar-fill" style="width:${v}%"></div></div><span class="pbar-val">${v}</span></div>`)
       .join("");
     const stars = E.potStars(G.potCap);
-    $("profile-meta").innerHTML = `Potentiel estimé : <span class="pot-stars">${"★".repeat(stars)}${"☆".repeat(5 - stars)}</span> · Contrat : ${E.fmtMoney(G.contract.salary)}/an${G.contract.years > 0 ? `, ${G.contract.years} an${G.contract.years > 1 ? "s" : ""}` : " (dernière année)"}${G.archetype ? `<br/>🧬 <strong>${esc(G.archetype.name)}</strong> — ${esc(G.archetype.effect || G.archetype.desc)}` : ""}`;
+    const contractLeft = G.contract.years > 0
+      ? T(G.contract.years > 1 ? ", {n} ans restants" : ", {n} an restant", { n: G.contract.years })
+      : T(" (dernière année)");
+    $("profile-meta").innerHTML =
+      T("Potentiel estimé : {stars} · Contrat : {salary}/an{left}", {
+        stars: `<span class="pot-stars">${"★".repeat(stars)}${"☆".repeat(5 - stars)}</span>`,
+        salary: E.fmtMoney(G.contract.salary), left: contractLeft,
+      })
+      + (G.archetype ? T("<br/>🧬 <strong>{name}</strong> — {effect}", { name: esc(G.archetype.name), effect: esc(G.archetype.effect || G.archetype.desc) }) : "");
 
     // Onglet Distinctions : traits débloqués
     $("profile-traits").innerHTML = G.traits.length
@@ -218,7 +234,7 @@
       statRowHtml("Passes décisives", G.totals.assists),
       ...((G.captainMatches || 0) > 0 ? [statRowHtml("©️ Matchs comme capitaine", G.captainMatches)] : []),
       statRowHtml("OVR max", G.peakOvr),
-      statRowHtml(`${flagHtml(G.nationality)} Sélections`, G.natTeam.caps),
+      statRowHtml(T("{flag} Sélections", { flag: flagHtml(G.nationality) }), G.natTeam.caps),
       ...(youthCaps > 0 ? [statRowHtml("🎽 Sélections jeunes", youthCaps)] : []),
       statRowHtml("💰 Gains de carrière", E.fmtMoney(G.money)),
     ].join("");
@@ -295,7 +311,7 @@
     grid.innerHTML = "";
     setNatTitle("Votre nationalité");
     const sub = $("nationality-sub");
-    if (sub) sub.textContent = `${cont.icon} ${cont.name} — le pays qui vous verra grandir.`;
+    if (sub) sub.textContent = T("{icon} {cont} — le pays qui vous verra grandir.", { icon: cont.icon, cont: cont.name });
     const back = document.createElement("button");
     back.className = "nat-card nat-card-back";
     back.innerHTML = `<span class="nat-flag">↩</span><span class="nat-name">Continents</span>`;
@@ -326,7 +342,7 @@
     grid.innerHTML = "";
     setNatTitle("Double nationalité");
     const sub = $("nationality-sub");
-    if (sub) sub.innerHTML = `${flagHtml(nat)} ${esc(nat.name)} — vos origines peuvent vous ouvrir une seconde sélection. Vous trancherez en carrière, avant votre première convocation.`;
+    if (sub) sub.innerHTML = T("{flag} {nat} — vos origines peuvent vous ouvrir une seconde sélection. Vous trancherez en carrière, avant votre première convocation.", { flag: flagHtml(nat), nat: esc(nat.name) });
 
     const none = document.createElement("button");
     none.className = "nat-card dual-none";
@@ -360,7 +376,7 @@
     grid.innerHTML = "";
     setNatTitle("Votre nom");
     const sub = $("nationality-sub");
-    if (sub) sub.textContent = `${esc(nat.name)} — écrivez votre nom, ou laissez le hasard décider.`;
+    if (sub) sub.textContent = T("{nat} — écrivez votre nom, ou laissez le hasard décider.", { nat: nat.name });
     const rnd = randomNameFor(nat.id);
     const form = document.createElement("div");
     form.className = "name-form";
@@ -467,7 +483,7 @@
       setup._academyKey = key;
     }
     const stars = E.potStars(setup.potCap);
-    $("academy-sub").innerHTML = `Les recruteurs ont observé votre profil.<br/>Potentiel estimé : <span class="pot-stars">${"★".repeat(stars)}${"☆".repeat(5 - stars)}</span>`;
+    $("academy-sub").innerHTML = T("Les recruteurs ont observé votre profil.<br/>Potentiel estimé : {stars}", { stars: `<span class="pot-stars">${"★".repeat(stars)}${"☆".repeat(5 - stars)}</span>` });
     const offers = setup._academyOffers;
     const list = $("academy-list");
     list.innerHTML = "";
@@ -722,7 +738,7 @@
   function renderLoanChoice(offers) {
     const buttons = offers.map((offer, i) => {
       const cc = E.countryOf(offer.club.countryId);
-      return `<button class="opt-btn" data-offer="${i}"><span class="opt-hint">${esc(E.divShort(offer.club.level, offer.club.countryId))}</span>${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)} — prêt d'une saison</button>`;
+      return `<button class="opt-btn" data-offer="${i}"><span class="opt-hint">${esc(E.divShort(offer.club.level, offer.club.countryId))}</span>${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)} — ${T("prêt d'une saison")}</button>`;
     }).join("");
     showCard(`
       <div class="card-tag"><span class="card-icon">🔄</span> Prêt · ${G.age} ans</div>
@@ -974,7 +990,7 @@
         showCard(`
           <div class="card-tag"><span class="card-icon">${icon}</span> ${esc(cupName)} · Phase de Ligue</div>
           <div class="natl-table">${rows}</div>
-          <p class="natl-sum">${w} V · ${d} N · ${l} D — <strong>${pts} pts</strong> · ${gf}-${ga}${pg ? ` · ⚽ vous : ${pg}` : ""}</p>
+          <p class="natl-sum">${w} V · ${d} N · ${l} D — <strong>${pts} pts</strong> · ${gf}-${ga}${pg ? T(" · ⚽ vous : {n}", { n: pg }) : ""}</p>
           ${verdict}
           <button class="btn btn-secondary" id="btn-tstep">${last ? "Résultat ▶" : "Final Four ▶"}</button>`,
           step.qualified ? "good" : "bad");
@@ -990,7 +1006,7 @@
             <span class="tm-score ${cls}">${m.sf} – ${m.sa}</span>
             <span class="tm-side">${flagHtml(m.opp)} ${esc(m.opp.name)}</span>
           </div>
-          <p class="tm-result ${cls}">${rtxt}${m.pgoals ? ` · ⚽ vous : ${m.pgoals} but${m.pgoals > 1 ? "s" : ""}` : ""}</p>
+          <p class="tm-result ${cls}">${rtxt}${m.pgoals ? T(m.pgoals > 1 ? " · ⚽ vous : {n} buts" : " · ⚽ vous : {n} but", { n: m.pgoals }) : ""}</p>
           <button class="btn btn-secondary" id="btn-tstep">${last ? "Résultat ▶" : "Match suivant ▶"}</button>`, cls === "tm-win" ? "good" : cls === "tm-loss" ? "bad" : "neutral");
       }
       $("btn-tstep").addEventListener("click", next);
@@ -1120,10 +1136,10 @@
       : "";
     let leagueLine;
     if (report.leaguePos === 1) leagueLine = report.divisionTitle ? `🥇 Champion ${E.deOf(E.divShort(report.level, report.countryId))} !` : "🥇 Champion !";
-    else if (report.promoted) leagueLine = `${report.leaguePos}ᵉ — 🚀 montée arrachée en barrage !`;
-    else if (report.playoffRun) leagueLine = `${report.leaguePos}ᵉ — barrage de montée perdu`;
-    else if (report.survivedPlayoff) leagueLine = `${report.leaguePos}ᵉ — 🛟 maintien arraché en barrage`;
-    else if (report.relegated) leagueLine = `${report.leaguePos}ᵉ — 📉 RELÉGATION`;
+    else if (report.promoted) leagueLine = T("{pos}ᵉ — 🚀 montée arrachée en barrage !", { pos: report.leaguePos });
+    else if (report.playoffRun) leagueLine = T("{pos}ᵉ — barrage de montée perdu", { pos: report.leaguePos });
+    else if (report.survivedPlayoff) leagueLine = T("{pos}ᵉ — 🛟 maintien arraché en barrage", { pos: report.leaguePos });
+    else if (report.relegated) leagueLine = T("{pos}ᵉ — 📉 RELÉGATION", { pos: report.leaguePos });
     else leagueLine = `${report.leaguePos}ᵉ`;
 
     // Changement de statut (rôle) décidé en fin de saison.
@@ -1132,10 +1148,10 @@
       const to = ROLES[report.roleChange.to];
       const up = report.roleChange.to > report.roleChange.from;
       const txt = report.roleChange.reason === "signing"
-        ? `🛒 Une recrue de renom débarque à votre poste : vous voilà <strong>${to.icon} ${esc(to.label)}</strong>.`
+        ? T("🛒 Une recrue de renom débarque à votre poste : vous voilà <strong>{role}</strong>.", { role: `${to.icon} ${esc(to.label)}` })
         : up
-          ? `📈 Le coach vous promeut : nouveau statut <strong>${to.icon} ${esc(to.label)}</strong>.`
-          : `📉 Vous perdez du galon : statut <strong>${to.icon} ${esc(to.label)}</strong>.`;
+          ? T("📈 Le coach vous promeut : nouveau statut <strong>{role}</strong>.", { role: `${to.icon} ${esc(to.label)}` })
+          : T("📉 Vous perdez du galon : statut <strong>{role}</strong>.", { role: `${to.icon} ${esc(to.label)}` });
       roleChangeHtml = `<p class="recap-role ${up ? "up" : "down"}">${txt}</p>`;
     }
 
@@ -1148,7 +1164,7 @@
         <div class="recap-cell"><span class="recap-num">${report.assists}</span><span class="recap-lbl">Passes déc.</span></div>
         <div class="recap-cell"><span class="recap-num">${report.rating.toFixed(1)}</span><span class="recap-lbl">Note</span></div>
       </div>
-      <p class="recap-line">Championnat : <strong>${leagueLine}</strong>${report.caps ? ` · ${flagHtml(G.nationality)} ${report.caps} sélection${report.caps > 1 ? "s" : ""}${report.natGoals ? `, ${report.natGoals} but${report.natGoals > 1 ? "s" : ""}` : ""}` : ""}</p>
+      <p class="recap-line">Championnat : <strong>${leagueLine}</strong>${report.caps ? T(report.caps > 1 ? " · {flag} {n} sélections" : " · {flag} {n} sélection", { flag: flagHtml(G.nationality), n: report.caps }) + (report.natGoals ? T(report.natGoals > 1 ? ", {g} buts" : ", {g} but", { g: report.natGoals }) : "") : ""}</p>
       ${trophyLine ? `<p class="recap-trophies">${trophyLine}</p>` : ""}
       ${report.ballonRank && report.ballonRank > 1 ? `<p class="recap-trophies">⭐ Classement Ballon d'Or : <strong>${report.ballonRank}ᵉ</strong></p>` : ""}
       ${awardsHtml}
@@ -1567,7 +1583,7 @@
       progress.weeklyDone.done = true;
       progress.questTotal += 1;
       gained += weekly.pts || 60;
-      completed.push(`${weekly.icon} Défi de la semaine : ${weekly.name}`);
+      completed.push(T("{icon} Défi de la semaine : {name}", { icon: weekly.icon, name: weekly.name }));
       track("quest_completed", { quest_id: weekly.id, kind: "weekly" });
     }
     const legend = legendQuestFor(week);
@@ -1575,7 +1591,7 @@
       progress.legendDone.done = true;
       progress.questTotal += 1;
       gained += legend.pts || 120;
-      completed.push(`${legend.icon} Défi légendaire : ${legend.name}`);
+      completed.push(T("{icon} Défi légendaire : {name}", { icon: legend.icon, name: legend.name }));
       track("quest_completed", { quest_id: legend.id, kind: "legend" });
     }
     progress.questPoints += gained;
@@ -1594,7 +1610,7 @@
       } else if (progress.lastQuestDate === jKey && progress.streakJokers > 0) {
         progress.streakJokers -= 1;
         progress.questStreak += 1;
-        completed.push(`🧊 Joker consommé : un jour manqué, série sauvée (${progress.streakJokers} en réserve)`);
+        completed.push(T("🧊 Joker consommé : un jour manqué, série sauvée ({n} en réserve)", { n: progress.streakJokers }));
       } else {
         progress.questStreak = 1;
         progress.streakMilestone = 0; // les paliers se ré-arment : tout est à reconstruire
@@ -1603,13 +1619,13 @@
       progress.bestStreak = Math.max(progress.bestStreak, progress.questStreak);
       if (progress.questStreak % 7 === 0 && progress.streakJokers < 2) {
         progress.streakJokers += 1;
-        completed.push(`🧊 7 jours de plus : +1 joker de série (${progress.streakJokers}/2 en réserve)`);
+        completed.push(T("🧊 7 jours de plus : +1 joker de série ({n}/2 en réserve)", { n: progress.streakJokers }));
       }
       for (const ms of STREAK_MILESTONES) {
         if (progress.questStreak >= ms.days && (progress.streakMilestone || 0) < ms.days) {
           progress.streakMilestone = ms.days;
           progress.jetonsFromStreaks += ms.jetons;
-          completed.push(`🔥 Palier de série ${ms.days} jours : +${ms.jetons} 🪙 !`);
+          completed.push(T("🔥 Palier de série {days} jours : +{jetons} 🪙 !", { days: ms.days, jetons: ms.jetons }));
           track("streak_milestone", { days: ms.days, jetons: ms.jetons });
         }
       }
@@ -1634,7 +1650,7 @@
       <div class="hc-body">
         <ul class="hc-lines">
           <li><strong>${doneCount}/${daily.length}</strong> quête${doneCount > 1 ? "s" : ""} accomplie${doneCount > 1 ? "s" : ""} aujourd'hui</li>
-          <li>${streak > 0 ? `Série de <strong>${streak} jour${streak > 1 ? "s" : ""}</strong> en cours 🔥` : "Aucune série en cours — lancez-vous !"}</li>
+          <li>${streak > 0 ? T(streak > 1 ? "Série de <strong>{n} jours</strong> en cours 🔥" : "Série de <strong>{n} jour</strong> en cours 🔥", { n: streak }) : "Aucune série en cours — lancez-vous !"}</li>
         </ul>
         <div class="hc-cta">En voir plus</div>
       </div>`;
@@ -1739,7 +1755,7 @@
     track("daily_started", { date: ch.id });
     const reminder = $("daily-reminder");
     if (reminder) {
-      reminder.innerHTML = `🗓️ <strong>Défi du jour</strong> — ${ch.position.icon} ${esc(ch.position.name)} · ${flagHtml(ch.nationality)} ${esc(ch.nationality.name)} · ${esc(ch.origin.name)}`;
+      reminder.innerHTML = T("🗓️ <strong>Défi du jour</strong> — {profile}", { profile: `${ch.position.icon} ${esc(ch.position.name)} · ${flagHtml(ch.nationality)} ${esc(ch.nationality.name)} · ${esc(ch.origin.name)}` });
       reminder.hidden = false;
     }
     showScreen("screen-lifestyle");
@@ -1764,7 +1780,7 @@
     if (!story) { panel.innerHTML = ""; return; }
     const best = (loadProgress().stories || {})[story.id];
     const bestLine = best && best.best != null
-      ? `Votre record : ${best.best} pts${best.beaten ? " · 👑 légende battue" : ""}`
+      ? T("Votre record : {n} pts", { n: best.best }) + (best.beaten ? T(" · 👑 légende battue") : "")
       : `Objectif : battre ses ${story.baseline} pts`;
     panel.innerHTML = `
       <div class="hc-head">Mode Histoire</div>
@@ -1797,7 +1813,7 @@
         <p class="story-teaser">${esc(st.teaser)}</p>
         <p class="story-goal">🎯 La légende a terminé sa carrière à <strong>${st.baseline} pts</strong>. Faites mieux.</p>
         ${bestLine}
-        <button class="btn btn-secondary story-play" data-story="${st.id}"${!unlocked && jetonsBalance(progress) < st.cost ? " disabled" : ""}>${unlocked ? "Revivre cette légende" : `Débloquer (🪙 ${st.cost} jetons)`}</button>
+        <button class="btn btn-secondary story-play" data-story="${st.id}"${!unlocked && jetonsBalance(progress) < st.cost ? " disabled" : ""}>${unlocked ? "Revivre cette légende" : T("Débloquer (🪙 {n} jetons)", { n: st.cost })}</button>
       </div>`;
     }).join("");
     list.querySelectorAll(".story-play").forEach((btn) => {
@@ -2003,10 +2019,10 @@
 
   function duelVerdict(lFrom, sFrom, lTo, sTo) {
     const diff = sTo - sFrom;
-    if (Math.abs(diff) <= 8) return `Duel au sommet : ${esc(lFrom)} et ${esc(lTo)} se tiennent dans un mouchoir (${sFrom} – ${sTo}).`;
+    if (Math.abs(diff) <= 8) return T("Duel au sommet : {a} et {b} se tiennent dans un mouchoir ({sa} – {sb}).", { a: esc(lFrom), b: esc(lTo), sa: sFrom, sb: sTo });
     const win = diff > 0 ? lTo : lFrom;
     const lose = diff > 0 ? lFrom : lTo;
-    return `${esc(win)} l'emporte sur ${esc(lose)} (${Math.max(sFrom, sTo)} – ${Math.min(sFrom, sTo)}).`;
+    return T("{win} l'emporte sur {lose} ({a} – {b}).", { win: esc(win), lose: esc(lose), a: Math.max(sFrom, sTo), b: Math.min(sFrom, sTo) });
   }
 
   // Écran d'intro d'un défi reçu (l'adversaire n'a pas encore répondu).
@@ -2079,7 +2095,7 @@
     setup = { nationality: prof.nationality, position: prof.position, origin: prof.origin, duelRole: "create", duelSeed: seed, duelTargetPseudo: targetPseudo || null, duelChoices: [], entryScreen: "screen-lifestyle" };
     E.setSeed(seed);
     const cible = targetPseudo ? ` vers <strong>${esc(targetPseudo)}</strong>` : "";
-    setDuelReminder(`🆚 <strong>Tu crées un défi</strong>${cible} — ${prof.position.icon} ${esc(prof.position.name)} · ${flagHtml(prof.nationality)} ${esc(prof.nationality.name)} · ${esc(prof.origin.name)}`);
+    setDuelReminder(T("🆚 <strong>Tu crées un défi</strong>{cible} — {profile}", { cible, profile: `${prof.position.icon} ${esc(prof.position.name)} · ${flagHtml(prof.nationality)} ${esc(prof.nationality.name)} · ${esc(prof.origin.name)}` }));
     track("duel_created", { seed });
     showScreen("screen-lifestyle");
   }
@@ -2107,7 +2123,7 @@
       duelServerId: serverId || null,
       duelChoices: [], entryScreen: "screen-lifestyle",
     };
-    setDuelReminder(`🆚 <strong>Défi de ${esc(d.f.l)}</strong> — ${prof.position.icon} ${esc(prof.position.name)} · ${flagHtml(prof.nationality)} ${esc(prof.nationality.name)} · ${esc(prof.origin.name)}`);
+    setDuelReminder(T("🆚 <strong>Défi de {who}</strong> — {profile}", { who: esc(d.f.l), profile: `${prof.position.icon} ${esc(prof.position.name)} · ${flagHtml(prof.nationality)} ${esc(prof.nationality.name)} · ${esc(prof.origin.name)}` }));
     track("duel_accepted", { seed: d.s });
     showScreen("screen-lifestyle");
   }
@@ -2197,7 +2213,7 @@
       <p class="quest-hint-note">Terminez une carrière pour valider vos quêtes. Elles se renouvellent chaque jour — revenez pour entretenir votre série 🔥</p>
 
       <p class="quest-section-label">🧭 Objectifs de rétention</p>
-      ${nextMs ? retentionBarHtml("🔥", `Série de ${nextMs.days} jours (+${nextMs.jetons} 🪙)`, streak, nextMs.days) : retentionBarHtml("🔥", "Série de 365 jours", streak, 365)}
+      ${nextMs ? retentionBarHtml("🔥", T("Série de {days} jours (+{jetons} 🪙)", { days: nextMs.days, jetons: nextMs.jetons }), streak, nextMs.days) : retentionBarHtml("🔥", "Série de 365 jours", streak, 365)}
       ${retentionBarHtml("🎯", "20 quêtes accomplies", progress.questTotal, 20)}`;
   }
   function saveProgress(p) {
@@ -2214,7 +2230,7 @@
     function tryUnlock(id, cond) {
       if (cond && !progress.unlockedBadges.includes(id)) {
         progress.unlockedBadges.push(id);
-        progress.badgeContexts[id] = `Débloqué avec ${G.name} (${G.nationality.flag} ${G.position.name}, carrière ${careerStartYear()}-${G.year})`;
+        progress.badgeContexts[id] = T("Débloqué avec {name} ({flag} {pos}, carrière {from}-{to})", { name: G.name, flag: G.nationality.flag, pos: G.position.name, from: careerStartYear(), to: G.year });
         unlocked.push(id);
         track("badge_unlocked", { badge_id: id });
       }
@@ -2338,7 +2354,7 @@
       wrap.appendChild(grid);
     });
 
-    $("badge-meta").textContent = `${done}/${total} badges · ${progress.careersPlayed} carrière${progress.careersPlayed > 1 ? "s" : ""} jouée${progress.careersPlayed > 1 ? "s" : ""}`;
+    $("badge-meta").textContent = T(progress.careersPlayed > 1 ? "{done}/{total} badges · {n} carrières jouées" : "{done}/{total} badges · {n} carrière jouée", { done, total, n: progress.careersPlayed });
   }
 
   // --- Boutique de jetons (méta-progression) -------------------------------------
@@ -2626,7 +2642,7 @@
     $("final-card").className = `player-card tier-${tier.id}`;
     $("final-tier").textContent = tier.label;
     $("final-flag").innerHTML = `${flagHtml(G.nationality)} ${esc(G.name)}`;
-    $("final-age").textContent = !G.careerEnded ? `Retraite à ${G.age} ans` : dignifiedInjuryEnd() ? `Carrière écourtée à ${G.age} ans` : "Carrière interrompue";
+    $("final-age").textContent = !G.careerEnded ? T("Retraite à {age} ans", { age: G.age }) : dignifiedInjuryEnd() ? T("Carrière écourtée à {age} ans", { age: G.age }) : "Carrière interrompue";
     $("final-title").textContent = narrative.title;
     $("final-ovr").textContent = rating;
     $("final-pos").textContent = POS_SHORT[G.position.id] || G.position.icon;
@@ -2649,7 +2665,7 @@
     if (pctEl) {
       if ((!G.careerEnded || dignifiedInjuryEnd()) && SCORE_PERCENTILES.length) {
         const p = percentileForScore(E.computeCareerScore(G));
-        pctEl.textContent = `🌍 Meilleure carrière que ${p} % des destins simulés`;
+        pctEl.textContent = T("🌍 Meilleure carrière que {p} % des destins simulés", { p });
         pctEl.style.display = "";
       } else {
         pctEl.textContent = "";
@@ -2662,8 +2678,8 @@
       statRowHtml(isGk ? "Clean sheets" : "Buts marqués", isGk ? G.totals.cleanSheets : G.totals.goals),
       statRowHtml("Passes décisives", G.totals.assists),
       ...((G.captainMatches || 0) > 0 ? [statRowHtml("©️ Matchs comme capitaine", G.captainMatches)] : []),
-      statRowHtml(`${flagHtml(G.nationality)} Sélections`, G.natTeam.caps),
-      ...(((G.youth && G.youth.caps) || 0) > 0 ? [statRowHtml(`🎽 Sélections jeunes${G.youth.tiers && G.youth.tiers.length ? ` (${G.youth.tiers.map((t) => t.toUpperCase()).join(" · ")})` : ""}`, G.youth.caps)] : []),
+      statRowHtml(T("{flag} Sélections", { flag: flagHtml(G.nationality) }), G.natTeam.caps),
+      ...(((G.youth && G.youth.caps) || 0) > 0 ? [statRowHtml(T("🎽 Sélections jeunes{tiers}", { tiers: G.youth.tiers && G.youth.tiers.length ? ` (${G.youth.tiers.map((t) => t.toUpperCase()).join(" · ")})` : "" }), G.youth.caps)] : []),
       statRowHtml("💰 Fortune", E.fmtMoney(G.money)),
     ].join("");
 
@@ -2759,8 +2775,8 @@
       duelBtn.style.display = (!review && G.duel) ? "" : "none";
       duelBtn.disabled = !!serverDuel;
       if (!review && G.duel) {
-        if (serverDuel) duelBtn.textContent = G.duelRole === "respond" ? "✅ Réponse envoyée" : `✅ Défi envoyé à ${G.duelTargetPseudo}`;
-        else duelBtn.textContent = G.duelRole === "respond" ? `↩️ Renvoyer à ${G.duelFromLabel}` : "🆚 Défier un ami";
+        if (serverDuel) duelBtn.textContent = G.duelRole === "respond" ? "✅ Réponse envoyée" : T("✅ Défi envoyé à {who}", { who: G.duelTargetPseudo });
+        else duelBtn.textContent = G.duelRole === "respond" ? T("↩️ Renvoyer à {who}", { who: G.duelFromLabel }) : "🆚 Défier un ami";
       }
     }
     const replayBtn = $("btn-replay");
@@ -2771,7 +2787,7 @@
 
     if (newBadges.length) {
       const names = newBadges.map((id) => { const b = BADGES.find((x) => x.id === id); return b ? `${b.icon} ${b.name}` : id; });
-      $("final-badge-note").textContent = `Nouveau badge débloqué : ${names.join(", ")}`;
+      $("final-badge-note").textContent = T("Nouveau badge débloqué : {names}", { names: names.join(", ") });
     } else {
       $("final-badge-note").textContent = "";
     }
@@ -2783,11 +2799,11 @@
     if (dailyNote) {
       if (dailyResult) {
         let msg = dailyResult.stale
-          ? `🗓️ Défi du ${dailyResult.date} — ${dailyResult.score} pts (défi expiré : hors classement du jour, série intacte)`
-          : `🗓️ Défi du jour — ${dailyResult.score} pts`;
+          ? T("🗓️ Défi du {date} — {n} pts (défi expiré : hors classement du jour, série intacte)", { date: dailyResult.date, n: dailyResult.score })
+          : T("🗓️ Défi du jour — {n} pts", { n: dailyResult.score });
         if (dailyResult.isAllTimeBest) msg += " · 🏆 nouveau record absolu !";
         else if (dailyResult.isTodayBest) msg += " · ✨ meilleur score du jour";
-        if (!dailyResult.stale && dailyResult.streak > 1) msg += ` · 🔥 série de ${dailyResult.streak} jours`;
+        if (!dailyResult.stale && dailyResult.streak > 1) msg += T(" · 🔥 série de {n} jours", { n: dailyResult.streak });
         dailyNote.textContent = msg;
         dailyNote.style.display = "";
       } else {
@@ -2798,7 +2814,7 @@
 
     const jetonNote = $("final-jeton-note");
     if (jetonNote) {
-      jetonNote.textContent = jetonBonus > 0 ? `🪙 +${jetonBonus} jeton${jetonBonus > 1 ? "s" : ""} pour la boutique` : "";
+      jetonNote.textContent = jetonBonus > 0 ? T(jetonBonus > 1 ? "🪙 +{n} jetons pour la boutique" : "🪙 +{n} jeton pour la boutique", { n: jetonBonus }) : "";
       jetonNote.style.display = jetonBonus > 0 ? "" : "none";
     }
 
@@ -2808,8 +2824,8 @@
       if (storyResult) {
         const st = storyResult.story;
         const verdict = storyResult.beaten
-          ? `👑 ${storyResult.score} pts — vous avez fait MIEUX que la légende (${st.baseline} pts) !`
-          : `${st.icon} ${storyResult.score} pts — la légende reste devant (${st.baseline} pts). Réécrivez l'histoire.`;
+          ? T("👑 {n} pts — vous avez fait MIEUX que la légende ({base} pts) !", { n: storyResult.score, base: st.baseline })
+          : T("{icon} {n} pts — la légende reste devant ({base} pts). Réécrivez l'histoire.", { icon: st.icon, n: storyResult.score, base: st.baseline });
         const lived = Object.entries(st.moments || {}).filter(([f]) => G.flags[f]).map(([, label]) => label);
         legendNote.innerHTML = `${esc(verdict)}${lived.length ? `<br><span class="legend-moments">Moments de légende vécus : ${esc(lived.join(" · "))}</span>` : ""}<br><span class="legend-reveal">${esc(st.reveal)}</span>`;
         legendNote.style.display = "";
@@ -3121,7 +3137,7 @@
     y += 40;
     ctx.fillStyle = "#b9c2e0";
     ctx.font = "600 26px Poppins, 'Segoe UI', sans-serif";
-    ctx.fillText(`${G.position.icon} ${G.position.name}${G.archetype ? ` · ${G.archetype.name}` : ""} · ${G.careerEnded ? "Carrière interrompue" : `${careerStartYear()} – ${G.year}`}`, cx, y);
+    ctx.fillText(`${G.position.icon} ${G.position.name}${G.archetype ? ` · ${G.archetype.name}` : ""} · ${G.careerEnded ? T("Carrière interrompue") : `${careerStartYear()} – ${G.year}`}`, cx, y);
     y += 64;
 
     ctx.fillStyle = TS.soft;
@@ -3283,15 +3299,17 @@
     const t = G.trophies;
     const bits = [];
     if (t.ballon) bits.push(`${t.ballon}× Ballon d'Or`);
-    if (t.worldCup) bits.push(`${t.worldCup}× Coupe du Monde`);
-    if (t.continental) bits.push(`${t.continental}× Coupe des Champions`);
+    if (t.worldCup) bits.push(T("{n}× Coupe du Monde", { n: t.worldCup }));
+    if (t.continental) bits.push(T("{n}× Coupe des Champions", { n: t.continental }));
     if (t.continental2) bits.push(`${t.continental2}× ${COMPETITIONS.continental2.name}`);
     if (t.continental3) bits.push(`${t.continental3}× ${COMPETITIONS.continental3.name}`);
-    if (t.league) bits.push(`${t.league}× Champion`);
+    if (t.league) bits.push(T("{n}× Champion", { n: t.league }));
     const isGk = G.position.id === "gk";
-    const perf = isGk ? `${G.totals.cleanSheets} clean sheets` : `${G.totals.goals} buts`;
+    const perf = isGk ? T("{n} clean sheets", { n: G.totals.cleanSheets }) : T("{n} buts", { n: G.totals.goals });
     const link = BRAND.url ? ` ${BRAND.url}` : "";
-    return `⚽ ${G.name}, ${G.position.name.toLowerCase()} — « ${narrative.title} » (note de carrière ${E.careerRating(G)}, ${perf}).${bits.length ? ` Palmarès : ${bits.join(", ")}.` : ""} Écris ta légende sur ${BRAND.game} !${link} ${BRAND.hashtag || ""}`.trim();
+    return (T("⚽ {name}, {pos} — « {title} » (note de carrière {rating}, {perf}).", { name: G.name, pos: G.position.name.toLowerCase(), title: narrative.title, rating: E.careerRating(G), perf })
+      + (bits.length ? T(" Palmarès : {list}.", { list: bits.join(", ") }) : "")
+      + T(" Écris ta légende sur {game} !", { game: BRAND.game }) + link + " " + (BRAND.hashtag || "")).trim();
   }
 
   function shareCard() {
@@ -3406,7 +3424,7 @@
       const g = snap.g;
       const clubName = g.club && g.club.name ? ` · ${esc(g.club.name)}` : "";
       resumeBtn.style.display = "";
-      resumeBtn.innerHTML = `▶️ Reprendre ${g.dailyDate ? "le défi " : g.storyId ? "l'histoire " : ""}— ${esc(g.name)}, ${g.age} ans${clubName}`;
+      resumeBtn.innerHTML = T("▶️ Reprendre {what}— {name}, {age} ans{club}", { what: g.dailyDate ? T("le défi ") : g.storyId ? T("l'histoire ") : "", name: esc(g.name), age: g.age, club: clubName });
       startBtn.textContent = "Nouvelle carrière";
       startBtn.classList.remove("btn-primary");
       startBtn.classList.add("btn-secondary");
@@ -3438,7 +3456,7 @@
     refreshHomeButtons();
     const progress = loadProgress();
     $("home-meta").textContent = progress.careersPlayed > 0
-      ? `${progress.careersPlayed} carrière${progress.careersPlayed > 1 ? "s" : ""} vécue${progress.careersPlayed > 1 ? "s" : ""} · record : ${progress.bestScore} pts`
+      ? T(progress.careersPlayed > 1 ? "{n} carrières vécues · record : {best} pts" : "{n} carrière vécue · record : {best} pts", { n: progress.careersPlayed, best: progress.bestScore })
       : "";
   }
 

@@ -7305,6 +7305,196 @@ const BALANCE = {
 };
 
 /* ============================================================
+   TEXTES DU MOTEUR — les phrases que engine.js écrit dans
+   l'historique de carrière, les récaps et les pastilles d'effet.
+
+   Elles vivaient auparavant en dur dans engine.js, ce qui mélangeait
+   simulation et présentation : le moteur est censé calculer, data.js
+   fournir les mots (c'est déjà le cas de HEADLINES, WC_STAGES,
+   RIVAL_NEWS_*, UNTAKEN_PATH_TEMPLATES). Les rassembler ici les rend
+   aussi traduisibles par le même mécanisme que le reste du contenu.
+
+   Marqueurs : {club} {name} {nat} {country} {coach} {year} {age} sont
+   substitués depuis l'état de carrière ; les autres ({div}, {fee},
+   {rank}…) sont fournis par l'appelant. « de {x} » applique l'élision
+   française (« de {club} » → « d'Osaka »).
+   Rendu par engine.tx(s, clé, valeurs).
+   ============================================================ */
+const ENGINE_TEXT = {
+  // --- Sélection nationale & jeunes ---
+  natSwitch: "Choix international : {target} plutôt que {from}.",
+  firstCap: "Première convocation avec {nat}.",
+  firstCapYoung: "Première convocation avec {nat} — à seulement {age} ans !",
+  natRetire: "Fin de l'aventure en sélection avec {nat} : place à la nouvelle génération.",
+  youthCall: "Sélectionné en {tier} de {nat}.",
+  youthWin: "Vainqueur du {tournament} {year} !",
+
+  // --- Coupe du Monde, continental, Ligue des Sélections, JO ---
+  wcStage: "{stage} de la Coupe du Monde {year}.",
+  wcChampion: "Champion du monde {year} avec {nat} !",
+  wcFinalist: "Finaliste de la Coupe du Monde {year} — si près du rêve.",
+  contChampion: "Champion {cupOf} {year} avec {nat} !",
+  contFinalist: "Finaliste {cupOf} {year} — l'argent au goût amer.",
+  contSemi: "Demi-finaliste {cupOf} {year}.",
+  nlWinner: "Vainqueur {cupOf} {year} avec {nat} !",
+  nlFinalist: "Finaliste {cupOf} {year}.",
+  nlSemi: "Dernier carré {cupOf} {year}.",
+  olyGold: "🥇 Champion olympique {year} avec {nat} !",
+  olySilver: "🥈 Médaille d'argent olympique {year}.",
+  olyBronze: "🥉 Médaille de bronze olympique {year}.",
+
+  // --- Distinctions individuelles ---
+  award: "{icon} {awardName} {year}.",
+  ballon: "Ballon d'Or {year} — le monde à vos pieds.",
+  ballonPodium: "Sur le podium du Ballon d'Or {year} ({rank}ᵉ).",
+  goldenBoot: "Soulier d'Or européen {year} — meilleur buteur du continent.",
+  prodigy: "À {age} ans, le monde entier parle déjà de vous comme d'un phénomène.",
+  captain: "Nommé capitaine de {club}.",
+
+  // --- Vie du club : titres, montées, descentes ---
+  leagueTitle: "Champion national {year} avec {club}.",
+  divTitlePromo: "Champion de {div} {year} avec {club} — la montée !",
+  relegated: "Relégation de {club} en {year} — une saison noire.",
+  promoWin: "Montée décrochée en barrage avec {club} ({year}) !",
+  promoLoss: "Barrage de montée perdu avec {club} ({year}).",
+  stayWin: "Maintien arraché en barrage avec {club} ({year}) !",
+  stayLoss: "Relégation de {club} au bout du barrage ({year}).",
+  cupWin: "Vainqueur de la {cupName} {year} avec {club}.",
+  cupLoss: "Finale de {cupName} perdue en {year}.",
+  contCupWin: "Vainqueur de la {cupName} avec {club} ({year}) !",
+  contCupLossTop: "Finale de {cupName} perdue en {year} — si près du toit du continent.",
+  contCupLoss: "Finale de {cupName} perdue en {year}.",
+  clubInvestor: "Un investisseur propulse {club} en {div}.",
+  clubUp: "{seasonClub} évolue désormais en {div} — l'ascension continue.",
+  clubElite: "{seasonClub} change de dimension et rejoint l'élite européenne.",
+  clubFade: "{seasonClub} n'est plus que l'ombre du géant qu'il fut.",
+
+  // --- Blessures ---
+  injury: "{label} ({weeks} sem.) en {year}.",
+  careerEndInjury: "{label} : votre carrière s'arrête net en {year}.",
+  injuryBack: "Retour de blessure réussi en {year} — le pire est derrière vous.",
+  injuryRelapse: "Rechute en {year} : la convalescence s'éternise.",
+
+  // --- Transferts & prêts ---
+  transfer: "Transfert à {toClub} pour {fee}.",
+  loanOut: "Prêté une saison à {toClub} pour s'aguerrir.",
+  loanBackGood: "Retour de prêt convaincant : {parentClub} compte enfin sur vous.",
+  loanBackOk: "Retour de prêt à {parentClub}, avec une copie honnête.",
+  loanBackBad: "Un prêt raté : {parentClub} doute ouvertement de vous.",
+
+  // Rival anonyme, quand aucun nom n'est fourni au rendu d'un texte.
+  rivalFallback: "votre grand rival",
+
+  // --- Divisions & centres de formation ---
+  divElite: "Élite",
+  divRegional: "Rég.",
+  academyElite: "Centre d'élite — infrastructures de pointe, concurrence féroce",
+  academyD1: "Centre professionnel réputé — un cap sérieux vers le haut niveau",
+  academyD2: "Club formateur solide — du temps de jeu et de vrais éducateurs",
+  academyRegional: "Club local — l'école de la débrouille, près des vôtres",
+
+  // --- Coupe du Monde & Jeux Olympiques (intitulés de phase) ---
+  wcInFinal: "En finale !",
+  wcFinalText: "Votre nation renverse tout sur son passage : LA FINALE ! À 90 minutes du toit du monde.",
+  wcChampionLabel: "CHAMPION DU MONDE",
+  olyCupName: "Jeux Olympiques",
+  olyGoldLabel: "MÉDAILLE D'OR",
+  olySilverLabel: "Médaille d'argent",
+  olyBronzeLabel: "Médaille de bronze",
+
+  // --- Moments décisifs : intitulé, issue gagnée, issue perdue ---
+  momInjury: "Coup dur",
+  momInjuryWin: "De retour, plus fort",
+  momInjuryFail: "Convalescence prolongée",
+  momPromo: "Barrage de montée en {div}",
+  momPromoWin: "MONTÉE !",
+  momPromoFail: "Échec en barrage",
+  momStay: "Barrage de maintien",
+  momStayWin: "MAINTIEN ARRACHÉ !",
+  momStayFail: "Relégation au bout du barrage",
+  momCup: "Finale de la Coupe Nationale",
+  momCupWin: "VAINQUEUR !",
+  momCupFail: "Finale perdue",
+  momCont: "Finale · {cupName}",
+  momContWin: "SACRE CONTINENTAL !",
+  momCont2Win: "TROPHÉE D'EUROPE REMPORTÉ !",
+  momCont3Win: "BOUCLIER D'EUROPE REMPORTÉ !",
+  momContFail: "Finale continentale perdue",
+  momContEuFail: "Finale européenne perdue",
+  momOldClub: "Retrouvailles avec votre ancien club",
+  momOldClubWin: "Retrouvailles maîtrisées",
+  momOldClubFail: "Soirée compliquée",
+  momDerby: "Le derby",
+  momDerbyWin: "Derby remporté !",
+  momDerbyFail: "Derby perdu",
+
+  // --- Pastilles d'effet ---
+  chipRep: "{sign}{n} Réputation",
+  chipNatCall: "🌍 Sélection : {target}",
+  chipRolePromo: "⬆️ Promu : {role}",
+  chipRoleDemo: "⬇️ Rétrogradé : {role}",
+  chipBan: "⛔ {weeks} semaines hors du groupe",
+  chipRetire: "👋 Retraite en fin de saison",
+
+  // --- Objectif fixé par le club ---
+  objRating: "Note de saison ≥ {n}",
+  objTrophy: "Ramener un trophée majeur",
+
+  // --- Lignes de récap de saison ---
+  lineDiscipline: "Des écarts d'hygiène de vie répétés se paient sur le terrain.",
+  lineCaptain: "🅒 Le vestiaire vous confie le brassard de capitaine.",
+  lineYouthCall: "🎽 Première convocation avec les {tier} de {nat}.",
+
+  // --- Mercato : pourquoi la fenêtre s'ouvre ---
+  winLoanBuy: "{club2} n'a pas oublié votre prêt réussi : offre de transfert définitif sur la table.",
+  winContractEnd: "Votre contrat expire : il faut trancher.",
+  winNoRenew: "Vos statistiques n'ont pas convaincu : {club} ne prolonge pas votre contrat. À vous de rebondir ailleurs.",
+  winPromoted: "La montée de {club} fait de vous une cible : rester pour l'aventure, ou viser encore plus haut ?",
+  winRelegated: "La relégation de {club} ouvre votre bon de sortie.",
+  winNoGameTime: "Votre temps de jeu famélique alerte tout le marché.",
+  winBigSeason: "Votre saison XXL affole les recruteurs.",
+  winListed: "Le club vous a placé sur la liste des transferts : le marché s'organise.",
+  winRumours: "Le mercato s'agite autour de votre nom.",
+  winOldGk: "L'élite vous juge trop vieux, mais un gardien chevronné trouve toujours preneur, un ou deux crans plus bas.",
+  winTooOld: "Passé 42 ans, plus aucun cador ne mise sur vous : seuls des clubs modestes vous ouvrent encore leurs portes.",
+  winTooWeak: "Trop juste pour ce niveau : le club vous remercie. Direction l'échelon inférieur pour vous relancer.",
+  lineEuroTicket: "🇪🇺 Sacre en Coupe Nationale : vous voilà qualifié pour une coupe d'Europe la saison prochaine !",
+
+  // --- Verdicts de rivalité (fiche finale) ---
+  verdictYouEnded: "Le destin ne vous aura pas laissé la moindre chance de rivaliser. {rival} aura eu l'opportunité de construire la carrière qui vous a échappé.",
+  verdictRivalEnded: "{rival} n'aura même pas eu la chance de faire ses preuves. Le destin vous aura été bien plus favorable qu'à lui.",
+  verdictCrushing: "Vous surpassez très largement {rival} : cette rivalité n'en aura jamais vraiment été une.",
+  verdictClearWin: "Vous prenez clairement le dessus sur {rival} au fil des années.",
+  verdictTight: "Une rivalité aussi intense que serrée avec {rival} — tout aurait pu basculer à tout moment.",
+  verdictBehind: "{rival} vous aura devancé sur la majeure partie de votre carrière.",
+  verdictCrushed: "{rival} aura eu la carrière que vous auriez rêvé d'avoir.",
+
+  // --- Titres de fin de carrière (fiche finale) ---
+  endMedicalTitle: "Carrière jamais commencée",
+  endMedicalStory: "Un diagnostic médical implacable a mis fin à vos espoirs avant même vos débuts professionnels. Une histoire qui aurait pu être si différente.",
+  endCutShortTitle: "Carrière écourtée par la blessure",
+  endCutShortStory: "Une blessure de trop a refermé le rideau plus tôt que vous ne l'auriez voulu. Mais le chemin parcouru, lui, personne ne pourra vous l'enlever.",
+  endFelledTitle: "Carrière fauchée en plein vol",
+  endFelledStory: "En pleine ascension, une blessure implacable a tout arrêté net. On ne saura jamais jusqu'où vous seriez allé — et c'est peut-être ça, le plus cruel.",
+  endBrokenTitle: "Carrière brisée",
+  endBrokenStory: "Une blessure sévère a stoppé net votre progression, alors que tout semblait encore possible. Le destin en a décidé autrement.",
+  tierSurpriseTitle: "Star inattendue",
+  tierSurpriseStory: "Rien ne laissait présager un tel sommet, et pourtant vous avez soulevé le plus grand des trophées. Une carrière que personne n'avait vue venir.",
+  tierLegendTitle: "Légende du football mondial",
+  tierLegendStory: "Votre nom restera gravé parmi les plus grands. Les gamins du monde entier porteront votre maillot pendant des décennies.",
+  tierWorldStarTitle: "Star mondiale",
+  tierWorldStarStory: "Vous avez marqué votre époque et forcé le respect de tout un sport, bien au-delà des frontières de vos clubs.",
+  tierIntlTitle: "Joueur de classe internationale",
+  tierIntlStory: "Une carrière remarquable, de celles qui remplissent les stades et les albums de vignettes.",
+  tierSolidTitle: "Carrière solide et respectée",
+  tierSolidStory: "Sans être une superstar, vous avez mené une carrière dont vous pouvez être fier, reconnue par vos pairs.",
+  tierHonestTitle: "Honnête professionnel",
+  tierHonestStory: "Une carrière sans éclat majeur, mais menée avec sérieux jusqu'au bout, loin des projecteurs.",
+  tierQuietTitle: "Carrière discrète",
+  tierQuietStory: "Le grand public ne retiendra pas votre nom, mais vous avez vécu de votre passion, et ça n'a pas de prix.",
+};
+
+/* ============================================================
    PERCENTILES DE SCORE — seuils des centiles 1→99 du score de
    carrière (computeCareerScore) sur 50 000 carrières simulées.
    Affiché sur la fiche finale : « meilleure que X % des destins ».
@@ -7646,6 +7836,7 @@ if (typeof module !== "undefined" && module.exports) {
     RIVAL_NEWS_BEHIND, WORLD_NEWS, WC_STAGES, WC_STAGES_48, YOUTH_TIERS, YOUTH_STAGES, OLYMPIC_STAGES, BALANCE, HEADLINES,
     UNTAKEN_PATH_TEMPLATES, DAILY_QUESTS, WEEKLY_CHALLENGES, LEGEND_QUESTS, BADGE_CATS, BADGES,
     PERKS, PERK_SLOTS, STORIES, SCORE_PERCENTILES, STREAK_MILESTONES, COUNTRY_LANG,
+    ENGINE_TEXT,
   };
   Object.assign(global, dataExports);
   module.exports = dataExports;

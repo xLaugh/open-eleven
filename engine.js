@@ -85,9 +85,9 @@
     }
     return _countryTopRank[countryId];
   }
-  const _DIV_SHORTS = ["D1", "D2", "D3", "Rég."];
+  const _DIV_SHORTS = ["D1", "D2", "D3", ENGINE_TEXT.divRegional];
   function divShort(level, countryId) {
-    if (level === "elite") return "Élite"; // l'élite reste distincte (grands pays)
+    if (level === "elite") return ENGINE_TEXT.divElite; // l'élite reste distincte (grands pays)
     const baseIdx = { d1: 0, d2: 1, d3: 2, regional: 3 }[level];
     if (baseIdx == null) return LEVELS[level] ? LEVELS[level].short : level;
     const shift = Math.max(0, 3 - countryTopRank(countryId)); // 3 = rang de D1
@@ -211,12 +211,12 @@
     prodige: { elite: 12, d1: 6, regional: -12 }, // les grands centres se l'arrachent
   };
   const LIFESTYLE_ACADEMY = { pro: { d1: 4, elite: 4 }, balance: {}, street: { elite: -4 } };
+  // Clés de ENGINE_TEXT, résolues à l'appel (et non ici) pour que la langue
+  // choisie s'applique : le texte est traduit en place au chargement.
   const ACADEMY_BLURBS = {
-    elite: "Centre d'élite — infrastructures de pointe, concurrence féroce",
-    d1: "Centre professionnel réputé — un cap sérieux vers le haut niveau",
-    d2: "Club formateur solide — du temps de jeu et de vrais éducateurs",
-    regional: "Club local — l'école de la débrouille, près des vôtres",
+    elite: "academyElite", d1: "academyD1", d2: "academyD2", regional: "academyRegional",
   };
+  const academyBlurb = (lvl) => ENGINE_TEXT[ACADEMY_BLURBS[lvl]] || "";
 
   function academyOffers(profile) {
     const w = { ...BALANCE.academyWeights };
@@ -242,12 +242,12 @@
       if (!entries.length) break;
       const [lvl] = weightedRandom(entries, (e) => e[1]);
       delete remaining[lvl];
-      offers.push({ club: pick(clubsAt(lvl)), level: lvl, blurb: ACADEMY_BLURBS[lvl] });
+      offers.push({ club: pick(clubsAt(lvl)), level: lvl, blurb: academyBlurb(lvl) });
     }
     if (!offers.some((o) => o.level === "elite") && clubsAt("elite").length && rng() < BALANCE.academySurpriseChance) {
       offers[offers.length - 1] = {
         club: pick(clubsAt("elite")), level: "elite",
-        blurb: ACADEMY_BLURBS.elite, surprise: true,
+        blurb: academyBlurb("elite"), surprise: true,
       };
     }
     offers.sort((a, b) => levelRank(a.level) - levelRank(b.level));
@@ -432,10 +432,30 @@
       .replace(/\{country\}/g, country ? country.name : "")
       .replace(/\{contCup\}/g, contCup) // coupe continentale du club (Europe/Amériques/Afrique…)
       .replace(/\{name\}/g, s.name)
-      .replace(/\{nat\}/g, s.nationality.name);
+      .replace(/\{nat\}/g, s.nationality.name)
+      .replace(/\{year\}/g, s.year)
+      .replace(/\{age\}/g, s.age);
     if (extra && extra.rival) out = out.replace(/\{rival\}/g, extra.rival);
-    else out = out.replace(/\{rival\}/g, "votre grand rival");
+    else out = out.replace(/\{rival\}/g, ENGINE_TEXT.rivalFallback);
+    // Valeurs ponctuelles fournies par l'appelant ({fee}, {rank}, {div}…).
+    // Deux formes acceptées : « de {x} » pour l'élision française, et « {x} ».
+    if (extra) {
+      for (const k in extra) {
+        if (k === "rival") continue;
+        const v = extra[k] == null ? "" : String(extra[k]);
+        out = out.replace(new RegExp("\\bde \\{" + k + "\\}", "g"), deOf(v))
+                 .replace(new RegExp("\\{" + k + "\\}", "g"), v);
+      }
+    }
     return out;
+  }
+
+  // Gabarit de texte joueur : il vit dans data.js (ENGINE_TEXT), pas ici —
+  // engine.js simule, data.js fournit les mots. Repli silencieux sur une chaîne
+  // vide si la clé manque, pour ne jamais afficher d'identifiant technique.
+  function tx(s, key, extra) {
+    const tpl = ENGINE_TEXT[key];
+    return tpl ? renderText(s, tpl, extra) : "";
   }
 
   // --- Application des effets ("fx") ---------------------------------------
@@ -459,7 +479,7 @@
       if (d > 0 && hasTrait(s, "showman")) d = Math.round(d * 1.3);
       if (d > 0 && hasTrait(s, "mercenary")) d = Math.round(d * 0.85);
       s.rep = clamp(s.rep + d, 0, 100);
-      if (d) chips.push({ label: `${d > 0 ? "+" : ""}${d} Réputation`, kind: d > 0 ? "good" : "bad" });
+      if (d) chips.push({ label: tx(s, "chipRep", { sign: d > 0 ? "+" : "", n: d }), kind: d > 0 ? "good" : "bad" });
     }
     if (fx.form) {
       s.form = clamp(s.form + fx.form, 5, 100);
@@ -491,8 +511,8 @@
         s.nationality = target;
         s.flags.natSwitched = true;
         s.natSwitchFrom = from.id;
-        chips.push({ label: `🌍 Sélection : ${target.name}`, kind: "trait" });
-        s.history.push({ age: s.age, text: `Choix international : ${target.name} plutôt que ${from.name}.`, impact: 6 });
+        chips.push({ label: tx(s, "chipNatCall", { target: target.name }), kind: "trait" });
+        s.history.push({ age: s.age, text: tx(s, "natSwitch", { target: target.name, from: from.name }), impact: 6 });
       }
       s.dualNat = null;
     }
@@ -503,7 +523,7 @@
     if (fx.role) { // ajustement direct du statut au club (ex. « tu restes → tu perds ta place »)
       const before = typeof s.role === "number" ? s.role : 2;
       s.role = clamp(before + fx.role, 0, 4);
-      if (s.role !== before) chips.push({ label: `${fx.role > 0 ? "⬆️ Promu" : "⬇️ Rétrogradé"} : ${ROLES[s.role].label}`, kind: fx.role > 0 ? "good" : "bad" });
+      if (s.role !== before) chips.push({ label: tx(s, fx.role > 0 ? "chipRolePromo" : "chipRoleDemo", { role: ROLES[s.role].label }), kind: fx.role > 0 ? "good" : "bad" });
     }
     if (fx.money) {
       let d = fx.money;
@@ -524,7 +544,7 @@
     }
     if (fx.ban) {
       s.injuryWeeks += fx.ban;
-      chips.push({ label: `⛔ ${fx.ban} semaines hors du groupe`, kind: "bad" });
+      chips.push({ label: tx(s, "chipBan", { weeks: fx.ban }), kind: "bad" });
     }
     if (fx.inj) {
       const weeks = applyInjury(s, fx.inj); // modulation traits + répartition saison/chronique + fragilité
@@ -540,7 +560,7 @@
     if (fx.clubBoost) {
       const newLvl = shiftClubLevel(s, s.club, fx.clubBoost);
       chips.push({ label: `🏗️ ${s.club.name} passe en ${divShort(newLvl, s.club.countryId)}`, kind: "trophy" });
-      s.history.push({ age: s.age, text: `Un investisseur propulse ${s.club.name} en ${divShort(newLvl, s.club.countryId)}.`, impact: 8 });
+      s.history.push({ age: s.age, text: tx(s, "clubInvestor", { div: divShort(newLvl, s.club.countryId) }), impact: 8 });
     }
     if (fx.trait && !hasTrait(s, fx.trait)) {
       s.traits.push(fx.trait);
@@ -580,7 +600,7 @@
     }
     if (fx.retire) {
       s.retiring = true;
-      chips.push({ label: "👋 Retraite en fin de saison", kind: "neutral" });
+      chips.push({ label: tx(s, "chipRetire"), kind: "neutral" });
     }
     if (fx.end) {
       s.careerEnded = true;
@@ -726,7 +746,11 @@
       }
     }
     const impact = netImpact(outcome.fx);
-    s.history.push({ age: s.age, text: outcome.text, impact });
+    // Le texte est STOCKÉ rendu, pas brut : l'historique alimente le récit de
+    // la fiche finale (pickHighlights → buildNarrative), où un {rival} ou un
+    // {dualNat} non substitué s'afficherait tel quel. Le nom du rival n'étant
+    // pas connu du moteur ici, {rival} retombe sur sa formulation générique.
+    s.history.push({ age: s.age, text: renderText(s, outcome.text), impact });
     return { outcome, chips, tone: toneOf(outcome.fx, impact), movedTo };
   }
 
@@ -829,9 +853,9 @@
     const wc = {
       year: s.year,
       stage: finalReached ? "final" : stage.id,
-      label: finalReached ? "En finale !" : stage.label,
+      label: finalReached ? ENGINE_TEXT.wcInFinal : stage.label,
       text: finalReached
-        ? "Votre nation renverse tout sur son passage : LA FINALE ! À 90 minutes du toit du monde."
+        ? ENGINE_TEXT.wcFinalText
         : stage.text,
       finalPending: finalReached,
       champion: false,
@@ -841,7 +865,7 @@
       if (stage.id === "semi") {
         s.rep = clamp(s.rep + 4, 0, 100);
         s.moral = clamp(s.moral - 4, 5, 100);
-        s.history.push({ age: s.age, text: `${stage.label} de la Coupe du Monde ${s.year}.`, impact: 8 });
+        s.history.push({ age: s.age, text: tx(s, "wcStage", { stage: stage.label }), impact: 8 });
       } else {
         s.moral = clamp(s.moral - 3, 5, 100);
       }
@@ -896,17 +920,17 @@
       s.rep = clamp(s.rep + 6, 0, 100);
       s.moral = clamp(s.moral + 10, 5, 100);
       s.money += 1;
-      s.history.push({ age: s.age, text: `Champion ${cup.of} ${s.year} avec ${s.nationality.name} !`, impact: 22 });
+      s.history.push({ age: s.age, text: tx(s, "contChampion", { cupOf: cup.of }), impact: 22 });
       if (!report.awards.includes("ballon_won")) rollBallon(s, report, 1.5); // coup de pouce Ballon d'Or (moindre que le Mondial)
       recheckObjective(s, report);
     } else if (stage.id === "final") {
       cont.label = "Finaliste";
       s.rep = clamp(s.rep + 3, 0, 100);
       s.moral = clamp(s.moral - 5, 5, 100);
-      s.history.push({ age: s.age, text: `Finaliste ${cup.of} ${s.year} — l'argent au goût amer.`, impact: 9 });
+      s.history.push({ age: s.age, text: tx(s, "contFinalist", { cupOf: cup.of }), impact: 9 });
     } else if (stage.id === "semi") {
       s.rep = clamp(s.rep + 2, 0, 100);
-      s.history.push({ age: s.age, text: `Demi-finaliste ${cup.of} ${s.year}.`, impact: 6 });
+      s.history.push({ age: s.age, text: tx(s, "contSemi", { cupOf: cup.of }), impact: 6 });
     } else {
       s.moral = clamp(s.moral - 2, 5, 100);
     }
@@ -945,17 +969,17 @@
       s.rep = clamp(s.rep + 3, 0, 100);
       s.moral = clamp(s.moral + 7, 5, 100);
       s.money += 0.4;
-      s.history.push({ age: s.age, text: `Vainqueur ${cup.of} ${s.year} avec ${s.nationality.name} !`, impact: 12 });
+      s.history.push({ age: s.age, text: tx(s, "nlWinner", { cupOf: cup.of }), impact: 12 });
       if (!report.awards.includes("ballon_won")) rollBallon(s, report, 0.6); // léger coup de pouce (moindre que l'Euro)
       recheckObjective(s, report);
     } else if (stage.id === "final") {
       nl.label = "Finaliste";
       s.rep = clamp(s.rep + 2, 0, 100);
       s.moral = clamp(s.moral - 3, 5, 100);
-      s.history.push({ age: s.age, text: `Finaliste ${cup.of} ${s.year}.`, impact: 6 });
+      s.history.push({ age: s.age, text: tx(s, "nlFinalist", { cupOf: cup.of }), impact: 6 });
     } else if (stage.id === "final_four") {
       s.rep = clamp(s.rep + 1, 0, 100);
-      s.history.push({ age: s.age, text: `Dernier carré ${cup.of} ${s.year}.`, impact: 4 });
+      s.history.push({ age: s.age, text: tx(s, "nlSemi", { cupOf: cup.of }), impact: 4 });
     } else {
       s.moral = clamp(s.moral - 1, 5, 100);
     }
@@ -979,20 +1003,20 @@
     s.youth = s.youth || { caps: 0, goals: 0, tiers: [] };
     s.youth.caps += games; // les JO (U23) comptent dans les sélections jeunes
     s.youth.goals += goals;
-    const ol = { year: s.year, stage: stage.id, label: stage.label, text: stage.text, games, goals, icon: "🥇", cupName: "Jeux Olympiques", medal: null };
+    const ol = { year: s.year, stage: stage.id, label: stage.label, text: stage.text, games, goals, icon: "🥇", cupName: ENGINE_TEXT.olyCupName, medal: null };
     if (stage.id === "champion") {
-      s.trophies.olympic += 1; s.olympicMedals.gold += 1; ol.medal = "gold"; ol.label = "MÉDAILLE D'OR";
+      s.trophies.olympic += 1; s.olympicMedals.gold += 1; ol.medal = "gold"; ol.label = ENGINE_TEXT.olyGoldLabel;
       s.rep = clamp(s.rep + 5, 0, 100); s.moral = clamp(s.moral + 9, 5, 100);
-      s.history.push({ age: s.age, text: `🥇 Champion olympique ${s.year} avec ${s.nationality.name} !`, impact: 16 });
+      s.history.push({ age: s.age, text: tx(s, "olyGold"), impact: 16 });
       if (!report.awards.includes("ballon_won")) rollBallon(s, report, 0.5); // petit coup de pouce Ballon d'Or
     } else if (stage.id === "final") {
-      s.olympicMedals.silver += 1; ol.medal = "silver"; ol.label = "Médaille d'argent";
+      s.olympicMedals.silver += 1; ol.medal = "silver"; ol.label = ENGINE_TEXT.olySilverLabel;
       s.rep = clamp(s.rep + 3, 0, 100); s.moral = clamp(s.moral - 2, 5, 100);
-      s.history.push({ age: s.age, text: `🥈 Médaille d'argent olympique ${s.year}.`, impact: 9 });
+      s.history.push({ age: s.age, text: tx(s, "olySilver"), impact: 9 });
     } else if (stage.id === "semi") {
-      s.olympicMedals.bronze += 1; ol.medal = "bronze"; ol.label = "Médaille de bronze";
+      s.olympicMedals.bronze += 1; ol.medal = "bronze"; ol.label = ENGINE_TEXT.olyBronzeLabel;
       s.rep = clamp(s.rep + 2, 0, 100);
-      s.history.push({ age: s.age, text: `🥉 Médaille de bronze olympique ${s.year}.`, impact: 7 });
+      s.history.push({ age: s.age, text: tx(s, "olyBronze"), impact: 7 });
     } else {
       s.moral = clamp(s.moral - 2, 5, 100);
     }
@@ -1021,13 +1045,13 @@
       if (option.id === "panenka") s.flags.panenka_final = true;
       wc.champion = true;
       wc.stage = "champion";
-      wc.label = "CHAMPION DU MONDE";
+      wc.label = ENGINE_TEXT.wcChampionLabel;
       s.trophies.worldCup += 1;
       report.trophies.push("worldCup");
       s.rep = clamp(s.rep + 8, 0, 100);
       s.moral = clamp(s.moral + 12, 5, 100);
       s.money += 2;
-      s.history.push({ age: s.age, text: `Champion du monde ${s.year} avec ${s.nationality.name} !`, impact: 40 });
+      s.history.push({ age: s.age, text: tx(s, "wcChampion"), impact: 40 });
       // Distinctions du tournoi
       if (ovr(s) >= 85 && rng() < 0.55) {
         wc.goldenBall = true;
@@ -1042,7 +1066,7 @@
       wc.label = "Finaliste";
       s.rep = clamp(s.rep + 4, 0, 100);
       s.moral = clamp(s.moral - 8, 5, 100);
-      s.history.push({ age: s.age, text: `Finaliste de la Coupe du Monde ${s.year} — si près du rêve.`, impact: 10 });
+      s.history.push({ age: s.age, text: tx(s, "wcFinalist"), impact: 10 });
     }
     return res;
   }
@@ -1152,13 +1176,13 @@
       // deux fois — on retire exactement ce malus de la barre.
       const base = BALANCE.objectiveRating[lvl] || BALANCE.objectiveRating.other;
       const n = Math.round(Math.max(5.6, base + Math.min(0, (pt - 0.7) * 0.8)) * 10) / 10;
-      return { type: "rating", n, label: `Note de saison ≥ ${n.toFixed(1)}` };
+      return { type: "rating", n, label: tx(s, "objRating", { n: n.toFixed(1) }) };
     }
     // Cibles « top N » élargies d'un cran : le classement du club suit désormais la
     // note du joueur (cf. leaguePos), mais il reste largement tiré au sort — viser
     // le top 5 d'un randInt(4,14) ne réussissait qu'une fois sur trois, et chaque
     // échec coûte de la confiance du coach, donc du temps de jeu.
-    if (lvl === "elite") return { type: "trophy", label: "Ramener un trophée majeur" };
+    if (lvl === "elite") return { type: "trophy", label: tx(s, "objTrophy") };
     if (lvl === "d1") return { type: "top", n: 8, label: "Accrocher le top 8" };
     if (lvl === "d2") return { type: "top", n: 7, label: "Jouer la montée (top 7)" };
     if (lvl === "d3") return { type: "top", n: 8, label: "Jouer la montée (top 8)" };
@@ -1209,7 +1233,7 @@
     report.awards.push(id);
     s.awardCounts[id] = (s.awardCounts[id] || 0) + 1;
     if (["league_mvp", "wc_golden_ball", "cl_mvp"].includes(id)) {
-      s.history.push({ age: s.age, text: `${award.icon} ${award.name} ${s.year}.`, impact: 12 });
+      s.history.push({ age: s.age, text: tx(s, "award", { icon: award.icon, awardName: award.name }), impact: 12 });
     }
   }
 
@@ -1277,7 +1301,7 @@
         s.bestBallonRank = 1;
         s.rep = clamp(s.rep + 8, 0, 100);
         s.money += 1.5;
-        s.history.push({ age: s.age, text: `Ballon d'Or ${s.year} — le monde à vos pieds.`, impact: 30 });
+        s.history.push({ age: s.age, text: tx(s, "ballon"), impact: 30 });
         if (s.age <= 23) s.flags.early_ballon = true;
         return true;
       }
@@ -1299,7 +1323,7 @@
       report.ballonRank = rank;
       if (!s.bestBallonRank || rank < s.bestBallonRank) s.bestBallonRank = rank;
       if (rank <= 10) s.rep = clamp(s.rep + 2, 0, 100);
-      if (rank <= 3) s.history.push({ age: s.age, text: `Sur le podium du Ballon d'Or ${s.year} (${rank}ᵉ).`, impact: 12 });
+      if (rank <= 3) s.history.push({ age: s.age, text: tx(s, "ballonPodium", { rank }), impact: 12 });
     }
     return false;
   }
@@ -1372,7 +1396,7 @@
     if (s.discipline < 40 && rng() < 0.35) {
       s.form = clamp(s.form - 4, 5, 100);
       s.injuryWeeks += 2;
-      report.lines.push({ text: "Des écarts d'hygiène de vie répétés se paient sur le terrain.", impact: -5 });
+      report.lines.push({ text: tx(s, "lineDiscipline"), impact: -5 });
     } else if (s.discipline >= 72) {
       s.form = clamp(s.form + 2, 5, 100);
     }
@@ -1401,12 +1425,12 @@
       s.moral = clamp(s.moral - seasonInj.tier.mor, 5, 100);
       s.form = clamp(s.form - seasonInj.tier.form, 5, 100);
       report.seasonInjury = { tier: seasonInj.tier.id, weeks: seasonInj.weeks };
-      s.history.push({ age: s.age, text: `${BALANCE.injury.labels[seasonInj.tier.id]} (${seasonInj.weeks} sem.) en ${s.year}.`, impact: -(seasonInj.tier.mor + 4) });
+      s.history.push({ age: s.age, text: tx(s, "injury", { label: BALANCE.injury.labels[seasonInj.tier.id], weeks: seasonInj.weeks }), impact: -(seasonInj.tier.mor + 4) });
       // Grosse blessure → carte interactive « chemin du retour »
       if (seasonInj.tier.interactive) {
         report.pendingMoments.push({
-          type: "injury", label: "Coup dur",
-          winLabel: "De retour, plus fort", failLabel: "Convalescence prolongée",
+          type: "injury", label: tx(s, "momInjury"),
+          winLabel: tx(s, "momInjuryWin"), failLabel: tx(s, "momInjuryFail"),
           moment: keyMomentFor(s, "injury"),
         });
       }
@@ -1431,8 +1455,8 @@
         s.flags.captain = true;
         s.rep = clamp(s.rep + 2, 0, 100);
         report.newCaptain = true;
-        report.lines.push({ text: "🅒 Le vestiaire vous confie le brassard de capitaine.", impact: 7 });
-        s.history.push({ age: s.age, text: `Nommé capitaine ${deOf(s.club.name)}.`, impact: 7 });
+        report.lines.push({ text: tx(s, "lineCaptain"), impact: 7 });
+        s.history.push({ age: s.age, text: tx(s, "captain"), impact: 7 });
       }
       if (s.flags.captain) {
         s.captainMatches += matches;
@@ -1515,15 +1539,15 @@
       s.leagueTitlesDetail.push({ countryId: s.club.countryId, level: lvl, clubId: s.club.id, year: s.year });
       s.rep = clamp(s.rep + Math.round(4 * visibilityOf(s)), 0, 100);
       s.moral = clamp(s.moral + 6, 5, 100);
-      s.history.push({ age: s.age, text: `Champion ${deOf(divShort(lvl, s.club.countryId))} ${s.year} avec ${s.club.name} — la montée !`, impact: 9 });
+      s.history.push({ age: s.age, text: tx(s, "divTitlePromo", { div: divShort(lvl, s.club.countryId) }), impact: 9 });
     } else if (!isTopFlight && rating >= 6.4 && rng() < (BALANCE.playoffChance[lvl] || 0) * teamBoost) {
       // Saison solide sans titre : la montée se joue en barrage (moment décisif)
       report.playoffRun = true;
       report.pendingMoments.push({
         // Libellé explicite sur la division VISÉE : « Barrage de montée » tout court
         // laissait croire à une montée depuis la division où l'on est déjà affiché.
-        type: "playoff", label: `Barrage de montée en ${divShort(LEVEL_ORDER[Math.min(LEVEL_ORDER.length - 1, LEVEL_ORDER.indexOf(lvl) + 1)], s.club.countryId)}`,
-        winLabel: "MONTÉE !", failLabel: "Échec en barrage",
+        type: "playoff", label: tx(s, "momPromo", { div: divShort(LEVEL_ORDER[Math.min(LEVEL_ORDER.length - 1, LEVEL_ORDER.indexOf(lvl) + 1)], s.club.countryId) }),
+        winLabel: tx(s, "momPromoWin"), failLabel: tx(s, "momPromoFail"),
         moment: keyMomentFor(s, "promo_playoff"),
       });
     }
@@ -1539,12 +1563,12 @@
       if (rating <= BALANCE.relegDirectRating) {
         report.relegated = true;
         s.moral = clamp(s.moral - 8, 5, 100);
-        s.history.push({ age: s.age, text: `Relégation ${deOf(s.club.name)} en ${s.year} — une saison noire.`, impact: -10 });
+        s.history.push({ age: s.age, text: tx(s, "relegated"), impact: -10 });
       } else {
         report.relegationPlayoff = true;
         report.pendingMoments.push({
-          type: "relegation_playoff", label: "Barrage de maintien",
-          winLabel: "MAINTIEN ARRACHÉ !", failLabel: "Relégation au bout du barrage",
+          type: "relegation_playoff", label: tx(s, "momStay"),
+          winLabel: tx(s, "momStayWin"), failLabel: tx(s, "momStayFail"),
           moment: keyMomentFor(s, "relegation_playoff"),
         });
       }
@@ -1553,8 +1577,8 @@
     // joue dans un moment décisif
     if (!evTrophies.includes("cup") && rng() < BALANCE.cupChance[lvl] * BALANCE.cupFinalReachMult * teamBoost) {
       report.pendingMoments.push({
-        type: "cup_final", label: "Finale de la Coupe Nationale",
-        winLabel: "VAINQUEUR !", failLabel: "Finale perdue",
+        type: "cup_final", label: tx(s, "momCup"),
+        winLabel: tx(s, "momCupWin"), failLabel: tx(s, "momCupFail"),
         moment: keyMomentFor(s, "cup_final"),
       });
     }
@@ -1584,9 +1608,9 @@
           type: "continental_final",
           tier,
           continent: tier === 1 ? continent : "eu",
-          label: `Finale · ${cup.name}`,
-          winLabel: tier === 3 ? "BOUCLIER D'EUROPE REMPORTÉ !" : tier === 2 ? "TROPHÉE D'EUROPE REMPORTÉ !" : "SACRE CONTINENTAL !",
-          failLabel: tier === 1 ? "Finale continentale perdue" : "Finale européenne perdue",
+          label: tx(s, "momCont", { cupName: cup.name }),
+          winLabel: tx(s, tier === 3 ? "momCont3Win" : tier === 2 ? "momCont2Win" : "momContWin"),
+          failLabel: tx(s, tier === 1 ? "momContFail" : "momContEuFail"),
           moment: keyMomentFor(s, "continental_final"),
         });
       }
@@ -1618,14 +1642,14 @@
     if (report.pendingMoments.length < 2 && matches > 8) {
       if (oldClubPlausible && rng() < BALANCE.oldClubMomentChance) {
         report.pendingMoments.push({
-          type: "old_club", label: "Retrouvailles avec votre ancien club",
-          winLabel: "Retrouvailles maîtrisées", failLabel: "Soirée compliquée",
+          type: "old_club", label: tx(s, "momOldClub"),
+          winLabel: tx(s, "momOldClubWin"), failLabel: tx(s, "momOldClubFail"),
           moment: keyMomentFor(s, "old_club"),
         });
       } else if (rng() < BALANCE.derbyMomentChance) {
         report.pendingMoments.push({
-          type: "derby", label: "Le derby",
-          winLabel: "Derby remporté !", failLabel: "Derby perdu",
+          type: "derby", label: tx(s, "momDerby"),
+          winLabel: tx(s, "momDerbyWin"), failLabel: tx(s, "momDerbyFail"),
           moment: keyMomentFor(s, "derby"),
         });
       }
@@ -1643,7 +1667,7 @@
     if (shoeCoef && report.goals * shoeCoef >= BALANCE.goldenShoePts && !evTrophies.includes("goldenBoot") && rng() < BALANCE.goldenShoeChance) {
       s.trophies.goldenBoot += 1;
       report.trophies.push("goldenBoot");
-      s.history.push({ age: s.age, text: `Soulier d'Or européen ${s.year} — meilleur buteur du continent.`, impact: 12 });
+      s.history.push({ age: s.age, text: tx(s, "goldenBoot"), impact: 12 });
     }
 
     // Sélections de jeunes (U17 → U23) : on gravit l'échelle selon l'âge, tant
@@ -1659,8 +1683,8 @@
         s.flags.youth_int = true;
         s.youth.caps += randInt(3, 6);
         s.rep = clamp(s.rep + 2, 0, 100);
-        report.lines.push({ text: `🎽 Première convocation avec les ${tier.label} ${deOf(s.nationality.name)}.`, impact: 5 });
-        s.history.push({ age: s.age, text: `Sélectionné en ${tier.label} ${deOf(s.nationality.name)}.`, impact: 5 });
+        report.lines.push({ text: tx(s, "lineYouthCall", { tier: tier.label }), impact: 5 });
+        s.history.push({ age: s.age, text: tx(s, "youthCall", { tier: tier.label }), impact: 5 });
         if (tier.tournament) {
           const natW = s.nationality.weight;
           const st = weightedRandom(YOUTH_STAGES, (x) =>
@@ -1668,7 +1692,7 @@
             (x.id === "final" || x.id === "semi") ? x.baseW * (0.5 + natW * 1.0) : x.baseW);
           s.youth.caps += st.games;
           report.lines.push({ text: `🏆 ${tier.tournament} : ${st.label}.`, impact: st.champion ? 8 : 4 });
-          if (st.champion) s.history.push({ age: s.age, text: `Vainqueur du ${tier.tournament} ${s.year} !`, impact: 9 });
+          if (st.champion) s.history.push({ age: s.age, text: tx(s, "youthWin", { tournament: tier.tournament }), impact: 9 });
         }
         break; // un seul palier par saison
       }
@@ -1750,7 +1774,7 @@
     const prize = report.trophies.length * 0.3;
     if (prize) s.money += prize;
 
-    if (report.trophies.includes("league")) s.history.push({ age: s.age, text: `Champion national ${s.year} avec ${s.club.name}.`, impact: 10 });
+    if (report.trophies.includes("league")) s.history.push({ age: s.age, text: tx(s, "leagueTitle"), impact: 10 });
 
     // Fin de carrière par blessure : RARISSIME, à tout âge, issue extrême d'une
     // grave/catastrophe. Évaluée en FIN de saison (la saison diminuée a été jouée
@@ -1764,7 +1788,7 @@
         s.careerEnded = true;
         s.careerEndReason = "injury";
         report.careerEndInjury = { age: s.age, tier: tier.id };
-        s.history.push({ age: s.age, text: `${BALANCE.injury.labels[tier.id]} : votre carrière s'arrête net en ${s.year}.`, impact: -90 });
+        s.history.push({ age: s.age, text: tx(s, "careerEndInjury", { label: BALANCE.injury.labels[tier.id] }), impact: -90 });
       }
     }
 
@@ -1830,11 +1854,11 @@
         if (s.lastSeason) s.lastSeason.promoted = true;
         s.moral = clamp(s.moral + 10, 5, 100);
         s.rep = clamp(s.rep + 4, 0, 100);
-        s.history.push({ age: s.age, text: `Montée décrochée en barrage avec ${s.club.name} (${s.year}) !`, impact: 12 });
+        s.history.push({ age: s.age, text: tx(s, "promoWin"), impact: 12 });
         recheckObjective(s, report);
       } else {
         s.moral = clamp(s.moral - 6, 5, 100);
-        s.history.push({ age: s.age, text: `Barrage de montée perdu avec ${s.club.name} (${s.year}).`, impact: -6 });
+        s.history.push({ age: s.age, text: tx(s, "promoLoss"), impact: -6 });
       }
     } else if (entry.type === "relegation_playoff") {
       // Miroir du barrage de montée : ici c'est la survie du club qui se joue.
@@ -1846,13 +1870,13 @@
         if (s.lastSeason) s.lastSeason.relegated = false;
         s.moral = clamp(s.moral + 8, 5, 100);
         s.rep = clamp(s.rep + 2, 0, 100);
-        s.history.push({ age: s.age, text: `Maintien arraché en barrage avec ${s.club.name} (${s.year}) !`, impact: 8 });
+        s.history.push({ age: s.age, text: tx(s, "stayWin"), impact: 8 });
       } else {
         report.relegated = true;
         if (s.lastSeason) s.lastSeason.relegated = true;
         report.leaguePos = Math.max(report.leaguePos, lvlOf(s, s.club) === "d1" ? 17 : 18);
         s.moral = clamp(s.moral - 10, 5, 100);
-        s.history.push({ age: s.age, text: `Relégation ${deOf(s.club.name)} au bout du barrage (${s.year}).`, impact: -11 });
+        s.history.push({ age: s.age, text: tx(s, "stayLoss"), impact: -11 });
       }
     } else if (entry.type === "cup_final") {
       if (res.success) {
@@ -1860,17 +1884,17 @@
         report.trophies.push("cup");
         s.money += 0.3;
         s.moral = clamp(s.moral + 8, 5, 100);
-        s.history.push({ age: s.age, text: `Vainqueur de la ${COMPETITIONS.cup.name} ${s.year} avec ${s.club.name}.`, impact: 9 });
+        s.history.push({ age: s.age, text: tx(s, "cupWin", { cupName: COMPETITIONS.cup.name }), impact: 9 });
         recheckObjective(s, report);
         // Vainqueur de coupe (club européen) → qualifié pour une coupe d'Europe
         // la saison prochaine (C2, ou C1 si le club est/passe élite). Aucun rng.
         if (((countryOf(s.club.countryId) || {}).continent) === "eu") {
           s.euroCupTicket = true;
-          if (lvlOf(s, s.club) !== "elite") report.lines.push({ text: `🇪🇺 Sacre en Coupe Nationale : vous voilà qualifié pour une coupe d'Europe la saison prochaine !`, impact: 5 });
+          if (lvlOf(s, s.club) !== "elite") report.lines.push({ text: tx(s, "lineEuroTicket"), impact: 5 });
         }
       } else {
         s.moral = clamp(s.moral - 5, 5, 100);
-        s.history.push({ age: s.age, text: `Finale de ${COMPETITIONS.cup.name} perdue en ${s.year}.`, impact: -4 });
+        s.history.push({ age: s.age, text: tx(s, "cupLoss", { cupName: COMPETITIONS.cup.name }), impact: -4 });
       }
     } else if (entry.type === "continental_final") {
       const tier = entry.tier || 1;
@@ -1885,14 +1909,14 @@
           s.money += continent === "eu" ? 1.2 : 0.6;
           s.rep = clamp(s.rep + (continent === "eu" ? 6 : 4), 0, 100);
           s.moral = clamp(s.moral + 10, 5, 100);
-          s.history.push({ age: s.age, text: `Vainqueur de la ${cup.name} avec ${s.club.name} (${s.year}) !`, impact: continent === "eu" ? 15 : 11 });
+          s.history.push({ age: s.age, text: tx(s, "contCupWin", { cupName: cup.name }), impact: continent === "eu" ? 15 : 11 });
           recheckObjective(s, report);
           // Le sacre continental rebat les cartes du Ballon d'Or (comme le Mondial).
           if (!report.awards.includes("ballon_won")) rollBallon(s, report, 0);
         } else {
           s.rep = clamp(s.rep + 2, 0, 100);
           s.moral = clamp(s.moral - 6, 5, 100);
-          s.history.push({ age: s.age, text: `Finale de ${cup.name} perdue en ${s.year} — si près du toit du continent.`, impact: -5 });
+          s.history.push({ age: s.age, text: tx(s, "contCupLossTop", { cupName: cup.name }), impact: -5 });
         }
       } else {
         // C2 (Trophée d'Europe) / C3 (Bouclier d'Europe) — coupes d'Europe secondaires
@@ -1905,13 +1929,13 @@
           s.money += rw.money;
           s.rep = clamp(s.rep + rw.rep, 0, 100);
           s.moral = clamp(s.moral + rw.moral, 5, 100);
-          s.history.push({ age: s.age, text: `Vainqueur de la ${cup.name} avec ${s.club.name} (${s.year}) !`, impact: rw.impact });
+          s.history.push({ age: s.age, text: tx(s, "contCupWin", { cupName: cup.name }), impact: rw.impact });
           recheckObjective(s, report);
           if (rw.ballon && !report.awards.includes("ballon_won")) rollBallon(s, report, 0);
         } else {
           s.rep = clamp(s.rep + 1, 0, 100);
           s.moral = clamp(s.moral - (tier === 2 ? 5 : 4), 5, 100);
-          s.history.push({ age: s.age, text: `Finale de ${cup.name} perdue en ${s.year}.`, impact: tier === 2 ? -4 : -3 });
+          s.history.push({ age: s.age, text: tx(s, "contCupLoss", { cupName: cup.name }), impact: tier === 2 ? -4 : -3 });
         }
       }
     } else if (entry.type === "injury") {
@@ -1922,11 +1946,11 @@
         s.chronicWeeks = Math.max(0, (s.chronicWeeks || 0) - (opt.recover || 8));
         s.moral = clamp(s.moral + 6, 5, 100);
         s.form = clamp(s.form + 6, 5, 100);
-        s.history.push({ age: s.age, text: `Retour de blessure réussi en ${s.year} — le pire est derrière vous.`, impact: 6 });
+        s.history.push({ age: s.age, text: tx(s, "injuryBack"), impact: 6 });
       } else {
         s.chronicWeeks = (s.chronicWeeks || 0) + (opt.setback || 10);
         s.moral = clamp(s.moral - 6, 5, 100);
-        s.history.push({ age: s.age, text: `Rechute en ${s.year} : la convalescence s'éternise.`, impact: -8 });
+        s.history.push({ age: s.age, text: tx(s, "injuryRelapse"), impact: -8 });
       }
     } else if (entry.type === "derby") {
       if (res.success) {
@@ -2041,7 +2065,7 @@
     // Un phénomène est né ?
     if (!s.flags.wonderkid && s.age < 22 && ovr(s) >= 85) {
       s.flags.wonderkid = true;
-      s.history.push({ age: s.age, text: `À ${s.age} ans, le monde entier parle déjà de vous comme d'un phénomène.`, impact: 15 });
+      s.history.push({ age: s.age, text: tx(s, "prodigy"), impact: 15 });
     }
     if (s.age < 23 && ovr(s) >= 85) s.flags.high_early = true;
 
@@ -2057,7 +2081,7 @@
         const lvl = lvlOf(s, seasonClub);
         if (ls.promoted && (lvl === "regional" || lvl === "d3" || lvl === "d2")) {
           const newLvl = shiftClubLevel(s, seasonClub, 1);
-          if (stayed) s.history.push({ age: s.age, text: `${seasonClub.name} évolue désormais en ${divShort(newLvl, seasonClub.countryId)} — l'ascension continue.`, impact: 6 });
+          if (stayed) s.history.push({ age: s.age, text: tx(s, "clubUp", { seasonClub: seasonClub.name, div: divShort(newLvl, seasonClub.countryId) }), impact: 6 });
         } else if (ls.relegated && (lvl === "d1" || lvl === "d2" || lvl === "d3")) {
           shiftClubLevel(s, seasonClub, -1);
         } else if (stayed && lvl === "d1") {
@@ -2069,7 +2093,7 @@
           if (s.clubMomentum >= BALANCE.clubRiseSeasons) {
             setClubLevel(s, seasonClub, "elite");
             s.clubMomentum = 0;
-            s.history.push({ age: s.age, text: `${seasonClub.name} change de dimension et rejoint l'élite européenne.`, impact: 8 });
+            s.history.push({ age: s.age, text: tx(s, "clubElite", { seasonClub: seasonClub.name }), impact: 8 });
           }
         } else if (stayed && lvl === "elite") {
           // Un cador peut décliner s'il enchaîne les saisons ratées
@@ -2077,7 +2101,7 @@
           if (s.clubFade >= BALANCE.clubFadeSeasons) {
             setClubLevel(s, seasonClub, "d1");
             s.clubFade = 0;
-            s.history.push({ age: s.age, text: `${seasonClub.name} n'est plus que l'ombre du géant qu'il fut.`, impact: -5 });
+            s.history.push({ age: s.age, text: tx(s, "clubFade", { seasonClub: seasonClub.name }), impact: -5 });
           }
         }
       }
@@ -2103,15 +2127,15 @@
       if (loanRating >= 7.2) {
         s.coachRel = 72;
         s.form = clamp(s.form + 6, 5, 100);
-        s.history.push({ age: s.age, text: `Retour de prêt convaincant : ${parent.parentClub.name} compte enfin sur vous.`, impact: 8 });
+        s.history.push({ age: s.age, text: tx(s, "loanBackGood", { parentClub: parent.parentClub.name }), impact: 8 });
         if (rng() < 0.6) s.loanReturn = { clubId: parent.loanClubId, rating: loanRating };
       } else if (loanRating >= 6.3) {
         s.coachRel = 60;
-        s.history.push({ age: s.age, text: `Retour de prêt à ${parent.parentClub.name}, avec une copie honnête.`, impact: 3 });
+        s.history.push({ age: s.age, text: tx(s, "loanBackOk", { parentClub: parent.parentClub.name }), impact: 3 });
       } else {
         s.coachRel = 46;
         s.rep = clamp(s.rep - 2, 0, 100);
-        s.history.push({ age: s.age, text: `Un prêt raté : ${parent.parentClub.name} doute ouvertement de vous.`, impact: -6 });
+        s.history.push({ age: s.age, text: tx(s, "loanBackBad", { parentClub: parent.parentClub.name }), impact: -6 });
       }
       s.transferHistory.push({ age: s.age + 1, toClubName: parent.parentClub.name, countryName: countryOf(parent.parentClub.countryId).name, fee: null, loanReturn: true, level: lvlOf(s, parent.parentClub) });
     } else if (rng() < BALANCE.coachChangeChance) {
@@ -2160,7 +2184,7 @@
         s.natTeam.active = true;
         if (s.age <= 18) s.flags.early_cap = true;
         if (s.age <= 20) s.flags.young_int = true;
-        s.history.push({ age: s.age, text: `Première convocation avec ${s.nationality.name}${s.age <= 19 ? ` — à seulement ${s.age} ans !` : ""}.`, impact: 8 });
+        s.history.push({ age: s.age, text: tx(s, s.age <= 19 ? "firstCapYoung" : "firstCap"), impact: 8 });
       }
     }
 
@@ -2182,7 +2206,7 @@
       if (!stillGood) {
         s.natTeam.active = false;
         s.natTeam.retired = true;
-        s.history.push({ age: s.age, text: `Fin de l'aventure en sélection avec ${s.nationality.name} : place à la nouvelle génération.`, impact: -4 });
+        s.history.push({ age: s.age, text: tx(s, "natRetire"), impact: -4 });
       }
     }
 
@@ -2322,7 +2346,7 @@
       loan: true,
       level: lvlOf(s, offer.club),
     });
-    s.history.push({ age: s.age, text: `Prêté une saison à ${offer.club.name} pour s'aguerrir.`, impact: 4 });
+    s.history.push({ age: s.age, text: tx(s, "loanOut", { toClub: offer.club.name }), impact: 4 });
   }
 
   function transferWindow(s, report) {
@@ -2337,7 +2361,7 @@
       s.loanReturn = null;
       if (club) {
         return {
-          reason: `${club.name} n'a pas oublié votre prêt réussi : offre de transfert définitif sur la table.`,
+          reason: tx(s, "winLoanBuy", { club2: club.name }),
           offers: [buildOffer(s, club)],
           contractUp: false,
           renewSalary: salaryFor(s, s.club),
@@ -2360,8 +2384,8 @@
       if (LEVEL_ORDER.indexOf(target) > curIdx) target = LEVEL_ORDER[curIdx]; // ne remonte jamais
       return {
         reason: gk
-          ? "L'élite vous juge trop vieux, mais un gardien chevronné trouve toujours preneur, un ou deux crans plus bas."
-          : "Passé 42 ans, plus aucun cador ne mise sur vous : seuls des clubs modestes vous ouvrent encore leurs portes.",
+          ? tx(s, "winOldGk")
+          : tx(s, "winTooOld"),
         offers: offersFor(s, { toLevel: target }),
         contractUp: false, // pas de prolongation : le vétéran doit descendre pour continuer
         renewSalary: salaryFor(s, s.club),
@@ -2379,7 +2403,7 @@
     if (curLvl !== "regional" && outOfDepth && badSeason) {
       const drop = ovr(s) < expectedHere - 16 ? -2 : -1;
       return {
-        reason: "Trop juste pour ce niveau : le club vous remercie. Direction l'échelon inférieur pour vous relancer.",
+        reason: tx(s, "winTooWeak"),
         offers: offersFor(s, { d: drop }),
         contractUp: false,
         renewSalary: salaryFor(s, s.club),
@@ -2403,31 +2427,31 @@
         for (let d = (r < 5.4 ? -1 : (rng() < 0.5 ? -1 : 0)); d >= -3 && !offers.length; d--) offers = offersFor(s, { d });
         if (offers.length) {
           return {
-            reason: `Vos statistiques n'ont pas convaincu : ${s.club.name} ne prolonge pas votre contrat. À vous de rebondir ailleurs.`,
+            reason: tx(s, "winNoRenew"),
             offers, contractUp: false, noStay: true, renewSalary: salaryFor(s, s.club),
           };
         }
         // Aucun club preneur : on n'envoie pas dans le vide → la prolongation a lieu quand même.
       }
-      reason = "Votre contrat expire : il faut trancher.";
+      reason = tx(s, "winContractEnd");
       spec = { d: r >= 7.2 ? 1 : 0 };
     } else if (report && report.promoted) {
-      reason = `La montée ${deOf(s.club.name)} fait de vous une cible : rester pour l'aventure, ou viser encore plus haut ?`;
+      reason = tx(s, "winPromoted");
       spec = { d: 1 };
     } else if (report && report.relegated) {
-      reason = `La relégation ${deOf(s.club.name)} ouvre votre bon de sortie.`;
+      reason = tx(s, "winRelegated");
       spec = { d: 0 };
     } else if (report && report.benched) {
-      if (rng() < 0.65) { reason = "Votre temps de jeu famélique alerte tout le marché."; spec = { d: -1 }; }
+      if (rng() < 0.65) { reason = tx(s, "winNoGameTime"); spec = { d: -1 }; }
     } else if (report && report.rating >= 7.8 && s.rep >= 50 && lvlOf(s, s.club) !== "elite") {
-      if (rng() < 0.5) { reason = "Votre saison XXL affole les recruteurs."; spec = { d: 1 }; }
+      if (rng() < 0.5) { reason = tx(s, "winBigSeason"); spec = { d: 1 }; }
     } else if (s.flags.listed) {
       // Placé sur la liste des transferts après un bras de fer
       delete s.flags.listed;
-      reason = "Le club vous a placé sur la liste des transferts : le marché s'organise.";
+      reason = tx(s, "winListed");
       spec = { d: report && report.rating >= 7 ? 0 : -1 };
     } else if (rng() < BALANCE.windowRandomChance) {
-      reason = "Le mercato s'agite autour de votre nom.";
+      reason = tx(s, "winRumours");
       spec = { d: rng() < 0.35 ? 1 : 0, cross: rng() < 0.3 };
     }
     if (!reason) return null;
@@ -2464,7 +2488,7 @@
       fee: offer.fee,
       level: lvlOf(s, offer.club),
     });
-    s.history.push({ age: s.age, text: `Transfert à ${offer.club.name} pour ${fmtMoney(offer.fee)}.`, impact: 5 });
+    s.history.push({ age: s.age, text: tx(s, "transfer", { toClub: offer.club.name, fee: fmtMoney(offer.fee) }), impact: 5 });
     s.justTransferred = true; // retrouvailles possibles la saison suivante
     const newCountry = countryOf(offer.club.countryId);
     if (newCountry) {
@@ -2517,30 +2541,30 @@
   function careerTitle(s) {
     if (s.careerEnded && s.careerEndReason) {
       if (s.careerEndReason === "medical") {
-        return { title: "Carrière jamais commencée", story: "Un diagnostic médical implacable a mis fin à vos espoirs avant même vos débuts professionnels. Une histoire qui aurait pu être si différente." };
+        return { title: tx(s, "endMedicalTitle"), story: tx(s, "endMedicalStory") };
       }
       // Fin sur blessure : le récit s'adapte à l'âge et au palmarès accompli — un
       // vétéran au vrai vécu n'est pas un « espoir fauché ».
       const sc = computeCareerScore(s);
       if (s.age >= 30 || sc >= 130) {
-        return { title: "Carrière écourtée par la blessure", story: "Une blessure de trop a refermé le rideau plus tôt que vous ne l'auriez voulu. Mais le chemin parcouru, lui, personne ne pourra vous l'enlever." };
+        return { title: tx(s, "endCutShortTitle"), story: tx(s, "endCutShortStory") };
       }
       if (s.age >= 24) {
-        return { title: "Carrière fauchée en plein vol", story: "En pleine ascension, une blessure implacable a tout arrêté net. On ne saura jamais jusqu'où vous seriez allé — et c'est peut-être ça, le plus cruel." };
+        return { title: tx(s, "endFelledTitle"), story: tx(s, "endFelledStory") };
       }
-      return { title: "Carrière brisée", story: "Une blessure sévère a stoppé net votre progression, alors que tout semblait encore possible. Le destin en a décidé autrement." };
+      return { title: tx(s, "endBrokenTitle"), story: tx(s, "endBrokenStory") };
     }
     const score = computeCareerScore(s);
     const t = s.trophies;
     if ((t.worldCup > 0 || t.ballon > 0) && score < 170) {
-      return { title: "Star inattendue", story: "Rien ne laissait présager un tel sommet, et pourtant vous avez soulevé le plus grand des trophées. Une carrière que personne n'avait vue venir." };
+      return { title: tx(s, "tierSurpriseTitle"), story: tx(s, "tierSurpriseStory") };
     }
-    if (score >= 235) return { title: "Légende du football mondial", story: "Votre nom restera gravé parmi les plus grands. Les gamins du monde entier porteront votre maillot pendant des décennies." };
-    if (score >= 196) return { title: "Star mondiale", story: "Vous avez marqué votre époque et forcé le respect de tout un sport, bien au-delà des frontières de vos clubs." };
-    if (score >= 148) return { title: "Joueur de classe internationale", story: "Une carrière remarquable, de celles qui remplissent les stades et les albums de vignettes." };
-    if (score >= 105) return { title: "Carrière solide et respectée", story: "Sans être une superstar, vous avez mené une carrière dont vous pouvez être fier, reconnue par vos pairs." };
-    if (score >= 78) return { title: "Honnête professionnel", story: "Une carrière sans éclat majeur, mais menée avec sérieux jusqu'au bout, loin des projecteurs." };
-    return { title: "Carrière discrète", story: "Le grand public ne retiendra pas votre nom, mais vous avez vécu de votre passion, et ça n'a pas de prix." };
+    if (score >= 235) return { title: tx(s, "tierLegendTitle"), story: tx(s, "tierLegendStory") };
+    if (score >= 196) return { title: tx(s, "tierWorldStarTitle"), story: tx(s, "tierWorldStarStory") };
+    if (score >= 148) return { title: tx(s, "tierIntlTitle"), story: tx(s, "tierIntlStory") };
+    if (score >= 105) return { title: tx(s, "tierSolidTitle"), story: tx(s, "tierSolidStory") };
+    if (score >= 78) return { title: tx(s, "tierHonestTitle"), story: tx(s, "tierHonestStory") };
+    return { title: tx(s, "tierQuietTitle"), story: tx(s, "tierQuietStory") };
   }
 
   function pickHighlights(history, count) {
@@ -2623,14 +2647,14 @@
   }
 
   function compareVerdict(s, r) {
-    if (s.careerEnded) return `Le destin ne vous aura pas laissé la moindre chance de rivaliser. ${r.name} aura eu l'opportunité de construire la carrière qui vous a échappé.`;
-    if (r.careerEnded) return `${r.name} n'aura même pas eu la chance de faire ses preuves. Le destin vous aura été bien plus favorable qu'à lui.`;
+    if (s.careerEnded) return tx(s, "verdictYouEnded", { rival: r.name });
+    if (r.careerEnded) return tx(s, "verdictRivalEnded", { rival: r.name });
     const diff = computeCareerScore(s) - computeCareerScore(r);
-    if (diff > 50) return `Vous surpassez très largement ${r.name} : cette rivalité n'en aura jamais vraiment été une.`;
-    if (diff > 18) return `Vous prenez clairement le dessus sur ${r.name} au fil des années.`;
-    if (diff > -18) return `Une rivalité aussi intense que serrée avec ${r.name} — tout aurait pu basculer à tout moment.`;
-    if (diff > -50) return `${r.name} vous aura devancé sur la majeure partie de votre carrière.`;
-    return `${r.name} aura eu la carrière que vous auriez rêvé d'avoir.`;
+    if (diff > 50) return tx(s, "verdictCrushing", { rival: r.name });
+    if (diff > 18) return tx(s, "verdictClearWin", { rival: r.name });
+    if (diff > -18) return tx(s, "verdictTight", { rival: r.name });
+    if (diff > -50) return tx(s, "verdictBehind", { rival: r.name });
+    return tx(s, "verdictCrushed", { rival: r.name });
   }
 
   // --- Défi du jour : dérivation déterministe (PARTAGÉE client ↔ serveur) -------
