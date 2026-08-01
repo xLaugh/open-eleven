@@ -1634,7 +1634,7 @@ const BADGES = [
   { id: "golden_boots", cat: "trophees", icon: "👟", name: "Serial buteur", hint: "Le meilleur devant le but, plusieurs fois…", desc: "Remporter 3 Souliers d'Or dans une même carrière." },
   { id: "award_10", cat: "trophees", icon: "🏅", name: "Vitrine pleine", hint: "Les récompenses s'empilent…", desc: "Cumuler 10 distinctions individuelles dans une même carrière." },
   { id: "wc_golden_badge", cat: "trophees", icon: "🌍", name: "Roi du Mondial", hint: "Le meilleur, sur la plus grande scène…", desc: "Être élu meilleur joueur d'une Coupe du Monde." },
-  { id: "triple", cat: "trophees", icon: "🎯", name: "Triplé mythique", secret: true, desc: "Gagner le championnat, la Coupe des Champions et la Coupe du Monde la même saison." },
+  { id: "triple", cat: "trophees", icon: "🎯", name: "Triplé mythique", secret: true, desc: "Gagner le championnat, la Coupe des Champions et la Coupe du Monde la même saison.", hint: "Trois trophées majeurs, une seule saison…" },
   // --- Championnats ---
   { id: "champ_3pays", cat: "championnats", icon: "🗺️", name: "Conquérant", hint: "Un titre ici, un titre là-bas, un titre ailleurs…", desc: "Être champion (toutes divisions) dans 3 pays différents." },
   { id: "champ_big5", cat: "championnats", icon: "🏰", name: "Grand Chelem", hint: "Les cinq royaumes d'Europe, un par un…", desc: "Remporter le championnat de première division dans les 5 grands pays européens." },
@@ -1668,10 +1668,10 @@ const BADGES = [
   { id: "quest_streak7", cat: "parcours", icon: "🔥", name: "L'Habitué", hint: "Revenir, jour après jour…", desc: "Accomplir au moins une quête du jour 7 jours d'affilée." },
   { id: "quest_20", cat: "parcours", icon: "🎯", name: "Chasseur de quêtes", hint: "Les défis sont une seconde nature…", desc: "Accomplir 20 quêtes ou défis au total." },
   // --- Secrets ---
-  { id: "comeback", cat: "secret", icon: "🔄", name: "Renaissance", secret: true, desc: "Mener une carrière complète juste après une carrière brisée." },
-  { id: "survivor", cat: "secret", icon: "🩹", name: "Miraculé", secret: true, desc: "Terminer une carrière complète malgré une blessure très grave." },
-  { id: "panenka_or", cat: "secret", icon: "🥄", name: "La Cuillère", secret: true, desc: "Réussir une panenka dans une finale." },
-  { id: "double_agent", cat: "secret", icon: "😈", name: "Ennemi public", secret: true, desc: "Signer chez le club rival juré de vos supporters." },
+  { id: "comeback", cat: "secret", icon: "🔄", name: "Renaissance", secret: true, desc: "Mener une carrière complète juste après une carrière brisée.", hint: "Repartir de zéro après le pire…" },
+  { id: "survivor", cat: "secret", icon: "🩹", name: "Miraculé", secret: true, desc: "Terminer une carrière complète malgré une blessure très grave.", hint: "Le corps a lâché, pas vous…" },
+  { id: "panenka_or", cat: "secret", icon: "🥄", name: "La Cuillère", secret: true, desc: "Réussir une panenka dans une finale.", hint: "Une audace folle au pire moment…" },
+  { id: "double_agent", cat: "secret", icon: "😈", name: "Ennemi public", secret: true, desc: "Signer chez le club rival juré de vos supporters.", hint: "Trahir ceux qui vous chantaient…" },
   // --- Le Graal ---
   { id: "platine", cat: "graal", icon: "💎", name: "Palmarès Absolu", hint: "Tout. Absolument tout…", desc: "Débloquer tous les autres badges du jeu." },
 ];
