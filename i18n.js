@@ -472,6 +472,19 @@
     "🎯 Quêtes": "🎯 Quests",
     "🏠 Retour à l'accueil": "🏠 Back to home",
     "Votre carrière est sauvegardée.": "Your career is saved.",
+
+    // --- Mot de passe oublié ---
+    "Mot de passe oublié ?": "Forgotten your password?",
+    "Renseigne d'abord ton e-mail ci-dessus.": "Enter your e-mail above first.",
+    "Si un compte existe pour cette adresse, un lien de réinitialisation vient d'être envoyé.": "If an account exists for that address, a reset link has just been sent.",
+    "Nouveau mot de passe": "New password",
+    "Choisissez un nouveau mot de passe pour votre compte.": "Choose a new password for your account.",
+    "Nouveau mot de passe (8+ caractères)": "New password (8+ characters)",
+    "Confirmer le mot de passe": "Confirm the password",
+    "Enregistrer": "Save",
+    "Enregistrement…": "Saving…",
+    "Les deux mots de passe ne correspondent pas.": "The two passwords do not match.",
+    "Mot de passe mis à jour ✔": "Password updated ✔",
   };
 
   const DICT = { en: EN };

@@ -45,6 +45,9 @@
   // n'ouvre PAS de session : c'est le signal que « Confirm email » est activé
   // côté Supabase et qu'un lien a été envoyé.
   let pendingEmail = null;
+  // Vrai quand on arrive depuis un lien « mot de passe oublié » : la session
+  // ouverte par le jeton ne sert qu'à définir un nouveau mot de passe.
+  let recoveryMode = false;
 
   // Garde-fou de saisie. La validation qui fait foi reste celle du serveur ;
   // celle-ci évite juste d'envoyer une adresse manifestement erronée.
@@ -96,7 +99,9 @@
     ".acc-msg.err{color:#b3261e}.acc-msg.ok{color:var(--green,#087b4b)}" +
     ".acc-x{float:right;background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text-1,#567);line-height:1;margin:-4px -4px 0 0}" +
     ".acc-mail{font-weight:700;color:var(--green-ink,#0b3b26);word-break:break-all}" +
-    ".acc-row{display:flex;gap:8px}.acc-row .acc-btn{margin-top:0}";
+    ".acc-row{display:flex;gap:8px}.acc-row .acc-btn{margin-top:0}" +
+    ".acc-link{display:block;width:100%;margin-top:10px;padding:4px;background:none;border:none;cursor:pointer;font-family:inherit;font-size:.82rem;color:var(--text-1,#567);text-decoration:underline}" +
+    ".acc-link:hover{color:var(--green,#087b4b)}";
   document.head.appendChild(style);
 
   const overlay = document.createElement("div");
@@ -112,6 +117,7 @@
 
   function renderModal() {
     if (!overlay.classList.contains("on") && !session) { /* pas ouvert : rien à re-rendre de visible */ }
+    if (recoveryMode) { renderNewPassword(); return; }
     if (!session && pendingEmail) { renderPending(); return; }
     if (session) {
       box.innerHTML =
@@ -153,6 +159,7 @@
         '<input type="password" id="acc-pass" placeholder="Mot de passe (8+ caractères)" autocomplete="current-password" />' +
         '<button class="acc-btn primary" id="acc-login">Se connecter</button>' +
         '<button class="acc-btn ghost" id="acc-signup">Créer un compte</button>' +
+        '<button class="acc-link" id="acc-forgot">Mot de passe oublié ?</button>' +
         '<p class="acc-msg"></p>';
       box.querySelector(".acc-x").onclick = close;
       const email = () => box.querySelector("#acc-email").value.trim();
@@ -162,6 +169,17 @@
         msg("Connexion…");
         const { error } = await sb.auth.signInWithPassword({ email: email(), password: pass() });
         if (error) msg(traduire(error.message), "err");
+      };
+      box.querySelector("#acc-forgot").onclick = async () => {
+        if (!looksLikeEmail(email())) return msg("Renseigne d'abord ton e-mail ci-dessus.", "err");
+        msg(T("Envoi…"));
+        // redirectTo ramène sur le jeu : le lien arrive avec un jeton dans le
+        // hash, que l'on consomme au chargement (cf. consumeRecoveryHash).
+        const { error } = await sb.auth.resetPasswordForEmail(email(), { redirectTo: location.origin + location.pathname });
+        // Réponse volontairement identique que le compte existe ou non : dire
+        // « cette adresse est inconnue » permettrait d'énumérer les comptes.
+        if (error && /rate limit|too many/i.test(error.message || "")) return msg(traduire(error.message), "err");
+        msg("Si un compte existe pour cette adresse, un lien de réinitialisation vient d'être envoyé.", "ok");
       };
       box.querySelector("#acc-signup").onclick = async () => {
         if (!looksLikeEmail(email())) return msg("Adresse e-mail invalide.", "err");
@@ -181,6 +199,38 @@
         }
       };
     }
+  }
+
+  // Écran de définition du nouveau mot de passe, atteint depuis le lien reçu
+  // par e-mail. La session ouverte par le jeton n'est là que pour ça : tant
+  // que le mot de passe n'est pas changé, on ne bascule pas sur l'écran
+  // « Mon compte », pour ne pas laisser croire que tout est réglé.
+  function renderNewPassword() {
+    box.innerHTML =
+      '<button class="acc-x" aria-label="Fermer">×</button>' +
+      "<h3>Nouveau mot de passe</h3>" +
+      '<p class="acc-sub">Choisissez un nouveau mot de passe pour votre compte.</p>' +
+      '<input type="password" id="acc-np" placeholder="Nouveau mot de passe (8+ caractères)" autocomplete="new-password" />' +
+      '<input type="password" id="acc-np2" placeholder="Confirmer le mot de passe" autocomplete="new-password" />' +
+      '<button class="acc-btn primary" id="acc-np-save">Enregistrer</button>' +
+      '<p class="acc-msg"></p>';
+    box.querySelector(".acc-x").onclick = () => { recoveryMode = false; close(); renderModal(); };
+    box.querySelector("#acc-np-save").onclick = async () => {
+      const a = box.querySelector("#acc-np").value, b = box.querySelector("#acc-np2").value;
+      if (a.length < 8) return msg("Mot de passe : 8 caractères minimum.", "err");
+      if (a !== b) return msg("Les deux mots de passe ne correspondent pas.", "err");
+      msg(T("Enregistrement…"));
+      const { error } = await sb.auth.updateUser({ password: a });
+      if (error) return msg(traduire(error.message), "err");
+      recoveryMode = false;
+      msg("Mot de passe mis à jour ✔", "ok");
+      // La session du jeton devient une session normale : on rebascule sur
+      // « Mon compte », déjà connecté.
+      const { data } = await sb.auth.getSession();
+      session = data.session;
+      renderModal();
+      if (session) loadPseudo().then(renderModal);
+    };
   }
 
   // Écran d'attente de confirmation. Tant que le lien n'est pas cliqué, le
@@ -239,15 +289,46 @@
     }
   }
 
+  // ---- réinitialisation du mot de passe --------------------------------------
+  // Le client est créé avec detectSessionInUrl:false, pour que le SDK ne touche
+  // pas au hash — le jeu s'en sert pour les liens de duel (#duel=…). On lit
+  // donc NOUS-MÊMES le jeton de récupération que Supabase renvoie dans le hash.
+  async function consumeRecoveryHash() {
+    const h = (location.hash || "").replace(/^#/, "");
+    if (!h || h.indexOf("type=recovery") === -1) return false;
+    const p = new URLSearchParams(h);
+    const at = p.get("access_token"), rt = p.get("refresh_token");
+    if (!at) return false;
+    // Le hash est retiré immédiatement : un rechargement ne doit pas rejouer le
+    // jeton, et il n'a rien à faire dans l'historique du navigateur.
+    history.replaceState(null, "", location.pathname + location.search);
+    // Posé AVANT setSession : celui-ci déclenche onAuthStateChange(SIGNED_IN),
+    // qui doit déjà savoir qu'on est en récupération — sinon la réconciliation
+    // de sauvegarde cloud s'ouvrirait en plein milieu du parcours.
+    recoveryMode = true;
+    const { error } = await sb.auth.setSession({ access_token: at, refresh_token: rt || "" });
+    if (error) { recoveryMode = false; return false; }
+    open();
+    renderModal();
+    return true;
+  }
+
   // ---- état d'auth ------------------------------------------------------------
   sb.auth.onAuthStateChange((event, s) => {
     session = s;
     if (s) pendingEmail = null; // confirmé et connecté : l'écran d'attente n'a plus lieu d'être
     renderModal();
-    if (event === "SIGNED_IN") { onFreshLogin(); loadPseudo().then(() => { renderModal(); pushProfileStats(); }); }
+    // En récupération, on ne déclenche PAS la réconciliation locale/cloud :
+    // le joueur n'est là que pour changer son mot de passe.
+    if (event === "SIGNED_IN" && !recoveryMode) { onFreshLogin(); loadPseudo().then(() => { renderModal(); pushProfileStats(); }); }
     if (event === "SIGNED_OUT") pseudo = null;
   });
-  sb.auth.getSession().then(({ data }) => { session = data.session; renderModal(); if (session) loadPseudo().then(() => { renderModal(); pushProfileStats(); }); });
+  // On tente d'abord la récupération : si le hash porte un jeton, il ouvre
+  // directement l'écran « nouveau mot de passe » plutôt que la session normale.
+  consumeRecoveryHash().then((recovered) => {
+    if (recovered) return;
+    sb.auth.getSession().then(({ data }) => { session = data.session; renderModal(); if (session) loadPseudo().then(() => { renderModal(); pushProfileStats(); }); });
+  });
 
   // ---- sauvegarde auto quand on quitte / passe en arrière-plan ---------------
   document.addEventListener("visibilitychange", () => {
