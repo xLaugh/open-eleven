@@ -1632,6 +1632,27 @@
       report.leaguePos = clamp(randInt(lo, hi) - Math.round((rating - 6.6) * 2.4), 1, hi + 2);
     }
 
+    // Les deux bornes d'une carrière. Garanties, pas tirées au sort : le
+    // premier et le dernier match arrivent à tout le monde, et ils sont posés
+    // AVANT le plafond de deux moments — comme la blessure ou la finale
+    // continentale, qui ne se laissent pas évincer non plus.
+    if (!s.flags.debutDone && matches > 0 && s.seasons.length === 0) {
+      s.flags.debutDone = true;
+      report.pendingMoments.push({
+        type: "debut", label: tx(s, "momDebut"),
+        winLabel: tx(s, "momDebutWin"), failLabel: tx(s, "momDebutFail"),
+        moment: keyMomentFor(s, "debut"),
+      });
+    }
+    if (!s.flags.adieuDone && matches > 0 && s.retiring) {
+      s.flags.adieuDone = true;
+      report.pendingMoments.push({
+        type: "last_match", label: tx(s, "momAdieu"),
+        winLabel: tx(s, "momAdieuWin"), failLabel: tx(s, "momAdieuFail"),
+        moment: keyMomentFor(s, "last_match"),
+      });
+    }
+
     // Autres moments décisifs de la saison (2 maximum par saison).
     // Retrouvailles : uniquement si le match est crédible — même pays
     // (donc même championnat ou coupe nationale) ou trahison d'un rival.
@@ -1848,7 +1869,29 @@
       if (entry.type === "derby") s.derbyWins += 1;
       if (option.id === "panenka" && entry.type === "cup_final") s.flags.panenka_final = true;
     }
-    if (entry.type === "playoff") {
+    if (entry.type === "debut") {
+      // Premiers pas : l'enjeu n'est pas un trophée mais une réputation qui
+      // n'existe pas encore.
+      if (res.success) {
+        s.rep = clamp(s.rep + 3, 0, 100);
+        s.moral = clamp(s.moral + 8, 5, 100);
+        s.history.push({ age: s.age, text: tx(s, "debutWin"), impact: 7 });
+      } else {
+        s.moral = clamp(s.moral - 4, 5, 100);
+        s.history.push({ age: s.age, text: tx(s, "debutFail"), impact: -3 });
+      }
+    } else if (entry.type === "last_match") {
+      // Un adieu raté reste un adieu : le joueur lit ce texte en dernier, on
+      // ne termine pas une carrière sur une punition.
+      if (res.success) {
+        s.rep = clamp(s.rep + 4, 0, 100);
+        s.moral = clamp(s.moral + 10, 5, 100);
+        s.history.push({ age: s.age, text: tx(s, "adieuWin"), impact: 10 });
+      } else {
+        s.moral = clamp(s.moral + 2, 5, 100);
+        s.history.push({ age: s.age, text: tx(s, "adieuFail"), impact: 3 });
+      }
+    } else if (entry.type === "playoff") {
       if (res.success) {
         report.promoted = true;
         if (s.lastSeason) s.lastSeason.promoted = true;
@@ -2757,7 +2800,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.48";
+  const ENGINE_VERSION = "10.50";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {

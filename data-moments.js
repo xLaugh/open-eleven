@@ -1337,6 +1337,546 @@ const KEY_MOMENTS = {
       }
     ],
   },
+
+  // --- Phase 2 : les deux bornes d'une carrière -----------------------------
+  // Contrairement au derby ou aux retrouvailles, ces deux moments ne sont PAS
+  // tirés au sort : ils se déclenchent une fois exactement, au premier match
+  // professionnel et au dernier. Tout le monde doit les vivre.
+  debut: {
+    any: [
+      {
+        title: "PREMIER MATCH PROFESSIONNEL",
+        text: "71e minute, {club} mène d'un but, et le quatrième arbitre lève enfin le panneau avec votre numéro. Vous avez dix-sept ans, un maillot floqué le matin même, et quelque part dans le virage, votre mère n'a pas lâché la main de votre père depuis la mi-temps. L'entraîneur vous glisse une dernière consigne que vous n'entendez déjà plus.",
+        options: [
+          {
+            id: "simple",
+            label: "Jouer en une touche et vous fondre dans l'équipe",
+            hint: "Sage",
+            base: 0.8,
+            repWin: 1
+          },
+          {
+            id: "work",
+            label: "Courir pour les autres et prendre tous les efforts à votre compte",
+            hint: "Généreux",
+            base: 0.66,
+            repWin: 3,
+            repFail: -2
+          },
+          {
+            id: "ask",
+            label: "Réclamer chaque ballon, quitte à en perdre quelques-uns",
+            hint: "Culot",
+            base: 0.52,
+            repWin: 5,
+            repFail: -3,
+            traitWin: "clutch",
+            failText: "Vous réclamez tout et vous ratez beaucoup : au bout de dix minutes, le capitaine joue sans plus vous regarder. Vingt minutes pour se montrer, vingt minutes à se manquer devant ceux qui décident."
+          },
+          {
+            id: "moment",
+            label: "Tenter le geste qui fait lever le stade dès votre première touche",
+            hint: "Folie",
+            base: 0.36,
+            repWin: 9,
+            repFail: -5,
+            traitWin: "showman",
+            winText: "Votre première touche de ballon en professionnel est un geste que personne n'attendait d'un gamin de dix-sept ans, et tout un stade se lève d'un coup. On repassera ces trois secondes-là toute la semaine, et la seule question, au club, sera de savoir pourquoi vous n'aviez pas joué plus tôt.",
+            failText: "Le geste ne passe pas, le ballon file en touche, et le banc entier lève les bras au ciel. On pardonne l'audace à un gamin ; on lui rappelle surtout qu'il en était à sa première touche."
+          }
+        ],
+        winText: "Vingt minutes, pas une de plus, et pas une seconde où vous avez semblé de trop. Dans le couloir, l'entraîneur vous attrape par la nuque sans un mot : la prochaine feuille de match ne se discutera pas.",
+        failText: "Les vingt minutes passent sans vous, comme si le match se jouait à côté. Vous sortez sans avoir rien laissé, et dans le couloir, personne ne vient vous dire le contraire."
+      },
+      {
+        title: "PREMIER MATCH PROFESSIONNEL",
+        text: "L'entraîneur a annoncé hier soir que vous étiez titulaire, et depuis, vous n'avez pas vraiment dormi. Une heure avant le coup d'envoi, votre maillot est accroché tout au bout du vestiaire, à la place que personne ne prend jamais. Autour, les anciens déroulent leurs rituels sans vous voir. Vous ne savez même pas si vous avez le droit de vous asseoir.",
+        options: [
+          {
+            id: "quiet",
+            label: "Prendre la place du bout et ne déranger personne",
+            hint: "Discret",
+            base: 0.76,
+            repWin: 1
+          },
+          {
+            id: "greet",
+            label: "Faire le tour du vestiaire et serrer la main de chacun",
+            hint: "Poli",
+            base: 0.64,
+            repWin: 3,
+            repFail: -2
+          },
+          {
+            id: "sing",
+            label: "Monter sur le banc et chanter, comme le veut la tradition",
+            hint: "Bizutage",
+            base: 0.5,
+            repWin: 6,
+            repFail: -3,
+            traitWin: "showman",
+            winText: "Vous chantez faux, très fort, jusqu'au bout, et le vestiaire finit debout à taper sur les casiers. Le match, ensuite, vous paraît presque simple : ces gars-là jouent avec vous, plus devant vous.",
+            failText: "La voix se casse à la deuxième phrase et personne ne vient à votre secours. Le silence dure trop longtemps, et il vous suit sur la pelouse : vous jouez tout le match la tête basse."
+          },
+          {
+            id: "speak",
+            label: "Demander le silence et dire ce que ce maillot représente pour vous",
+            hint: "Aplomb",
+            base: 0.38,
+            repWin: 9,
+            repFail: -5,
+            traitWin: "leader",
+            winText: "Vous parlez trente secondes, sans trembler, et le capitaine vous coupe d'une main sur l'épaule : « on y va ». À dix-sept ans, vous venez de prendre la parole dans un vestiaire professionnel, et le match qui suit ne vous fait plus peur.",
+            failText: "Les mots sortent mal, trop haut, et un ancien vous demande gentiment de vous rasseoir. Vous montez sur la pelouse avec l'impression d'avoir déjà tout raté, et le match ne fait rien pour vous rassurer."
+          }
+        ],
+        winText: "Le match qui suit ne ressemble à rien de ce que vous avez connu au centre, et pourtant vous ne le subissez jamais. À la sortie, deux anciens vous attendent pour rentrer avec vous : dans ce vestiaire-là, vous avez désormais une place.",
+        failText: "Vous jouez tout le match à côté de vos crampons, sans jamais oser réclamer un ballon. Au retour, vos affaires sont déjà rangées dans un coin du vestiaire : personne ne vous en veut, mais personne ne vous attend non plus."
+      },
+      {
+        title: "PREMIER MATCH PROFESSIONNEL",
+        text: "Sixième minute de votre premier match, et le ballon vient enfin vers vous : une longue ouverture à mi-hauteur, dos au jeu. Derrière vous, un joueur de trente-quatre ans a déjà posé l'avant-bras sur vos reins et ne dit rien. C'est le premier ballon professionnel de votre vie, et tout un stade le regarde avec vous.",
+        options: [
+          {
+            id: "back",
+            label: "Remettre en une touche et repartir dans la course",
+            hint: "Sobre",
+            base: 0.84,
+            repWin: 0
+          },
+          {
+            id: "hold",
+            label: "Protéger le ballon, encaisser le contact et attendre du soutien",
+            hint: "Costaud",
+            base: 0.66,
+            repWin: 3,
+            repFail: -2
+          },
+          {
+            id: "turn",
+            label: "Vous retourner dans son dos et sortir de la pression, ballon au pied",
+            hint: "Culot",
+            base: 0.5,
+            repWin: 6,
+            repFail: -3,
+            traitWin: "clutch"
+          },
+          {
+            id: "roulette",
+            label: "Tenter la roulette, dos au jeu, sur le premier ballon",
+            hint: "Folie",
+            base: 0.36,
+            repWin: 9,
+            repFail: -5,
+            traitWin: "showman",
+            winText: "La roulette passe, le vieux briscard reste planté, et tout un stade lâche le même cri. Pour un premier ballon en professionnel, personne ici n'en avait vu de pareil.",
+            failText: "Vous perdez le ballon au milieu de votre geste, et l'ancien ne se prive pas de vous le rappeler jusqu'à la mi-temps. Un premier ballon gâché pour une figure de salon : l'entraîneur ne dira rien, mais il aura tout vu."
+          }
+        ],
+        winText: "Le ballon est bien traité, la charge n'a rien donné, et le vieux briscard vous regarde autrement en remontant. À partir de cette seconde-là, vous jouez votre match au lieu de l'attendre.",
+        failText: "Le ballon vous échappe sous la charge et le contre part dans la foulée. Vous mettrez une demi-heure à en retoucher un autre, et la moitié du stade a déjà retenu votre nom pour la mauvaise raison."
+      }
+    ],
+    gk: [
+      {
+        title: "PREMIER MATCH PROFESSIONNEL",
+        text: "Douzième minute de votre premier match, sous une pluie qui ne s'arrête plus. Coup franc excentré : le ballon part très haut vers vos six mètres, et votre défense recule d'un même mouvement en vous laissant décider. Personne, dans cette surface, ne sait encore si l'on peut compter sur vos gants.",
+        options: [
+          {
+            id: "line",
+            label: "Rester sur votre ligne et laisser vos défenseurs s'en charger",
+            hint: "Prudent",
+            base: 0.74,
+            repWin: 1,
+            winText: "Vos défenseurs s'en chargent : la tête est contrée à deux mètres de vous et le ballon file en touche. Vous n'avez pas bougé d'un centimètre, et c'était le bon choix — pour une première alerte sous cette pluie, personne ne viendra vous chercher.",
+            failText: "Cloué sur votre ligne, vous regardez la tête plonger devant vous sans avoir avancé d'un mètre. C'est exactement ce que l'on retiendra du gamin après le match : il n'est pas sorti."
+          },
+          {
+            id: "punch",
+            label: "Sortir au poing et taper le ballon le plus loin possible",
+            hint: "Sobre",
+            base: 0.62,
+            repWin: 3,
+            repFail: -2
+          },
+          {
+            id: "catch",
+            label: "Monter au-dessus de la mêlée et capter à deux mains",
+            hint: "Autorité",
+            base: 0.48,
+            repWin: 6,
+            repFail: -3,
+            traitWin: "leader"
+          },
+          {
+            id: "cut",
+            label: "Sortir jusqu'au point de penalty et couper la trajectoire avant tout le monde",
+            hint: "Folie",
+            base: 0.36,
+            repWin: 9,
+            repFail: -6,
+            traitWin: "showman",
+            winText: "Vous traversez la moitié de votre surface sous la pluie et vous cueillez le ballon à deux mètres du sol, avant même que la tête parte. Le stade découvre d'un coup qu'il a un gardien, et qu'il n'a pas encore vingt ans.",
+            failText: "Vos gants glissent sur le ballon mouillé au point de penalty, et le but ouvert derrière vous fait le reste. Une sortie de gamin, dira-t-on : trop loin, trop tôt, sous la pire des pluies."
+          }
+        ],
+        winText: "Le ballon est écarté, la surface se vide, et votre défenseur central vient taper dans vos gants avant même de remonter. Sur ce ballon-là, vous venez de gagner le droit de jouer votre match.",
+        failText: "Le ballon vous passe au-dessus et la reprise ne laisse aucune chance à personne. Aller chercher le ballon au fond de ses filets à la douzième minute de sa première titularisation : il y a des débuts plus doux."
+      },
+      {
+        title: "PREMIER MATCH PROFESSIONNEL",
+        text: "Trente-huitième minute de votre premier match, 0-0. Votre défenseur vous remet en retrait sans regarder, et leur attaquant est déjà lancé sur vous. Vingt mille personnes retiennent leur souffle en même temps : au centre de formation, on vous demandait de jouer ; ici, on vous demande surtout de ne pas vous tromper.",
+        options: [
+          {
+            id: "row",
+            label: "Dégager en tribune et assumer les sifflets",
+            hint: "Sûr",
+            base: 0.82,
+            repWin: 0,
+            failText: "Vous voulez dégager haut et vous croisez le ballon : il part en corner, et le stade souffle un peu trop fort. On ne vous en voudra pas, mais on l'a vu."
+          },
+          {
+            id: "long",
+            label: "Chercher l'avant-centre d'une longue relance",
+            hint: "Sobre",
+            base: 0.66,
+            repWin: 3,
+            repFail: -2
+          },
+          {
+            id: "side",
+            label: "Ouvrir sur le côté, dans l'intervalle, comme à l'entraînement",
+            hint: "Culot",
+            base: 0.5,
+            repWin: 6,
+            repFail: -4,
+            traitWin: "clutch"
+          },
+          {
+            id: "dribble",
+            label: "L'effacer d'un contrôle et ressortir le ballon au pied",
+            hint: "Folie",
+            base: 0.36,
+            repWin: 10,
+            repFail: -6,
+            traitWin: "showman",
+            winText: "Vous le laissez venir, vous ouvrez le corps au dernier instant, et vous ressortez le ballon proprement pendant qu'il file dans le vide. Le stade met une seconde à comprendre, puis se met debout : à dix-sept ans, dans sa propre surface, il faut du culot.",
+            failText: "Il vous prend le ballon dans la surface et vous n'avez plus qu'à regarder. Le but est encaissé sur votre premier vrai geste de professionnel, et cette image-là mettra des mois à s'effacer."
+          }
+        ],
+        winText: "Le ballon ressort proprement, le danger s'éloigne, et votre défenseur vous adresse un pouce levé sans se retourner. À partir de cette action, on vous remet le ballon sans hésiter.",
+        failText: "Le ballon ne ressort pas comme prévu et l'action tourne mal. Pendant vingt minutes, plus personne ne vous remettra en retrait — dans une équipe professionnelle, ça se voit tout de suite."
+      },
+      {
+        title: "PREMIER MATCH PROFESSIONNEL",
+        text: "Une heure avant le coup d'envoi, le numéro un se blesse à l'échauffement des gardiens. L'entraîneur traverse la pelouse, vous regarde et dit simplement : « tu joues ». Vos parents sont déjà en tribune avec leur billet de spectateurs, et il vous reste soixante minutes pour devenir gardien professionnel.",
+        options: [
+          {
+            id: "breathe",
+            label: "Vous isoler dans un coin du vestiaire et respirer",
+            hint: "Calme",
+            base: 0.74,
+            repWin: 1
+          },
+          {
+            id: "video",
+            label: "Revoir sur la tablette du staff toutes les frappes de leur buteur",
+            hint: "Méthode",
+            base: 0.62,
+            repWin: 3,
+            repFail: -2
+          },
+          {
+            id: "defense",
+            label: "Réunir la défense et lui dire, un par un, qu'elle peut compter sur vous",
+            hint: "Aplomb",
+            base: 0.5,
+            repWin: 6,
+            repFail: -3,
+            traitWin: "leader"
+          },
+          {
+            id: "kop",
+            label: "Aller saluer le virage, seul, avant même l'échauffement",
+            hint: "Panache",
+            base: 0.38,
+            repWin: 9,
+            repFail: -5,
+            traitWin: "showman",
+            winText: "Le virage vous répond avant même de savoir qui vous êtes, et ce mur de bruit ne vous quitte plus des quatre-vingt-dix minutes. Le vieux stade a adopté son gardien avant le coup d'envoi ; il ne restait plus qu'à le mériter, et vous l'avez fait.",
+            failText: "Le virage vous regarde saluer sans un mot, et le premier ballon relâché suffit à lui donner raison. On ne se présente pas à ces gens-là avant d'avoir rien prouvé : ils vous le rappellent à chaque sortie du match."
+          }
+        ],
+        winText: "Le match passe sans jamais vous engloutir : quelques ballons faciles pour se rassurer, deux vrais arrêts ensuite, et pas un instant de flottement. À la sortie, l'entraîneur ne vous dit rien de plus que le matin — mais il ne cherchera pas d'autre gardien pour le prochain match.",
+        failText: "Vous traversez ce match sans jamais y entrer, et les deux ballons qu'il fallait tenir vous filent entre les gants. Sur le parking, vos parents vous attendent quand même : c'est la seule chose qui vous fasse du bien de la soirée."
+      }
+    ]
+  },
+
+  last_match: {
+    any: [
+      {
+        title: "LE MATCH D'ADIEU",
+        text: "Vestiaire, vingt minutes avant le coup d'envoi de votre dernier match. Le capitaine dénoue son brassard et vous le tend sans un mot : ce soir il est à vous, tout le groupe était d'accord avant même d'en parler. Les crampons se sont tus, et vingt paires d'yeux attendent que vous disiez quelque chose.",
+        options: [
+          {
+            id: "silent",
+            label: "Enfiler le brassard et sortir sans un mot",
+            hint: "Pudeur",
+            base: 0.8,
+            repWin: 1
+          },
+          {
+            id: "thanks",
+            label: "Remercier un par un ceux qu'on ne remercie jamais",
+            hint: "Gratitude",
+            base: 0.68,
+            repWin: 3,
+            traitWin: "leader"
+          },
+          {
+            id: "young",
+            label: "Ne parler qu'aux plus jeunes et leur laisser une dernière consigne",
+            hint: "Héritage",
+            base: 0.56,
+            repWin: 6,
+            repFail: -2,
+            traitWin: "leader"
+          },
+          {
+            id: "promise",
+            label: "Promettre à voix haute une soirée dont on parlera longtemps",
+            hint: "Panache",
+            base: 0.42,
+            repWin: 10,
+            repFail: -4,
+            traitWin: "showman",
+            winText: "Vous aviez promis, et le stade a tout eu : un but, une passe, et cette façon de courir comme si le corps ne comptait plus. Le tunnel des vestiaires met dix minutes à vous avaler, tellement il reste de mains à serrer.",
+            failText: "La promesse était belle ; elle vous a seulement coûté vos vingt premières minutes, à trop vouloir. On ne retiendra pas la soirée annoncée, seulement un joueur qui a essayé jusqu'au bout — et ce n'est déjà pas rien."
+          }
+        ],
+        winText: "Vous sortez du tunnel le brassard au bras, et le stade est déjà debout. Pendant quatre-vingt-dix minutes, l'équipe joue pour vous sans jamais le dire, et vous quittez la pelouse avec ce sentiment très rare d'avoir été exactement à votre place jusqu'à la dernière seconde.",
+        failText: "Le match ne vient jamais : les jambes sont lourdes, les ballons vous fuient, et le brassard pèse plus qu'il ne porte. Vous terminez cette dernière soirée en spectateur de vous-même. Personne ne vous en voudra — vous, un peu, longtemps."
+      },
+      {
+        title: "LE MATCH D'ADIEU",
+        text: "80e minute, {club} mène de deux buts, et le quatrième arbitre tient déjà le panneau à la main. Votre entraîneur cherche votre regard depuis sa zone technique : la minute, c'est vous qui la choisissez. Les tribunes, elles, se lèvent dès que quelqu'un s'approche de la ligne de touche.",
+        options: [
+          {
+            id: "now",
+            label: "Sortir maintenant et saluer les quatre tribunes",
+            hint: "Apaisé",
+            base: 0.8,
+            repWin: 1,
+            failText: "Le panneau se lève, vous traversez la pelouse… et le stade met trois secondes de trop à comprendre. L'ovation arrive alors que vous êtes déjà assis, une veste sur les épaules. Ce n'était pas la sortie rêvée ; c'était quand même la vôtre."
+          },
+          {
+            id: "five",
+            label: "Demander cinq minutes de plus pour toucher un dernier ballon",
+            hint: "Sursis",
+            base: 0.66,
+            repWin: 3
+          },
+          {
+            id: "end",
+            label: "Jouer jusqu'à la dernière seconde, quitte à finir sur les genoux",
+            hint: "Orgueil",
+            base: 0.54,
+            repWin: 6,
+            repFail: -2,
+            traitWin: "clutch"
+          },
+          {
+            id: "one_more",
+            label: "Rester et monter chercher un dernier but",
+            hint: "Folie",
+            base: 0.4,
+            repWin: 10,
+            repFail: -4,
+            traitWin: "showman",
+            winText: "Le dernier ballon de votre carrière finit au fond, et le stade explose comme il ne l'avait plus fait depuis des années. Vos coéquipiers vous portent jusqu'à la ligne de touche : il n'existait pas de plus belle façon de s'en aller.",
+            failText: "Le dernier ballon passe à côté du poteau, et le stade applaudit quand même l'audace. Vous sortez le souffle court, avec ce petit regret qui ne pèsera rien dans dix ans — mais qui pèse ce soir."
+          }
+        ],
+        winText: "Quand vous quittez enfin la pelouse, tout le stade est debout, les deux camps confondus, et le banc adverse applaudit lui aussi. Vous mettez une minute entière à rejoindre la ligne de touche, et personne ne se rassoit avant que vous ayez disparu dans le tunnel.",
+        failText: "La fin arrive presque à la dérobée : un dégagement en tribune, un coup de sifflet, et c'est déjà terminé. Vous saluez en marchant, un peu à contretemps de l'ovation, avec l'impression d'avoir manqué de peu le dernier instant — et celui-là ne se rejoue pas."
+      },
+      {
+        title: "LE MATCH D'ADIEU",
+        text: "78e minute, {club} mène de trois buts et le match est joué depuis longtemps. Penalty sifflé — et il se passe quelque chose d'étrange : le tireur attitré ramasse le ballon, traverse toute la surface et vous le pose dans les mains. Derrière le but, le virage scande déjà votre nom.",
+        options: [
+          {
+            id: "refuse",
+            label: "Rendre le ballon : ce penalty n'est pas le vôtre",
+            hint: "Pudeur",
+            base: 0.72,
+            repWin: 0,
+            winText: "Vous rendez le ballon, et le tireur le met au fond en vous montrant du doigt avant même de se retourner. Toute l'équipe court vers vous plutôt que vers lui : ce penalty que vous n'avez pas voulu tirer, le stade s'en souviendra mieux que d'un but.",
+            failText: "Vous rendez le ballon, et la frappe s'envole au-dessus de la barre. Le stade applaudit quand même, par habitude, puis le jeu repart sans vous. Ce dernier geste-là, vous ne saurez jamais ce qu'il aurait donné."
+          },
+          {
+            id: "placed",
+            label: "Le placer tranquillement dans un coin, sans forcer",
+            hint: "Sobre",
+            base: 0.68,
+            repWin: 2,
+            failText: "Vous le placez sans forcer, et le gardien part exactement du bon côté. Il vous cherche du regard en se relevant, presque désolé : le dernier but, lui, n'aura pas eu lieu."
+          },
+          {
+            id: "power",
+            label: "L'envoyer sous la barre de toutes vos forces, une dernière fois",
+            hint: "Panache",
+            base: 0.5,
+            repWin: 6,
+            repFail: -2,
+            traitWin: "showman"
+          },
+          {
+            id: "kid",
+            label: "Confier le ballon au gamin qui n'a jamais marqué chez les pros",
+            hint: "Transmission",
+            base: 0.4,
+            repWin: 11,
+            repFail: -2,
+            traitWin: "leader",
+            winText: "Le gamin met dix secondes à comprendre, puis pose le ballon sans trembler et le met au fond. Il court vers vous les bras ouverts, tout le banc derrière lui, et vous savez exactement ce que vous laissez ici en partant.",
+            failText: "Le gamin frappe à côté et reste planté là, les mains sur la tête. Vous allez le chercher, vous lui dites quelque chose que personne n'entendra jamais, et le stade applaudit cette image plus fort que n'importe quel but. Le penalty est manqué ; la soirée n'aura pas son dernier but, seulement quelque chose de plus doux."
+          }
+        ],
+        winText: "Le ballon finit au fond, et tout le stade se lève d'un bloc. Ce but-là ne changera rien au classement ; c'est pourtant celui dont la ville parlera le plus longtemps.",
+        failText: "La frappe file au-dessus de la barre, et le stade éclate d'un rire tendre avant de se lever quand même. Il en faudrait beaucoup plus pour abîmer une soirée pareille — mais le dernier but, lui, n'aura pas eu lieu."
+      }
+    ],
+    gk: [
+      {
+        title: "LE MATCH D'ADIEU",
+        text: "90e+3, {club} mène de deux buts et l'arbitre a déjà la main sur son sifflet. Leur milieu arme une dernière frappe enroulée de vingt-cinq mètres, qui monte vers votre lucarne. Vous le savez en la voyant partir : c'est le dernier ballon de votre carrière.",
+        options: [
+          {
+            id: "punch",
+            label: "Repousser des deux poings vers la touche, sans prendre de risque",
+            hint: "Métier",
+            base: 0.78,
+            repWin: 1
+          },
+          {
+            id: "catch",
+            label: "Aller la capter à deux mains et garder le ballon contre vous",
+            hint: "Propreté",
+            base: 0.64,
+            repWin: 3
+          },
+          {
+            id: "tip",
+            label: "La détourner du bout des gants sur la barre",
+            hint: "Précision",
+            base: 0.52,
+            repWin: 6,
+            repFail: -2,
+            traitWin: "clutch"
+          },
+          {
+            id: "fly",
+            label: "Partir de tout votre long, tant pis pour la retombée",
+            hint: "Folie",
+            base: 0.4,
+            repWin: 10,
+            repFail: -3,
+            traitWin: "showman",
+            winText: "Vous partez de tout votre long et vous allez chercher le ballon là où votre corps ne vous emmenait plus depuis des années. Cette parade fera la une de tous les journaux demain matin, et personne, sur l'image, ne verra un gardien à quelques secondes de la retraite.",
+            failText: "Vos doigts passent à trois centimètres du ballon, qui finit sous la barre. Vous restez allongé un peu plus longtemps que nécessaire, le temps que le stade se lève : le geste était celui de vos vingt ans, le corps, non. Personne ne vous en voudra jamais pour celui-là."
+          }
+        ],
+        winText: "Le ballon ne rentre pas, et le coup de sifflet final tombe dans la seconde. Vos coéquipiers arrivent tous en même temps, et le stade reste debout longtemps après que le tableau d'affichage s'est éteint : la dernière image de vous, ce sera celle-là.",
+        failText: "La frappe finit dans vos filets à la dernière seconde. Vous allez chercher le ballon au fond, vous le posez sur le rond central, et l'arbitre siffle la fin sans que le jeu reprenne. Le stade se lève quand même, longuement — mais ce dernier ballon-là, vous le reverrez souvent."
+      },
+      {
+        title: "LE MATCH D'ADIEU",
+        text: "75e minute, {club} mène d'un but. Sur le banc, le gamin de dix-neuf ans que vous avez pris sous votre aile depuis trois saisons a enfilé ses gants et remonté ses chaussettes. Le quatrième arbitre attend, votre entraîneur attend : c'est votre dernier match, et ce serait peut-être son premier.",
+        options: [
+          {
+            id: "finish",
+            label: "Finir le match : on ne lâche pas une cage à un but d'écart",
+            hint: "Métier",
+            base: 0.74,
+            repWin: 1
+          },
+          {
+            id: "late",
+            label: "Attendre les toutes dernières minutes pour le faire entrer",
+            hint: "Prudent",
+            base: 0.64,
+            repWin: 3
+          },
+          {
+            id: "gloves",
+            label: "Sortir maintenant et lui passer vos gants devant tout le stade",
+            hint: "Passation",
+            base: 0.52,
+            repWin: 6,
+            repFail: -2,
+            winText: "Il tient la cage un quart d'heure avec vos gants aux mains, et il ne concède rien. Vous regardez ça depuis la touche, debout, et vous comprenez que la meilleure chose que vous laissiez à ce club n'est pas dans les vitrines."
+          },
+          {
+            id: "armband",
+            label: "Lui laisser les gants, le brassard et la fin du match",
+            hint: "Confiance",
+            base: 0.4,
+            repWin: 10,
+            repFail: -3,
+            traitWin: "leader",
+            winText: "Il tient la cage un quart d'heure sans trembler, avec le brassard qui lui tombe sur le coude et le stade derrière lui. Au coup de sifflet, c'est lui qui vous cherche des yeux avant de fêter quoi que ce soit : vous ne partez pas, vous vous prolongez."
+          }
+        ],
+        winText: "Le but d'avance tient jusqu'au bout, et le coup de sifflet libère un stade entier. Après la dernière poignée de main, vos gants finissent dans les mains du gamin, et il ne les lâchera plus de la soirée : ce qui s'est transmis là, aucun tableau d'affichage ne l'affichera jamais.",
+        failText: "L'égalisation tombe dans le dernier quart d'heure, sur un ballon que personne n'aurait pu arrêter. Le stade se lève quand même à la fin, longuement, pour le gardien qui s'en va — mais ce dernier match n'aura pas eu la fin qu'on lui souhaitait."
+      },
+      {
+        title: "LE MATCH D'ADIEU",
+        text: "90e+4, {club} mène de trois buts et il ne reste plus rien à jouer. Corner pour votre équipe, et le stade entier se met à scander la même chose en montrant l'autre surface du doigt : votre nom. Sur le banc, votre entraîneur hausse les épaules en souriant — c'est vous qui voyez.",
+        options: [
+          {
+            id: "stay",
+            label: "Rester dans vos six mètres, le métier jusqu'au bout",
+            hint: "Digne",
+            base: 0.76,
+            repWin: 0,
+            winText: "Vous ne bougez pas d'un mètre, les bras croisés dans vos six mètres, et le stade finit par comprendre. L'ovation qui monte alors n'est pas celle qu'on réserve aux gestes fous : c'est celle qu'on garde pour ceux qui ont fait le métier jusqu'à la dernière seconde.",
+            failText: "Vous ne bougez pas, le corner ne donne rien, et le stade retombe d'un coup, un peu déçu. Le sifflet final arrive dans la foulée. Vous n'avez rien à vous reprocher — seulement une image que vous n'aurez pas."
+          },
+          {
+            id: "halfway",
+            label: "Monter jusqu'au rond central et regarder de loin",
+            hint: "Sage",
+            base: 0.66,
+            repWin: 2
+          },
+          {
+            id: "box",
+            label: "Monter dans la surface et attaquer le premier poteau",
+            hint: "Culot",
+            base: 0.5,
+            repWin: 7,
+            repFail: -2,
+            winText: "Vous prenez le ballon de la tête au premier poteau et il finit au fond. Vos coéquipiers vous ensevelissent près du drapeau de corner : le dernier but de votre carrière est le seul que personne n'attendait de vous."
+          },
+          {
+            id: "take",
+            label: "Réclamer le corner et le tirer vous-même",
+            hint: "Folie",
+            base: 0.38,
+            repWin: 11,
+            repFail: -3,
+            traitWin: "showman",
+            winText: "Vous posez le ballon au drapeau sous les hurlements, et vous l'enroulez au second poteau : une tête au bout, et le fond des filets. La dernière passe décisive de votre carrière, tirée d'un corner, à la 94e minute de votre dernier match.",
+            failText: "Le centre est trop long, personne ne le touche, et le ballon finit dans les gants d'en face. L'arbitre siffle la fin, le stade rit et applaudit en même temps : tirer les corners n'aura jamais été votre métier — mais tout le monde vous aura vu essayer."
+          }
+        ],
+        winText: "Le ballon traîne dans la surface, rebondit deux fois et finit au fond, dans un vacarme que ce stade n'avait plus produit depuis des années. Ce but-là ne compte pour rien au classement ; il sera pourtant sur toutes les photos de demain matin, et plus personne ne se rassoit jusqu'au coup de sifflet.",
+        failText: "Le corner ne donne rien, le ballon file en touche, et l'arbitre siffle la fin dans la foulée. Le stade se lève quand même pour vous, longuement — il ne manquait qu'une dernière image à cette soirée, et elle ne viendra pas."
+      }
+    ]
+  },
 };
 
 // --- Export Node (data.js / engine.js / simulate.js) -----------------------

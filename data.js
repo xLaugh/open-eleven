@@ -1294,6 +1294,17 @@ const BALANCE = {
    Rendu par engine.tx(s, clé, valeurs).
    ============================================================ */
 const ENGINE_TEXT = {
+  // Phase 2 : premier match professionnel et match d'adieu.
+  momDebut: "Premier match professionnel",
+  momDebutWin: "Baptême du feu réussi",
+  momDebutFail: "Des débuts à oublier",
+  debutWin: "Premiers pas en professionnel avec {club} en {year} — le début de tout.",
+  debutFail: "Débuts professionnels manqués avec {club} ({year}) : la première impression est à refaire.",
+  momAdieu: "Le match d'adieu",
+  momAdieuWin: "Sorti par la grande porte",
+  momAdieuFail: "Une sortie discrète",
+  adieuWin: "Match d'adieu avec {club} en {year} — un stade entier debout pour vous.",
+  adieuFail: "Match d'adieu avec {club} en {year} : le rideau tombe en silence.",
   // --- Sélection nationale & jeunes ---
   natSwitch: "Choix international : {target} plutôt que {from}.",
   firstCap: "Première convocation avec {nat}.",
