@@ -466,6 +466,12 @@
     "Se connecter": "Sign in",
     "Connexion…": "Signing in…",
     "E-mail": "E-mail",
+
+    // --- Menu en jeu ---
+    "Menu": "Menu",
+    "🎯 Quêtes": "🎯 Quests",
+    "🏠 Retour à l'accueil": "🏠 Back to home",
+    "Votre carrière est sauvegardée.": "Your career is saved.",
   };
 
   const DICT = { en: EN };

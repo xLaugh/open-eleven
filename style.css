@@ -1313,6 +1313,54 @@ body { color: var(--text-0); }
 .gauge-moral { background: linear-gradient(90deg, #e06a5e, #7fb2ff 60%, #b7d3ff); }
 
 /* ---------- Panneau profil ---------- */
+/* ---------- Menu en jeu (☰) ----------
+   Même vocabulaire visuel que le sélecteur de langue : pastille discrète dans
+   le sous-en-tête, panneau déroulant ancré dessous. */
+.menu-wrap { position: relative; display: flex; }
+.menu-toggle { cursor: pointer; }
+.game-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  min-width: 210px;
+  background: var(--card-bg);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px var(--shadow);
+  padding: 8px;
+  animation: fadeIn 0.18s ease;
+}
+.game-menu[hidden] { display: none; }
+.gm-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-0);
+  font-family: var(--font);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.gm-item:hover { background: var(--panel-2); }
+.gm-home {
+  margin-top: 6px;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 10px 10px;
+  color: var(--green-ink);
+}
+.gm-note {
+  margin: 6px 4px 2px;
+  font-size: 0.7rem;
+  font-style: italic;
+  color: var(--text-1);
+  text-align: center;
+}
+
 .profile-panel {
   display: none;
   background: var(--card-bg);

@@ -9,11 +9,11 @@
    ⚠️ À CHAQUE DÉPLOIEMENT : bumper CACHE (ci-dessous) en même temps
    que le ?v= d'index.html — l'ancien cache est alors purgé.
    ============================================================ */
-const CACHE = "open-eleven-v10.39";
+const CACHE = "open-eleven-v10.40";
 const CORE = [
   "./", "./index.html",
-  "./style.css?v=10.39", "./data.js?v=10.39", "./engine.js?v=10.39", "./game.js?v=10.39", "./i18n-boot.js?v=10.39", "./i18n-data.js?v=10.39", "./i18n.js?v=10.39", "./sw-register.js?v=10.39",
-  "./src/vendor/supabase.js?v=10.39", "./src/supabase-config.js?v=10.39", "./src/badwords.js?v=10.39", "./account.js?v=10.39",
+  "./style.css?v=10.40", "./data.js?v=10.40", "./engine.js?v=10.40", "./game.js?v=10.40", "./i18n-boot.js?v=10.40", "./i18n-data.js?v=10.40", "./i18n.js?v=10.40", "./sw-register.js?v=10.40",
+  "./src/vendor/supabase.js?v=10.40", "./src/supabase-config.js?v=10.40", "./src/badwords.js?v=10.40", "./account.js?v=10.40",
   "./site.webmanifest", "./favicon.svg", "./privacy.html",
   "./src/img/logo-11-mark.png",
   "./src/img/icon-512.png", "./src/img/icon-192.png", "./src/img/icon-maskable-512.png",

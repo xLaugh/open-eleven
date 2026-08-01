@@ -45,7 +45,7 @@
 <link rel="preload" href="src/fonts/poppins-400-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="src/fonts/oswald-600-latin.woff2" as="font" type="font/woff2" crossorigin />
 
-<link rel="stylesheet" href="style.css?v=10.39" />
+<link rel="stylesheet" href="style.css?v=10.40" />
 </head>
 <body>
 <div id="app">
@@ -239,6 +239,19 @@
       <div class="sub-item" id="hh-money" title="Fortune">0 M€</div>
       <div class="sub-item rep-stars" id="hh-rep" title="Réputation">★☆☆☆☆</div>
       <button class="sub-item profile-toggle" id="profile-toggle" title="Profil complet">📋</button>
+      <!-- Menu en jeu : accès aux écrans annexes et retour à l'accueil. La
+           carrière est sauvegardée avant de quitter, donc toujours reprenable. -->
+      <div class="menu-wrap">
+        <button class="sub-item menu-toggle" id="menu-toggle" title="Menu" aria-haspopup="true" aria-expanded="false">☰</button>
+        <div class="game-menu" id="game-menu" hidden role="menu">
+          <button class="gm-item" data-go="screen-badges" role="menuitem">🏅 Badges</button>
+          <button class="gm-item" data-go="screen-quests" role="menuitem">🎯 Quêtes</button>
+          <button class="gm-item" data-go="screen-pantheon" role="menuitem">🏛️ Panthéon</button>
+          <button class="gm-item" data-go="screen-shop" role="menuitem">🛒 Boutique</button>
+          <button class="gm-item gm-home" id="gm-home" role="menuitem">🏠 Retour à l'accueil</button>
+          <p class="gm-note">Votre carrière est sauvegardée.</p>
+        </div>
+      </div>
     </div>
 
     <div class="gauges">
@@ -362,20 +375,20 @@
   </div>
 </div>
 
-<script src="data.js?v=10.39"></script>
-<script src="engine.js?v=10.39"></script>
-<script src="game.js?v=10.39"></script>
+<script src="data.js?v=10.40"></script>
+<script src="engine.js?v=10.40"></script>
+<script src="game.js?v=10.40"></script>
 <!-- Traduction. Le pack de contenu pèse 363 ko : il n'est chargé QUE si la
      langue anglaise est retenue — un joueur francophone ne le télécharge
      jamais. document.write est ici volontaire : il garantit que le pack est
      en place AVANT i18n.js, qui traduit les données dès son exécution. -->
-<script src="i18n-boot.js?v=10.39"></script>
-<script src="i18n.js?v=10.39"></script>
+<script src="i18n-boot.js?v=10.40"></script>
+<script src="i18n.js?v=10.40"></script>
 <!-- Compte & sauvegarde cloud (optionnel, désactivé tant que supabase-config.js est vide) -->
-<script src="src/vendor/supabase.js?v=10.39"></script>
-<script src="src/supabase-config.js?v=10.39"></script>
-<script src="src/badwords.js?v=10.39"></script>
-<script src="account.js?v=10.39"></script>
-<script src="sw-register.js?v=10.39"></script>
+<script src="src/vendor/supabase.js?v=10.40"></script>
+<script src="src/supabase-config.js?v=10.40"></script>
+<script src="src/badwords.js?v=10.40"></script>
+<script src="account.js?v=10.40"></script>
+<script src="sw-register.js?v=10.40"></script>
 </body>
 </html>

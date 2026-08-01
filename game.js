@@ -3440,7 +3440,67 @@
   }
 
   // --- Initialisation --------------------------------------------------------------
+  // --- Menu en jeu -------------------------------------------------------------
+  // Écran vers lequel « ← Retour » ramène. Ouvrir les badges depuis une partie
+  // en cours doit y revenir, pas éjecter vers l'accueil.
+  let backTarget = "screen-home";
+
+  function openSecondary(id) {
+    const active = document.querySelector(".screen.active");
+    backTarget = active ? active.id : "screen-home";
+    closeGameMenu();
+    if (id === "screen-badges") renderBadgeScreen();
+    else if (id === "screen-quests") renderQuestScreen();
+    else if (id === "screen-pantheon") renderPantheonScreen();
+    else if (id === "screen-shop") renderShopScreen();
+    showScreen(id);
+  }
+
+  // Retour depuis un écran annexe : vers le jeu si l'on en venait, sinon accueil.
+  function goBackFromSecondary() {
+    const to = backTarget || "screen-home";
+    backTarget = "screen-home";
+    if (to === "screen-home") { renderQuestTeaser(); refreshHomeButtons(); }
+    showScreen(to);
+  }
+
+  function closeGameMenu() {
+    const m = $("game-menu"), b = $("menu-toggle");
+    if (m) m.hidden = true;
+    if (b) b.setAttribute("aria-expanded", "false");
+  }
+
+  function initGameMenu() {
+    const btn = $("menu-toggle"), menu = $("game-menu");
+    if (!btn || !menu) return;
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const open = menu.hidden;
+      menu.hidden = !open;
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    menu.addEventListener("click", (e) => {
+      const item = e.target.closest(".gm-item");
+      if (!item) return;
+      if (item.id === "gm-home") {
+        // La carrière est écrite sur disque AVANT de quitter : « Reprendre »
+        // la retrouvera intacte sur l'accueil.
+        if (G && !G.careerEnded) saveCurrentGame();
+        closeGameMenu();
+        resetGame();
+        return;
+      }
+      if (item.dataset.go) openSecondary(item.dataset.go);
+    });
+    document.addEventListener("click", (e) => {
+      if (!menu.hidden && !menu.contains(e.target) && e.target !== btn) closeGameMenu();
+    });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeGameMenu(); });
+  }
+
   function resetGame() {
+    closeGameMenu();
+    backTarget = "screen-home";
     G = null; R = null; setup = {};
     E.clearSeed(); // retour à l'accueil : plus de graine active
     currentEvent = null; lastOutcome = null; lastReport = null;
@@ -3519,23 +3579,24 @@
       $("seasons-toggle").textContent = hidden ? "📅 Masquer le détail des saisons" : "📅 Voir la carrière saison par saison";
     });
     $("btn-badges").addEventListener("click", () => { track("open_badges"); renderBadgeScreen(); showScreen("screen-badges"); });
-    $("btn-badges-back").addEventListener("click", () => showScreen("screen-home"));
+    $("btn-badges-back").addEventListener("click", goBackFromSecondary);
     $("btn-pantheon").addEventListener("click", () => { track("open_pantheon"); renderPantheonScreen(); showScreen("screen-pantheon"); });
-    $("btn-pantheon-back").addEventListener("click", () => showScreen("screen-home"));
+    $("btn-pantheon-back").addEventListener("click", goBackFromSecondary);
     $("btn-shop").addEventListener("click", () => { track("open_shop"); renderShopScreen(); showScreen("screen-shop"); });
-    $("btn-shop-back").addEventListener("click", () => showScreen("screen-home"));
+    $("btn-shop-back").addEventListener("click", goBackFromSecondary);
     $("duel-panel").addEventListener("click", () => startDuelCreate());
     $("story-panel").addEventListener("click", () => { track("open_stories"); renderStoryScreen(); showScreen("screen-story"); });
     $("btn-story-back").addEventListener("click", () => showScreen("screen-home"));
     $("btn-duel-share").addEventListener("click", (e) => shareDuel(currentDuelLink(), e.currentTarget));
     $("quest-panel").addEventListener("click", () => { track("open_quests"); renderQuestScreen(); showScreen("screen-quests"); });
-    $("btn-quests-back").addEventListener("click", () => { renderQuestTeaser(); showScreen("screen-home"); });
+    $("btn-quests-back").addEventListener("click", goBackFromSecondary);
     $("profile-toggle").addEventListener("click", () => {
       // Rendu à l'ouverture seulement, si l'état a changé depuis la dernière fois
       const open = $("profile-panel").classList.toggle("open");
       if (open && profileDirty) renderProfilePanel();
     });
     initProfileTabs();
+    initGameMenu();
 
     // Le rendu de l'accueil vient APRÈS les gestionnaires, et sous filet : il
     // lit le localStorage, et une donnée corrompue laissait sinon une page
