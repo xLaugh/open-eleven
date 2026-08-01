@@ -38,6 +38,14 @@
   });
   let session = null;
   let lastPush = 0;
+  // E-mail dont l'inscription attend une confirmation. Renseigné quand signUp
+  // n'ouvre PAS de session : c'est le signal que « Confirm email » est activé
+  // côté Supabase et qu'un lien a été envoyé.
+  let pendingEmail = null;
+
+  // Garde-fou de saisie. La validation qui fait foi reste celle du serveur ;
+  // celle-ci évite juste d'envoyer une adresse manifestement erronée.
+  function looksLikeEmail(v) { return /^[^\s@]+@[^\s@.]+\.[^\s@]{2,}$/.test(v); }
 
   // ---- localStorage <-> cloud -------------------------------------------------
   function collectLocal() {
@@ -101,6 +109,7 @@
 
   function renderModal() {
     if (!overlay.classList.contains("on") && !session) { /* pas ouvert : rien à re-rendre de visible */ }
+    if (!session && pendingEmail) { renderPending(); return; }
     if (session) {
       box.innerHTML =
         '<button class="acc-x" aria-label="Fermer">×</button>' +
@@ -152,14 +161,45 @@
         if (error) msg(traduire(error.message), "err");
       };
       box.querySelector("#acc-signup").onclick = async () => {
-        if (!email() || pass().length < 8) return msg("Mot de passe : 8 caractères minimum.", "err");
+        if (!looksLikeEmail(email())) return msg("Adresse e-mail invalide.", "err");
+        if (pass().length < 8) return msg("Mot de passe : 8 caractères minimum.", "err");
         msg("Création…");
         const { data, error } = await sb.auth.signUp({ email: email(), password: pass() });
         if (error) return msg(traduire(error.message), "err");
-        if (data && data.session) msg("Compte créé ✔", "ok"); // confirmation e-mail désactivée
-        else msg("Compte créé. Vérifie ta boîte mail pour confirmer, puis connecte-toi.", "ok");
+        if (data && data.session) {
+          // Une session est ouverte d'emblée : « Confirm email » est DÉSACTIVÉ
+          // côté Supabase, n'importe quelle adresse inventée passe. Voir README
+          // (Authentication → Providers → Email → Confirm email) pour l'activer.
+          msg("Compte créé ✔", "ok");
+        } else {
+          // Pas de session : un lien de confirmation vient d'être envoyé.
+          pendingEmail = email();
+          renderModal();
+        }
       };
     }
+  }
+
+  // Écran d'attente de confirmation. Tant que le lien n'est pas cliqué, le
+  // compte n'ouvre aucune session : il ne peut ni publier de score, ni
+  // réserver un pseudo. C'est là que se joue le filtrage des faux comptes.
+  function renderPending() {
+    box.innerHTML =
+      '<button class="acc-x" aria-label="Fermer">×</button>' +
+      "<h3>Vérifiez votre e-mail</h3>" +
+      '<p class="acc-sub">' + T("Un lien de confirmation vient d'être envoyé à {email}. Ouvrez-le pour activer le compte, puis revenez vous connecter.",
+        { email: '<span class="acc-mail">' + esc(pendingEmail) + "</span>" }) + "</p>" +
+      '<p class="acc-sub">Pensez à regarder dans les indésirables.</p>' +
+      '<button class="acc-btn soft" id="acc-resend">Renvoyer l\'e-mail</button>' +
+      '<button class="acc-btn ghost" id="acc-back">Retour à la connexion</button>' +
+      '<p class="acc-msg"></p>';
+    box.querySelector(".acc-x").onclick = close;
+    box.querySelector("#acc-back").onclick = () => { pendingEmail = null; renderModal(); };
+    box.querySelector("#acc-resend").onclick = async () => {
+      msg(T("Envoi…"));
+      const { error } = await sb.auth.resend({ type: "signup", email: pendingEmail });
+      msg(error ? traduire(error.message) : T("E-mail renvoyé ✔"), error ? "err" : "ok");
+    };
   }
 
   // Échappe AUSSI l'apostrophe : plusieurs attributs sont écrits en HTML par
@@ -199,6 +239,7 @@
   // ---- état d'auth ------------------------------------------------------------
   sb.auth.onAuthStateChange((event, s) => {
     session = s;
+    if (s) pendingEmail = null; // confirmé et connecté : l'écran d'attente n'a plus lieu d'être
     renderModal();
     if (event === "SIGNED_IN") { onFreshLogin(); loadPseudo().then(() => { renderModal(); pushProfileStats(); }); }
     if (event === "SIGNED_OUT") pseudo = null;

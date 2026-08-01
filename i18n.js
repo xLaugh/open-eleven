@@ -452,6 +452,20 @@
     "carrières": "careers",
     "te défie · {n} pts à battre": "challenges you · {n} pts to beat",
     "{n} pts · en attente": "{n} pts · pending",
+
+    // --- Vérification de l'adresse e-mail ---
+    "Adresse e-mail invalide.": "Invalid e-mail address.",
+    "Vérifiez votre e-mail": "Check your e-mail",
+    "Un lien de confirmation vient d'être envoyé à {email}. Ouvrez-le pour activer le compte, puis revenez vous connecter.": "A confirmation link has just been sent to {email}. Open it to activate the account, then come back and sign in.",
+    "Pensez à regarder dans les indésirables.": "Remember to check your spam folder.",
+    "Renvoyer l'e-mail": "Resend the e-mail",
+    "Retour à la connexion": "Back to sign in",
+    "Envoi…": "Sending…",
+    "E-mail renvoyé ✔": "E-mail resent ✔",
+    "Compte & sauvegarde cloud": "Account & cloud save",
+    "Se connecter": "Sign in",
+    "Connexion…": "Signing in…",
+    "E-mail": "E-mail",
   };
 
   const DICT = { en: EN };
