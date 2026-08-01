@@ -30,7 +30,7 @@
 <link rel="preload" href="src/fonts/poppins-400-latin.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="preload" href="src/fonts/oswald-600-latin.woff2" as="font" type="font/woff2" crossorigin />
 
-<link rel="stylesheet" href="style.css?v=10.37" />
+<link rel="stylesheet" href="style.css?v=10.39" />
 </head>
 <body>
 <div id="app">
@@ -95,7 +95,7 @@
     <h2 class="screen-title">Badges</h2>
     <p class="screen-sub" id="badge-meta">Vos exploits à travers toutes vos carrières.</p>
     <div class="badge-grid" id="badge-grid"></div>
-    <button class="btn btn-secondary" id="btn-badges-back">Retour</button>
+    <button class="btn btn-secondary screen-back" id="btn-badges-back">← Retour</button>
   </section>
 
   <!-- ============ ÉCRAN QUÊTES ============ -->
@@ -103,7 +103,7 @@
     <h2 class="screen-title">Quêtes</h2>
     <div class="quest-hero" id="quest-hero"></div>
     <div class="quest-screen-body" id="quest-screen-body"></div>
-    <button class="btn btn-secondary" id="btn-quests-back">Retour</button>
+    <button class="btn btn-secondary screen-back" id="btn-quests-back">← Retour</button>
   </section>
 
   <!-- ============ ÉCRAN PANTHÉON ============ -->
@@ -112,7 +112,7 @@
     <p class="screen-sub">Les légendes que vous avez écrites.</p>
     <div class="pantheon-sort" id="pantheon-sort"></div>
     <div class="pantheon-list" id="pantheon-list"></div>
-    <button class="btn btn-secondary" id="btn-pantheon-back">Retour</button>
+    <button class="btn btn-secondary screen-back" id="btn-pantheon-back">← Retour</button>
   </section>
 
   <!-- ============ ÉCRAN BOUTIQUE (jetons) ============ -->
@@ -121,7 +121,7 @@
     <div class="shop-balance" id="shop-balance"></div>
     <p class="screen-sub shop-intro">Gagnez des <strong>jetons</strong> en accomplissant des quêtes. Dépensez-les pour débloquer des avantages, puis équipez-en jusqu'à 2 pour vos prochaines carrières. <em>Le Défi du jour les ignore : il reste équitable pour tous.</em></p>
     <div class="shop-list" id="shop-list"></div>
-    <button class="btn btn-secondary" id="btn-shop-back">Retour</button>
+    <button class="btn btn-secondary screen-back" id="btn-shop-back">← Retour</button>
   </section>
 
   <!-- ============ ÉCRAN DUEL (défi entre amis) ============ -->
@@ -135,7 +135,7 @@
     <h2 class="screen-title">Mode Histoire</h2>
     <p class="screen-sub">Revivez une carrière de légende — et essayez de faire mieux qu'elle.</p>
     <div class="story-list" id="story-list"></div>
-    <button class="btn btn-secondary" id="btn-story-back">Retour</button>
+    <button class="btn btn-secondary screen-back" id="btn-story-back">← Retour</button>
   </section>
 
   <!-- ============ CRÉATION : NATIONALITÉ ============ -->
@@ -347,9 +347,9 @@
   </div>
 </div>
 
-<script src="data.js?v=10.37"></script>
-<script src="engine.js?v=10.37"></script>
-<script src="game.js?v=10.37"></script>
+<script src="data.js?v=10.39"></script>
+<script src="engine.js?v=10.39"></script>
+<script src="game.js?v=10.39"></script>
 <!-- Traduction. Le pack de contenu pèse 363 ko : il n'est chargé QUE si la
      langue anglaise est retenue — un joueur francophone ne le télécharge
      jamais. document.write est ici volontaire : il garantit que le pack est
@@ -357,16 +357,16 @@
 <script>
   try {
     if (localStorage.getItem("openEleven_lang") === "en") {
-      document.write('<script src="i18n-data.js?v=10.37"><\/script>');
+      document.write('<script src="i18n-data.js?v=10.39"><\/script>');
     }
   } catch (e) { /* stockage indisponible : on reste en français */ }
 </script>
-<script src="i18n.js?v=10.37"></script>
+<script src="i18n.js?v=10.39"></script>
 <!-- Compte & sauvegarde cloud (optionnel, désactivé tant que supabase-config.js est vide) -->
-<script src="src/vendor/supabase.js?v=10.37"></script>
-<script src="src/supabase-config.js?v=10.37"></script>
-<script src="src/badwords.js?v=10.37"></script>
-<script src="account.js?v=10.37"></script>
+<script src="src/vendor/supabase.js?v=10.39"></script>
+<script src="src/supabase-config.js?v=10.39"></script>
+<script src="src/badwords.js?v=10.39"></script>
+<script src="account.js?v=10.39"></script>
 <script>
   // PWA : installable + chargement instantané au retour + hors-ligne.
   if ("serviceWorker" in navigator) {

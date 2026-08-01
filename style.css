@@ -1063,6 +1063,18 @@ body { color: var(--text-0); }
   padding: 8px 18px;
   font-size: 0.9rem;
 }
+/* Retour des écrans secondaires (badges, quêtes, Panthéon, boutique,
+   histoires) : même présentation que dans le tunnel de création — compact,
+   en haut à gauche. order:-1 le remonte en tête du flex-column sans avoir à
+   déplacer la balise dans le HTML, donc sans toucher à l'ordre de lecture. */
+.screen-back {
+  order: -1;
+  align-self: flex-start;
+  width: auto;
+  margin: 0 0 14px;
+  padding: 8px 18px;
+  font-size: 0.9rem;
+}
 /* « Tout aléatoire » : doré, pour se distinguer nettement du Retour. */
 .btn-random-all {
   font-family: var(--font);
