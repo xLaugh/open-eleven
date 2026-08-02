@@ -993,10 +993,30 @@
   function getLegends() { return legendsCache; }
   loadLegends();
 
+  // ---- Compteurs communautaires -----------------------------------------------
+  // Totaux agrégés et anonymes : aucun identifiant, aucun cookie, aucune donnée
+  // personnelle. La liste des clés acceptées vit dans la base (bump_stat) —
+  // une clé inconnue y est ignorée sans erreur.
+  // Silencieux par construction : un compteur ne doit JAMAIS gêner une partie
+  // ni retarder un affichage.
+  async function bumpStat(cle) {
+    try { await sb.rpc("bump_stat", { cle: cle }); } catch (_) {}
+  }
+  async function getStats() {
+    try {
+      const { data, error } = await sb.rpc("stats_publiques");
+      if (error) return null;
+      const o = {};
+      (data || []).forEach((r) => { o[r.cle] = Number(r.valeur) || 0; });
+      return o;
+    } catch (_) { return null; }
+  }
+
   // ---- API publique pour le jeu ----------------------------------------------
   window.OpenElevenAccount = {
     submitDaily, openLeaderboard, openProfile, getLegends, pushProfile: pushProfileStats,
     openDuels, submitDuelCreate, submitDuelRespond, openFriends,
+    bumpStat, getStats,
   };
 
   // ---- bouton d'accueil -------------------------------------------------------

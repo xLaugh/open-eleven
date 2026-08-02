@@ -111,12 +111,27 @@
     });
   }
 
-  // --- Statistiques (désactivées) -----------------------------------------
-  // Aucune analytique, aucun script tiers, aucun cookie : pas de Google
-  // Analytics ni de bannière RGPD. track() est conservé comme point d'ancrage
-  // neutre (appelé à plusieurs endroits) mais ne fait STRICTEMENT rien et
-  // n'émet rien vers l'extérieur.
-  function track() { /* no-op : aucune analytique, aucun cookie */ }
+  // --- Compteurs communautaires --------------------------------------------
+  // Toujours aucune analytique, aucun script tiers, aucun cookie : pas de
+  // Google Analytics, pas de bannière RGPD. Ce qui part vers la base, ce sont
+  // des TOTAUX anonymes — « +1 » sur un compteur partagé, pour afficher
+  // « N carrières jouées » en accueil.
+  //
+  // ⚠️ Les appelants passent un SECOND argument détaillé (score, graine, date,
+  // identifiant d'histoire…). Il est volontairement IGNORÉ : seul le nom du
+  // compteur voyage. C'est ce qui rend le procédé anonyme par construction —
+  // rien de ce qui pourrait caractériser une partie ne quitte l'appareil.
+  //
+  // La liste doit rester alignée sur celle de bump_stat() dans la base : une
+  // clé absente y serait ignorée, autant ne pas faire le voyage pour rien.
+  // Sans compte configuré, OpenElevenAccount n'existe pas et tout ceci est
+  // inerte — le jeu reste jouable hors ligne.
+  const STATS_SUIVIES = new Set(["career_created", "career_end", "daily_completed", "duel_created", "story_completed"]);
+  function track(nom) {
+    if (!STATS_SUIVIES.has(nom)) return;
+    const A = window.OpenElevenAccount;
+    if (A && A.bumpStat) A.bumpStat(nom);
+  }
 
   // Drapeau fiable : image si disponible (les emojis de drapeaux sont
   // cassés sur certains systèmes, ex. Angleterre), sinon emoji.
@@ -3046,6 +3061,22 @@
     $("home-meta").textContent = progress.careersPlayed > 0
       ? T(progress.careersPlayed > 1 ? "{n} carrières vécues · record : {best} pts" : "{n} carrière vécue · record : {best} pts", { n: progress.careersPlayed, best: progress.bestScore })
       : "";
+    renderGlobalStats();
+  }
+
+  // Compteur communautaire. Chargé APRÈS coup et sans await : l'accueil ne doit
+  // jamais attendre le réseau pour s'afficher. Reste vide si le compte n'est pas
+  // configuré, si la requête échoue, ou tant que le compteur est à zéro — un
+  // « 0 carrière jouée » serait pire que rien.
+  function renderGlobalStats() {
+    const el = $("home-global");
+    const A = window.OpenElevenAccount;
+    if (!el || !A || !A.getStats) return;
+    A.getStats().then((s) => {
+      const n = s && s.career_created;
+      if (!n) return;
+      el.textContent = T("{n} carrières jouées dans le monde", { n: n.toLocaleString() });
+    }).catch(() => {});
   }
 
   window.addEventListener("DOMContentLoaded", () => {

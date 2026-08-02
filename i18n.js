@@ -281,6 +281,7 @@
     "l'histoire ": "the story ",
     "{n} carrière vécue · record : {best} pts": "{n} career played · best: {best} pts",
     "{n} carrières vécues · record : {best} pts": "{n} careers played · best: {best} pts",
+    "{n} carrières jouées dans le monde": "{n} careers played worldwide",
     "{n}× Champion": "{n}× League title",
     "{n} clean sheets": "{n} clean sheets",
     "{n} buts": "{n} goals",

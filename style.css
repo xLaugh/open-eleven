@@ -304,6 +304,11 @@ body { color: var(--text-0); }
   margin: 0;
 }
 .home-meta { color: var(--on-green-faint); font-size: 0.8rem; margin: 0; }
+/* Compteur communautaire : un cran plus discret que le compteur personnel —
+   c'est un repère, pas une information sur SA propre partie. Vide la plupart
+   du temps au premier rendu, d'où l'absence de marge quand il n'a pas de texte. */
+.home-global { color: var(--on-green-faint); font-size: 0.76rem; margin: 3px 0 0; opacity: 0.85; }
+.home-global:empty { display: none; }
 
 /* Wrappers de mise en page de l'accueil : NEUTRALISÉS par défaut (mobile).
    display:contents fait disparaître la boîte — leurs enfants redeviennent des
