@@ -958,6 +958,9 @@ const AWARDS = {
   cl_mvp: { name: "MVP de la Coupe des Champions", icon: "🥇", fx: { rep: 8, mor: 4, money: 0.6 }, ballonPts: 1.8 },
   wc_golden_ball: { name: "Ballon d'Or du Mondial", icon: "🌍", fx: { rep: 9, mor: 5, money: 0.8 }, ballonPts: 2.5 },
   wc_top_scorer: { name: "Meilleur buteur du Mondial", icon: "⚽", fx: { rep: 6, mor: 4 }, ballonPts: 1.2 },
+  cont_top_scorer: { name: "Meilleur buteur du championnat continental", icon: "⚽", fx: { rep: 5, mor: 3 }, ballonPts: 0.9 },
+  natl_top_scorer: { name: "Meilleur buteur de la Ligue des Sélections", icon: "⚽", fx: { rep: 4, mor: 3 }, ballonPts: 0.6 },
+  oly_top_scorer: { name: "Meilleur buteur du tournoi olympique", icon: "⚽", fx: { rep: 4, mor: 3 }, ballonPts: 0.5 },
   top_scorer: { name: "Meilleur buteur du championnat", icon: "⚽", fx: { rep: 4, mor: 3, money: 0.3 }, ballonPts: 0.7 },
   golden_glove: { name: "Gant d'Or", icon: "🧤", fx: { rep: 5, mor: 3 }, ballonPts: 1.0 },
   revelation: { name: "Révélation de la saison", icon: "💫", fx: { rep: 6, mor: 5 }, ballonPts: 0.8 },
@@ -1273,6 +1276,11 @@ const BALANCE = {
   cupFinalReachMult: 1.7, // proba d'atteindre la finale = cupChance × ce facteur
   // --- Meilleurs buteurs : titre domestique & Soulier d'Or européen ---
   topScorerGoals: { regional: 20, d3: 21, d2: 22, d1: 24, elite: 26 }, // seuil de buts par niveau
+  // Meilleur buteur d'un tournoi de SÉLECTION : seuil de buts sur le tournoi.
+  // Volontairement SANS tirage, comme la distinction du Mondial qui existait
+  // déjà — aucun hasard consommé, donc aucune carrière modifiée et aucun duel
+  // invalidé. Un tournoi se joue en 3 à 8 matchs : les seuils sont bas.
+  compScorerGoals: { wc: 5, cont: 4, natl: 4, olympic: 4 },
   topScorerChance: 0.4, // proba de coiffer la concurrence une fois le seuil atteint
   goldenShoeCoef: { elite: 2, d1: 1.5 }, // coefficients européens (D2/rég. inéligibles)
   goldenShoePts: 56, // buts × coefficient requis pour prétendre au Soulier d'Or

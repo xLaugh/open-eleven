@@ -895,6 +895,19 @@
   // plus accessible mais moins prestigieux. Le continent vient de la nationalité.
   function isContinentalYear(year) { return year % 4 === 0; }
 
+  // --- Meilleur buteur d'un tournoi de sélection ------------------------------
+  // La distinction du Mondial existait déjà, mais n'était attribuée QUE dans
+  // resolveWcFinal : marquer sept buts et sortir en quart ne donnait rien. Elle
+  // est désormais évaluée au retour du tournoi, comme ses trois nouvelles
+  // sœurs. Seuil SEUL, aucun tirage — grantAward et applyFx sont purs, donc
+  // aucun hasard n'est consommé et aucune carrière existante ne change.
+  const COMP_SCORER_AWARD = { wc: "wc_top_scorer", cont: "cont_top_scorer", natl: "natl_top_scorer", olympic: "oly_top_scorer" };
+  function noteCompScorer(s, report, comp, goals) {
+    const seuil = (BALANCE.compScorerGoals || {})[comp];
+    if (!seuil || !goals || goals < seuil) return;
+    grantAward(s, report, COMP_SCORER_AWARD[comp]);
+  }
+
   // --- Numéro de maillot en sélection ---------------------------------------
   // DÉRIVÉ, jamais tiré au sort : appeler rng() ici décalerait tout le flux
   // aléatoire et changerait chaque carrière pour une même graine — donc
@@ -1136,7 +1149,8 @@
         wc.goldenBall = true;
         grantAward(s, report, "wc_golden_ball");
       }
-      if (wc.goals >= 5) grantAward(s, report, "wc_top_scorer");
+      // (Le meilleur buteur du Mondial est désormais attribué au retour de
+      //  playWorldCup : il ne dépend plus d'avoir atteint la FINALE.)
       // Le sacre mondial rebat les cartes du Ballon d'Or de fin d'année
       if (!report.awards.includes("ballon_won")) rollBallon(s, report, 3 + (wc.goldenBall ? 2.5 : 0));
       recheckObjective(s, report); // « Ramener un trophée majeur » : le Mondial compte
@@ -1834,9 +1848,9 @@
       const euNation = ((countryOf(s.nationality.homeCountryId) || {}).continent) === "eu";
       const nlYear = isNationsLeagueYear(s.year) && euNation; // Ligue des Sélections : Europe uniquement
       if (heavyInjury && (isWorldCupYear(s.year) || isContinentalYear(s.year) || nlYear)) report.tournamentMissed = true;
-      else if (isWorldCupYear(s.year)) { report.wc = playWorldCup(s); report.caps += report.wc.games; report.natGoals += report.wc.goals; }
-      else if (isContinentalYear(s.year)) { report.cont = playContinental(s, report); report.caps += report.cont.games; report.natGoals += report.cont.goals; }
-      else if (nlYear) { report.natl = playNationsLeague(s, report); report.caps += report.natl.games; report.natGoals += report.natl.goals; }
+      else if (isWorldCupYear(s.year)) { report.wc = playWorldCup(s); report.caps += report.wc.games; report.natGoals += report.wc.goals; noteCompScorer(s, report, "wc", report.wc.goals); }
+      else if (isContinentalYear(s.year)) { report.cont = playContinental(s, report); report.caps += report.cont.games; report.natGoals += report.cont.goals; noteCompScorer(s, report, "cont", report.cont.goals); }
+      else if (nlYear) { report.natl = playNationsLeague(s, report); report.caps += report.natl.games; report.natGoals += report.natl.goals; noteCompScorer(s, report, "natl", report.natl.goals); }
     }
 
     // Jeux Olympiques (années %4==3, sans tournoi A) : tournoi U23, ouvert aux
@@ -1848,7 +1862,10 @@
       const u23 = s.age <= 23;
       const overage = s.age >= 24 && s.age <= 29 && s.rep >= 62 && s.natTeam.active && rng() < 0.35; // surclassé, rare
       const goodEnough = ovr(s) >= 66 && (s.natTeam.active || s.flags.youth_int || ovr(s) >= 70);
-      if ((u23 || overage) && goodEnough) report.olympic = playOlympics(s, report);
+      if ((u23 || overage) && goodEnough) {
+        report.olympic = playOlympics(s, report);
+        noteCompScorer(s, report, "olympic", report.olympic.goals);
+      }
     }
 
     // Distinctions promises par les événements, puis celles de la saison, puis Ballon d'Or
@@ -2883,7 +2900,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.54";
+  const ENGINE_VERSION = "10.59";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {
