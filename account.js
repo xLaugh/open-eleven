@@ -559,8 +559,13 @@
     // --- Profil pleine page ---------------------------------------------------
     // Le profil d'un ami n'est plus une fenêtre mais une PAGE : ancrée en haut,
     // pleine hauteur, défilement propre. Les autres panneaux restent centrés.
-    ".acc-overlay.pf-page{align-items:flex-start;justify-content:center;padding:0}" +
-    ".pf-page .lb-box{max-width:600px;max-height:none;min-height:100vh;border-radius:0;padding:16px 18px 40px}" +
+    // overflow-y:auto est INDISPENSABLE : .acc-overlay est en position fixed,
+    // donc tout ce qui dépasse de la fenêtre est coupé et devient inatteignable.
+    // Sans lui, la 10e carrière du Panthéon existait dans le DOM sans qu'on
+    // puisse jamais l'atteindre.
+    ".acc-overlay.pf-page{align-items:flex-start;justify-content:center;padding:0;overflow-y:auto;-webkit-overflow-scrolling:touch}" +
+    // La boîte ne borne plus sa hauteur : c'est la PAGE qui défile, pas elle.
+    ".pf-page .lb-box{max-width:600px;max-height:none;min-height:100vh;overflow:visible;border-radius:0;padding:16px 18px 40px}" +
     ".pf-head{display:flex;align-items:center;gap:10px;margin:0 0 14px}" +
     ".pf-back{flex:none;width:auto;margin:0;padding:8px 16px;font-size:.9rem}" +
     ".pf-name{margin:0;font-family:var(--font-display,inherit);font-size:1.35rem;color:var(--green-ink,#0b3b26);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" +
