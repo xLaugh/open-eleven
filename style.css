@@ -304,10 +304,14 @@ body { color: var(--text-0); }
   margin: 0;
 }
 .home-meta { color: var(--on-green-faint); font-size: 0.8rem; margin: 0; }
-/* Compteur communautaire : un cran plus discret que le compteur personnel —
-   c'est un repère, pas une information sur SA propre partie. Vide la plupart
-   du temps au premier rendu, d'où l'absence de marge quand il n'a pas de texte. */
-.home-global { color: var(--on-green-faint); font-size: 0.76rem; margin: 3px 0 0; opacity: 0.85; }
+/* Compteur communautaire, sous l'accroche : preuve sociale avant le bouton de
+   départ. Discret — c'est un repère, pas une information sur SA propre partie.
+   :empty le fait disparaître entièrement tant qu'il n'a rien à dire, marges
+   comprises : rien ne bouge à l'écran quand la valeur arrive du réseau. */
+.home-global {
+  color: var(--on-green-faint); font-size: 0.82rem; font-weight: 600;
+  margin: 0 0 16px; opacity: 0.9;
+}
 .home-global:empty { display: none; }
 
 /* Wrappers de mise en page de l'accueil : NEUTRALISÉS par défaut (mobile).
