@@ -899,14 +899,27 @@
     // la nation, et d'autant plus fort que le tour est avancé — une petite nation
     // peut surgir en poule, presque jamais en demi-finale.
     const forceOf = (n) => ((kind === "wc" && n.wcWeight != null ? n.wcWeight : n.weight) || 0.02);
+    // Tirage SANS REMISE : une nation déjà rencontrée ne peut plus ressortir.
+    // Sans ça on affrontait l'Allemagne deux fois dans la même poule — défaut
+    // longtemps invisible avec un tirage uniforme sur 53 nations, devenu
+    // fréquent depuis que les grandes nations sont fortement favorisées.
+    // Vaut aussi pour les tours suivants : on ne rejoue pas un adversaire déjà
+    // éliminé plus tôt dans le tournoi.
+    const dejaVus = new Set();
     const pickNat = (puissance) => {
       const p = puissance || 1;
+      const dispo = pool.filter((n) => !dejaVus.has(n.id));
+      const src = dispo.length ? dispo : pool; // filet : vivier épuisé (Océanie)
       let tot = 0;
-      const poids = pool.map((n) => { const v = Math.pow(forceOf(n), p); tot += v; return v; });
-      if (!tot) return pool[Math.floor(rng() * pool.length)];
-      let r = rng() * tot;
-      for (let i = 0; i < pool.length; i++) { r -= poids[i]; if (r <= 0) return pool[i]; }
-      return pool[pool.length - 1];
+      const poids = src.map((n) => { const v = Math.pow(forceOf(n), p); tot += v; return v; });
+      let choisi = src[src.length - 1];
+      if (!tot) choisi = src[Math.floor(rng() * src.length)];
+      else {
+        let r = rng() * tot;
+        for (let i = 0; i < src.length; i++) { r -= poids[i]; if (r <= 0) { choisi = src[i]; break; } }
+      }
+      dejaVus.add(choisi.id);
+      return choisi;
     };
     // Exposant par tour : plus on avance, plus le champ se resserre sur les
     // grandes nations. Mêmes ordres de grandeur que le moteur pour la
@@ -915,20 +928,26 @@
     const KOL = { r32: "16es de finale", r16: "8es de finale", quarter: "Quart de finale", semi: "Demi-finale", final: "Finale" };
     const matches = [];
     let interactiveFinal = false;
-    const mk = (label, result, puissance) => {
+    // `adversaire` fourni = on ne tire pas : sert aux formats où l'on rejoue
+    // une même nation (aller/retour de la Ligue des Sélections).
+    const mk = (label, result, puissance, adversaire) => {
       let sf, sa;
       if (result === "win") { sf = 1 + Math.floor(rng() * 3); sa = Math.floor(rng() * sf); }
       else if (result === "loss") { sa = 1 + Math.floor(rng() * 3); sf = Math.floor(rng() * sa); }
       else { sf = Math.floor(rng() * 3); sa = sf; }
-      return { label, result, opp: pickNat(puissance), sf, sa, pgoals: 0 };
+      return { label, result, opp: adversaire || pickNat(puissance), sf, sa, pgoals: 0 };
     };
 
     if (kind === "natl") {
       const reachedFF = stage === "final_four" || stage === "final" || stage === "champion";
+      // Poule de quatre : TROIS adversaires, affrontés chacun deux fois (aller
+      // et retour), comme dans la vraie compétition. Six tirages indépendants
+      // pouvaient sortir six nations différentes — ou la même plusieurs fois.
+      const advLigue = [pickNat(POW.ligue), pickNat(POW.ligue), pickNat(POW.ligue)];
       for (let i = 0; i < 6; i++) {
         const p = rng();
         const r = reachedFF ? (p < 0.55 ? "win" : p < 0.8 ? "draw" : "loss") : (p < 0.35 ? "win" : p < 0.65 ? "draw" : "loss");
-        matches.push(mk("Ligue · J" + (i + 1), r, POW.ligue));
+        matches.push(mk("Ligue · J" + (i + 1), r, POW.ligue, advLigue[i % 3]));
       }
       if (stage === "final_four") matches.push(mk("Demi-finale (Final Four)", "loss", POW.semi));
       else if (stage === "final") { matches.push(mk("Demi-finale (Final Four)", "win", POW.semi)); matches.push(mk("Finale", "loss", POW.final)); }
@@ -960,9 +979,8 @@
         const t = ordre[i]; ordre[i] = ordre[j]; ordre[j] = t;
       }
       for (let i = 0; i < 3; i++) {
-        const gm = mk("Poule · J" + (i + 1), ordre[i], POW.groupe);
-        gm.opp = groupOpps[i]; // l'adversaire du jour = une équipe de la poule affichée
-        matches.push(gm);
+        // L'adversaire du jour est une équipe de la poule AFFICHÉE au tirage.
+        matches.push(mk("Poule · J" + (i + 1), ordre[i], POW.groupe, groupOpps[i]));
       }
       report._groupOpps = groupOpps;
       if (qualified) {
