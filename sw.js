@@ -9,11 +9,11 @@
    ⚠️ À CHAQUE DÉPLOIEMENT : bumper CACHE (ci-dessous) en même temps
    que le ?v= d'index.html — l'ancien cache est alors purgé.
    ============================================================ */
-const CACHE = "open-eleven-v10.59";
+const CACHE = "open-eleven-v10.60";
 const CORE = [
   "./", "./index.html",
-  "./style.css?v=10.59", "./data-clubs.js?v=10.59", "./data-moments.js?v=10.59", "./data-events.js?v=10.59", "./data.js?v=10.59", "./engine.js?v=10.59", "./game.js?v=10.59", "./game-card.js?v=10.59", "./i18n-boot.js?v=10.59", "./i18n-data.js?v=10.59", "./i18n.js?v=10.59", "./sw-register.js?v=10.59",
-  "./src/vendor/supabase.js?v=10.59", "./src/supabase-config.js?v=10.59", "./src/badwords.js?v=10.59", "./account.js?v=10.59",
+  "./style.css?v=10.60", "./data-clubs.js?v=10.60", "./data-moments.js?v=10.60", "./data-events.js?v=10.60", "./data.js?v=10.60", "./engine.js?v=10.60", "./game.js?v=10.60", "./game-card.js?v=10.60", "./i18n-boot.js?v=10.60", "./i18n-data.js?v=10.60", "./i18n.js?v=10.60", "./sw-register.js?v=10.60",
+  "./src/vendor/supabase.js?v=10.60", "./src/supabase-config.js?v=10.60", "./src/badwords.js?v=10.60", "./account.js?v=10.60",
   "./site.webmanifest", "./favicon.svg", "./privacy.html",
   "./src/img/logo-11-mark.png",
   "./src/img/icon-512.png", "./src/img/icon-192.png", "./src/img/icon-maskable-512.png",

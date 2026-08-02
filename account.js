@@ -121,6 +121,12 @@
   style.textContent =
     ".acc-overlay{position:fixed;inset:0;z-index:900;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(3,20,12,.62);backdrop-filter:blur(3px)}" +
     ".acc-overlay.on{display:flex}" +
+    // Le profil se consulte DEPUIS une autre fenêtre (amis, classement, duels).
+    // Tous les panneaux partageant le même z-index, l'empilement suivait l'ordre
+    // du DOM — et le profil, créé avant celui des amis, passait derrière lui.
+    // Il monte donc d'un cran : c'est une vue de détail, elle se referme pour
+    // revenir à la liste.
+    ".acc-overlay.acc-top{z-index:940}" +
     ".acc-box{width:100%;max-width:380px;background:var(--card-bg,#fff);color:var(--text-0,#182);border-radius:16px;padding:22px 22px 24px;box-shadow:0 24px 60px rgba(0,0,0,.4);font-family:var(--font,system-ui)}" +
     ".acc-box h3{font-family:var(--font-display,inherit);margin:0 0 4px;font-size:1.35rem;color:var(--green-ink,#0b3b26)}" +
     ".acc-box p.acc-sub{margin:0 0 14px;color:var(--text-1,#567);font-size:.86rem}" +
@@ -600,7 +606,7 @@
 
   // ---- fiche publique d'un joueur (profil par pseudo) ------------------------
   const pfOverlay = document.createElement("div");
-  pfOverlay.className = "acc-overlay";
+  pfOverlay.className = "acc-overlay acc-top";
   pfOverlay.innerHTML = '<div class="lb-box" role="dialog" aria-modal="true"></div>';
   document.body.appendChild(pfOverlay);
   const pfBox = pfOverlay.querySelector(".lb-box");
