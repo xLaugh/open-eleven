@@ -971,18 +971,18 @@
     const built = buildTournamentMatches(report, kind);
     const steps = [];
     if (built.groupTeams) steps.push({ type: "group" });
-    // Ligue des Sélections : la phase de Ligue (6 journées) est montrée D'UN SEUL
-    // COUP sous forme de tableau, puis on découvre si l'on est qualifié pour le
-    // Final Four. Enchaîner 6 cartes pour une phase sans élimination directe
-    // diluait la tension ; le Final Four, lui, reste match par match.
-    if (kind === "natl") {
-      const league = built.matches.filter((m) => /^Ligue · J/.test(m.label));
-      const ko = built.matches.filter((m) => !/^Ligue · J/.test(m.label));
-      if (league.length) steps.push({ type: "natlLeague", ms: league, qualified: ko.length > 0 });
-      ko.forEach((m) => steps.push({ type: "match", m }));
-    } else {
-      built.matches.forEach((m) => steps.push({ type: "match", m }));
-    }
+    // Toute phase SANS élimination directe est montrée D'UN SEUL COUP, en
+    // tableau : les poules du Mondial, de l'Euro, de la CAN, de la Copa, des JO,
+    // comme la phase de Ligue de la Ligue des Sélections. Les enchaîner carte
+    // par carte diluait la tension pour des matchs dont aucun n'élimine à lui
+    // seul, et allongeait la fin de saison pour rien.
+    // Les tours à élimination directe, eux, restent match par match : là, chaque
+    // rencontre se suffit à elle-même.
+    const estPhase = kind === "natl" ? /^Ligue · J/ : /^Poule · J/;
+    const phase = built.matches.filter((m) => estPhase.test(m.label));
+    const ko = built.matches.filter((m) => !estPhase.test(m.label));
+    if (phase.length) steps.push({ type: "phase", ms: phase, qualified: ko.length > 0 });
+    ko.forEach((m) => steps.push({ type: "match", m }));
     let i = 0;
     function next() {
       if (i >= steps.length) { onDone(); return; }
@@ -994,7 +994,10 @@
           <p class="event-text">${flagHtml(G.nationality)} Votre poule pour cette édition :</p>
           <div class="pool-grid">${teams}</div>
           <button class="btn btn-secondary" id="btn-tstep">Coup d'envoi ▶</button>`);
-      } else if (step.type === "natlLeague") {
+      } else if (step.type === "phase") {
+        // Les classes natl-* datent de la Ligue des Sélections, seule phase en
+        // tableau à l'origine. Le rendu étant strictement le même pour une poule,
+        // on les réutilise plutôt que d'entretenir deux jeux de styles jumeaux.
         const ms = step.ms;
         let w = 0, d = 0, l = 0, gf = 0, ga = 0, pg = 0;
         const rows = ms.map((m) => {
@@ -1002,23 +1005,25 @@
           gf += m.sf; ga += m.sa; pg += m.pgoals;
           const cls = m.result === "win" ? "tm-win" : m.result === "loss" ? "tm-loss" : "tm-draw";
           return `<div class="natl-row">
-            <span class="natl-day">${esc(m.label.replace("Ligue · ", ""))}</span>
+            <span class="natl-day">${esc(m.label.replace(/^(Ligue|Poule) · /, ""))}</span>
             <span class="natl-opp">${flagHtml(m.opp)} ${esc(m.opp.name)}</span>
             <span class="natl-score ${cls}">${m.sf} – ${m.sa}</span>
             <span class="natl-goal">${m.pgoals ? `⚽ ${m.pgoals}` : ""}</span>
           </div>`;
         }).join("");
         const pts = w * 3 + d;
+        const ligue = kind === "natl";
+        const titre = ligue ? "Phase de Ligue" : "Phase de poules";
         const verdict = step.qualified
-          ? `<p class="natl-verdict natl-ok">✅ Qualifié pour le Final Four</p>`
-          : `<p class="natl-verdict natl-out">❌ Éliminé dès la phase de Ligue</p>`;
+          ? `<p class="natl-verdict natl-ok">${ligue ? "✅ Qualifié pour le Final Four" : "✅ Qualifié pour les phases finales"}</p>`
+          : `<p class="natl-verdict natl-out">${ligue ? "❌ Éliminé dès la phase de Ligue" : "❌ Éliminé dès la phase de poules"}</p>`;
         const last = i >= steps.length;
         showCard(`
-          <div class="card-tag"><span class="card-icon">${icon}</span> ${esc(cupName)} · Phase de Ligue</div>
+          <div class="card-tag"><span class="card-icon">${icon}</span> ${esc(cupName)} · ${titre}</div>
           <div class="natl-table">${rows}</div>
           <p class="natl-sum">${w} V · ${d} N · ${l} D — <strong>${pts} pts</strong> · ${gf}-${ga}${pg ? T(" · ⚽ vous : {n}", { n: pg }) : ""}</p>
           ${verdict}
-          <button class="btn btn-secondary" id="btn-tstep">${last ? "Résultat ▶" : "Final Four ▶"}</button>`,
+          <button class="btn btn-secondary" id="btn-tstep">${last ? "Résultat ▶" : (ligue ? "Final Four ▶" : "Phases finales ▶")}</button>`,
           step.qualified ? "good" : "bad");
       } else {
         const m = step.m;
