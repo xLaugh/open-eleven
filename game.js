@@ -894,16 +894,33 @@
       const sameCont = pool.filter((n) => (E.countryOf(n.homeCountryId) || {}).continent === myCont);
       if (sameCont.length >= 3) pool = sameCont;
     }
-    const pickNat = () => pool[Math.floor(rng() * pool.length)];
+    // L'adversaire était tiré UNIFORMÉMENT : le Monténégro sortait aussi souvent
+    // que le Brésil en huitièmes de finale. On pondère désormais par la force de
+    // la nation, et d'autant plus fort que le tour est avancé — une petite nation
+    // peut surgir en poule, presque jamais en demi-finale.
+    const forceOf = (n) => ((kind === "wc" && n.wcWeight != null ? n.wcWeight : n.weight) || 0.02);
+    const pickNat = (puissance) => {
+      const p = puissance || 1;
+      let tot = 0;
+      const poids = pool.map((n) => { const v = Math.pow(forceOf(n), p); tot += v; return v; });
+      if (!tot) return pool[Math.floor(rng() * pool.length)];
+      let r = rng() * tot;
+      for (let i = 0; i < pool.length; i++) { r -= poids[i]; if (r <= 0) return pool[i]; }
+      return pool[pool.length - 1];
+    };
+    // Exposant par tour : plus on avance, plus le champ se resserre sur les
+    // grandes nations. Mêmes ordres de grandeur que le moteur pour la
+    // progression du joueur lui-même.
+    const POW = { groupe: 1, ligue: 1.2, r32: 1.5, r16: 1.8, quarter: 2.2, semi: 2.6, final: 3 };
     const KOL = { r32: "16es de finale", r16: "8es de finale", quarter: "Quart de finale", semi: "Demi-finale", final: "Finale" };
     const matches = [];
     let interactiveFinal = false;
-    const mk = (label, result) => {
+    const mk = (label, result, puissance) => {
       let sf, sa;
       if (result === "win") { sf = 1 + Math.floor(rng() * 3); sa = Math.floor(rng() * sf); }
       else if (result === "loss") { sa = 1 + Math.floor(rng() * 3); sf = Math.floor(rng() * sa); }
       else { sf = Math.floor(rng() * 3); sa = sf; }
-      return { label, result, opp: pickNat(), sf, sa, pgoals: 0 };
+      return { label, result, opp: pickNat(puissance), sf, sa, pgoals: 0 };
     };
 
     if (kind === "natl") {
@@ -911,18 +928,39 @@
       for (let i = 0; i < 6; i++) {
         const p = rng();
         const r = reachedFF ? (p < 0.55 ? "win" : p < 0.8 ? "draw" : "loss") : (p < 0.35 ? "win" : p < 0.65 ? "draw" : "loss");
-        matches.push(mk("Ligue · J" + (i + 1), r));
+        matches.push(mk("Ligue · J" + (i + 1), r, POW.ligue));
       }
-      if (stage === "final_four") matches.push(mk("Demi-finale (Final Four)", "loss"));
-      else if (stage === "final") { matches.push(mk("Demi-finale (Final Four)", "win")); matches.push(mk("Finale", "loss")); }
-      else if (stage === "champion") { matches.push(mk("Demi-finale (Final Four)", "win")); matches.push(mk("Finale", "win")); }
+      if (stage === "final_four") matches.push(mk("Demi-finale (Final Four)", "loss", POW.semi));
+      else if (stage === "final") { matches.push(mk("Demi-finale (Final Four)", "win", POW.semi)); matches.push(mk("Finale", "loss", POW.final)); }
+      else if (stage === "champion") { matches.push(mk("Demi-finale (Final Four)", "win", POW.semi)); matches.push(mk("Finale", "win", POW.final)); }
     } else {
       const qualified = stage !== "groups";
-      const groupOpps = [pickNat(), pickNat(), pickNat()];
+      const groupOpps = [pickNat(POW.groupe), pickNat(POW.groupe), pickNat(POW.groupe)];
+      // Les trois résultats étaient tirés INDÉPENDAMMENT du sort réel : on
+      // pouvait gagner deux matchs sur trois et être éliminé, ce qui n'arrive
+      // dans aucun format de poule existant. On tire donc un BILAN entier,
+      // cohérent avec la qualification, qu'on mélange ensuite.
+      // Éliminé → 4 points au maximum, et jamais deux victoires.
+      // Qualifié → 4 points au minimum. « 1V 1N 1D » figure dans les deux
+      // listes : 4 points passent parfois, parfois non, c'est la réalité.
+      const BILANS = qualified
+        ? [{ b: ["win", "win", "win"], p: 12 }, { b: ["win", "win", "draw"], p: 20 },
+           { b: ["win", "win", "loss"], p: 26 }, { b: ["win", "draw", "draw"], p: 22 },
+           { b: ["win", "draw", "loss"], p: 20 }]
+        : [{ b: ["loss", "loss", "loss"], p: 18 }, { b: ["draw", "loss", "loss"], p: 24 },
+           { b: ["draw", "draw", "loss"], p: 20 }, { b: ["win", "loss", "loss"], p: 24 },
+           { b: ["win", "draw", "loss"], p: 14 }];
+      let tot = 0;
+      BILANS.forEach((x) => (tot += x.p));
+      let tirage = rng() * tot, bilan = BILANS[BILANS.length - 1].b;
+      for (const x of BILANS) { tirage -= x.p; if (tirage <= 0) { bilan = x.b; break; } }
+      const ordre = bilan.slice();
+      for (let i = ordre.length - 1; i > 0; i--) { // sinon les victoires tomberaient toujours en premier
+        const j = Math.floor(rng() * (i + 1));
+        const t = ordre[i]; ordre[i] = ordre[j]; ordre[j] = t;
+      }
       for (let i = 0; i < 3; i++) {
-        const p = rng();
-        const r = qualified ? (p < 0.5 ? "win" : p < 0.8 ? "draw" : "loss") : (p < 0.3 ? "win" : p < 0.55 ? "draw" : "loss");
-        const gm = mk("Poule · J" + (i + 1), r);
+        const gm = mk("Poule · J" + (i + 1), ordre[i], POW.groupe);
         gm.opp = groupOpps[i]; // l'adversaire du jour = une équipe de la poule affichée
         matches.push(gm);
       }
@@ -930,20 +968,20 @@
       if (qualified) {
         if (kind === "wc") {
           const ko = ["r32", "r16", "quarter", "semi"];
-          if (stage === "final") { ko.forEach((rd) => matches.push(mk(KOL[rd], "win"))); interactiveFinal = true; }
-          else { const idx = ko.indexOf(stage); for (let i = 0; i < idx; i++) matches.push(mk(KOL[ko[i]], "win")); matches.push(mk(KOL[stage], "loss")); }
+          if (stage === "final") { ko.forEach((rd) => matches.push(mk(KOL[rd], "win", POW[rd]))); interactiveFinal = true; }
+          else { const idx = ko.indexOf(stage); for (let i = 0; i < idx; i++) matches.push(mk(KOL[ko[i]], "win", POW[ko[i]])); matches.push(mk(KOL[stage], "loss", POW[stage])); }
         } else if (kind === "olympic") {
           const ko = ["quarter", "semi"];
           if (stage === "champion" || stage === "final") {
-            ko.forEach((rd) => matches.push(mk(KOL[rd], "win")));
-            matches.push(mk("Finale", stage === "champion" ? "win" : "loss"));
-          } else { const idx = ko.indexOf(stage); for (let i = 0; i < idx; i++) matches.push(mk(KOL[ko[i]], "win")); matches.push(mk(KOL[stage], "loss")); }
+            ko.forEach((rd) => matches.push(mk(KOL[rd], "win", POW[rd])));
+            matches.push(mk("Finale", stage === "champion" ? "win" : "loss", POW.final));
+          } else { const idx = ko.indexOf(stage); for (let i = 0; i < idx; i++) matches.push(mk(KOL[ko[i]], "win", POW[ko[i]])); matches.push(mk(KOL[stage], "loss", POW[stage])); }
         } else { // continental
           const ko = ["r16", "quarter", "semi"];
           if (stage === "champion" || stage === "final") {
-            ko.forEach((rd) => matches.push(mk(KOL[rd], "win")));
-            matches.push(mk("Finale", stage === "champion" ? "win" : "loss"));
-          } else { const idx = ko.indexOf(stage); for (let i = 0; i < idx; i++) matches.push(mk(KOL[ko[i]], "win")); matches.push(mk(KOL[stage], "loss")); }
+            ko.forEach((rd) => matches.push(mk(KOL[rd], "win", POW[rd])));
+            matches.push(mk("Finale", stage === "champion" ? "win" : "loss", POW.final));
+          } else { const idx = ko.indexOf(stage); for (let i = 0; i < idx; i++) matches.push(mk(KOL[ko[i]], "win", POW[ko[i]])); matches.push(mk(KOL[stage], "loss", POW[stage])); }
         }
       }
     }
