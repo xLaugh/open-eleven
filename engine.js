@@ -308,6 +308,12 @@
       archetype: null,
       leagueTitlesDetail: [], // titres de champion : { countryId, level, clubId, year }
       continentalDetail: [], // coupes continentales : { continent, year }
+      // Parcours en SÉLECTION, tournoi par tournoi : { comp, year, stage }.
+      // Rien d'autre n'en gardait trace — seuls les TITRES survivaient à la
+      // saison. Une demi-finale de Coupe du Monde disparaissait purement et
+      // simplement. On n'enregistre qu'un résultat déjà décidé : aucun tirage
+      // consommé, donc aucune carrière modifiée.
+      natRuns: [],
       euroCupTicket: false, // vainqueur de Coupe Nationale (club EU) → qualifié C2 la saison suivante
       momentWins: 0,
       derbyWins: 0,
@@ -879,6 +885,7 @@
     wc.goals = wcGoals;
     if (finalReached) wc.moment = storyFinal || keyMomentFor(s, "wc_final");
     if (storyFinal) wc.storyFinal = true;
+    noteNatRun(s, "wc", wc.stage);
     return wc;
   }
 
@@ -887,6 +894,42 @@
   // Auto-résolu (la CDM reste le seul tournoi à finale interactive) : un pendant
   // plus accessible mais moins prestigieux. Le continent vient de la nationalité.
   function isContinentalYear(year) { return year % 4 === 0; }
+
+  // --- Parcours en sélection -------------------------------------------------
+  // Table d'étapes de chaque compétition, dans l'ORDRE croissant de valeur :
+  // le rang d'un parcours, c'est son indice. On réutilise les tables du jeu
+  // plutôt que d'en dupliquer une, qui dériverait tôt ou tard.
+  const NAT_STAGE_TABLE = { wc: "WC_STAGES_48", cont: "WC_STAGES", natl: "NL_STAGES", olympic: "OLYMPIC_STAGES" };
+  function natStages(comp) {
+    const t = { WC_STAGES_48: WC_STAGES_48, WC_STAGES: WC_STAGES, NL_STAGES: NL_STAGES, OLYMPIC_STAGES: OLYMPIC_STAGES };
+    return t[NAT_STAGE_TABLE[comp]] || [];
+  }
+  // Une seule entrée par compétition et par année : la finale de Coupe du Monde
+  // se joue en carte interactive APRÈS coup et fait passer le stade à
+  // « champion » — on met alors l'entrée à jour au lieu d'en créer une seconde.
+  function noteNatRun(s, comp, stage) {
+    if (!stage) return;
+    s.natRuns = s.natRuns || [];
+    const dejaLa = s.natRuns.find((r) => r.comp === comp && r.year === s.year);
+    if (dejaLa) dejaLa.stage = stage;
+    else s.natRuns.push({ comp, year: s.year, stage });
+  }
+  // Meilleur parcours par compétition, du plus prestigieux au moins. Utilisé
+  // par la fiche de fin de carrière.
+  function bestNatRuns(s) {
+    const par = {};
+    for (const r of (s.natRuns || [])) {
+      const table = natStages(r.comp);
+      const rang = table.findIndex((x) => x.id === r.stage);
+      if (rang < 0) continue; // stade inconnu (table modifiée depuis) : on ignore
+      // Le libellé vient de la table elle-même : pas de second jeu de textes à
+      // tenir à jour côté présentation.
+      if (!par[r.comp] || rang > par[r.comp].rang)
+        par[r.comp] = { comp: r.comp, year: r.year, stage: r.stage, rang, total: table.length, label: table[rang].label };
+    }
+    const ordre = ["wc", "cont", "natl", "olympic"];
+    return ordre.filter((c) => par[c]).map((c) => par[c]);
+  }
 
   function playContinental(s, report) {
     const continent = (countryOf(s.nationality.homeCountryId) || {}).continent;
@@ -934,6 +977,7 @@
     } else {
       s.moral = clamp(s.moral - 2, 5, 100);
     }
+    noteNatRun(s, "cont", cont.stage);
     return cont;
   }
 
@@ -983,6 +1027,7 @@
     } else {
       s.moral = clamp(s.moral - 1, 5, 100);
     }
+    noteNatRun(s, "natl", nl.stage);
     return nl;
   }
 
@@ -1023,6 +1068,7 @@
     } else {
       s.moral = clamp(s.moral - 2, 5, 100);
     }
+    noteNatRun(s, "olympic", ol.stage);
     return ol;
   }
 
@@ -1048,6 +1094,7 @@
       if (option.id === "panenka") s.flags.panenka_final = true;
       wc.champion = true;
       wc.stage = "champion";
+      noteNatRun(s, "wc", "champion"); // la finale s'est jouée APRÈS l'archivage
       wc.label = ENGINE_TEXT.wcChampionLabel;
       s.trophies.worldCup += 1;
       report.trophies.push("worldCup");
@@ -2814,6 +2861,7 @@
     generateName, newCareer, ovr, hasTrait, renderText, applyFx,
     eventEligible, pickEvent, optionEligible, resolveOption, netImpact, toneOf,
     keyMomentFor, keyMomentSuccess, playKeyMoment, isWorldCupYear,
+    bestNatRuns, // meilleur parcours par compétition de sélection (fiche finale)
     playWorldCup, resolveWcFinal, isContinentalYear, playContinental, isNationsLeagueYear, playNationsLeague, isOlympicYear, playOlympics, playingTimeFactor, setSeasonObjective,
     objectiveMet, headlineFor, grantAward, rollSeasonAwards, rollBallon,
     roleForClub, roleOf, dualNatOf, dualPartnersOf,

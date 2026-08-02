@@ -2654,6 +2654,29 @@
       .join("");
   }
 
+  // Meilleur parcours par compétition de sélection. Jusqu'ici seuls les TITRES
+  // laissaient une trace : une demi-finale de Coupe du Monde disparaissait avec
+  // la saison. Le moteur archive désormais chaque tournoi disputé, on n'affiche
+  // ici que le meilleur de chacun.
+  function natRunsHtml(s) {
+    const runs = (E.bestNatRuns && E.bestNatRuns(s)) || [];
+    if (!runs.length) return "";
+    const contId = (E.countryOf(s.nationality.homeCountryId) || {}).continent;
+    const nom = {
+      wc: "🏆 " + T("Coupe du Monde"),
+      cont: ((NATIONAL_CUPS[contId] || {}).icon || "🌍") + " " + ((NATIONAL_CUPS[contId] || {}).name || T("Championnat continental")),
+      natl: (NATIONS_LEAGUE.icon || "🛡️") + " " + NATIONS_LEAGUE.name,
+      olympic: "🥇 " + T("Jeux Olympiques"),
+    };
+    return runs
+      .map((r) => {
+        // Un parcours au sommet mérite d'être mis en avant comme un trophée.
+        const sacre = r.rang === r.total - 1;
+        return statRowHtml(nom[r.comp] || r.comp, esc(r.label) + " (" + r.year + ")", sacre);
+      })
+      .join("");
+  }
+
   // Chemin parcouru : chaque étape de la carrière (club, âge, division, prix).
   function pathHtml(s) {
     return (s.transferHistory || [])
@@ -2783,6 +2806,16 @@
     } else {
       awardsBlock.style.display = "none";
       awardsLabel.style.display = "none";
+    }
+
+    // Parcours en sélection : masqué pour qui n'a jamais été international.
+    const natRuns = natRunsHtml(G);
+    const natBloc = $("final-natruns");
+    const natLabel = $("final-natruns-label");
+    if (natBloc && natLabel) {
+      natBloc.innerHTML = natRuns;
+      natBloc.style.display = natRuns ? "" : "none";
+      natLabel.style.display = natRuns ? "" : "none";
     }
 
     $("final-traits").innerHTML = G.traits.length
