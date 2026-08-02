@@ -253,6 +253,8 @@
       ...((G.captainMatches || 0) > 0 ? [statRowHtml("©️ Matchs comme capitaine", G.captainMatches)] : []),
       statRowHtml("OVR max", G.peakOvr),
       statRowHtml(T("{flag} Sélections", { flag: flagHtml(G.nationality) }), G.natTeam.caps),
+      // Numéro en sélection : absent tant qu'on n'a pas été convoqué.
+      ...(G.natTeam.number ? [statRowHtml(T("👕 Numéro en sélection"), "n°" + G.natTeam.number)] : []),
       ...(youthCaps > 0 ? [statRowHtml("🎽 Sélections jeunes", youthCaps)] : []),
       statRowHtml("💰 Gains de carrière", E.fmtMoney(G.money)),
     ].join("");
@@ -2789,6 +2791,8 @@
       statRowHtml("Passes décisives", G.totals.assists),
       ...((G.captainMatches || 0) > 0 ? [statRowHtml("©️ Matchs comme capitaine", G.captainMatches)] : []),
       statRowHtml(T("{flag} Sélections", { flag: flagHtml(G.nationality) }), G.natTeam.caps),
+      // Numéro en sélection : absent tant qu'on n'a pas été convoqué.
+      ...(G.natTeam.number ? [statRowHtml(T("👕 Numéro en sélection"), "n°" + G.natTeam.number)] : []),
       ...(((G.youth && G.youth.caps) || 0) > 0 ? [statRowHtml(T("🎽 Sélections jeunes{tiers}", { tiers: G.youth.tiers && G.youth.tiers.length ? ` (${G.youth.tiers.map((t) => t.toUpperCase()).join(" · ")})` : "" }), G.youth.caps)] : []),
       statRowHtml("💰 Fortune", E.fmtMoney(G.money)),
     ].join("");

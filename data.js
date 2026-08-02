@@ -527,6 +527,18 @@ const TRAJECTORIES = [
   { id: "surge", w: 9, label: "Déclic fulgurant", desc: "Banal des années, puis une explosion soudaine." },
 ];
 
+// --- Numéros de maillot en sélection ------------------------------------
+// Le numéro se GAGNE. On débute avec un numéro de bout de banc (21-23), on
+// hérite d'un numéro de titulaire en devenant cadre, et les numéros mythiques
+// — le 1, le 9, le 10 — sont réservés aux tout meilleurs. Il ne redescend
+// jamais : on ne perd pas le 10 après une saison moyenne.
+const NAT_NUMBERS = {
+  gk: { debut: [23, 22, 16], cadre: [12, 16], star: [1] },
+  def: { debut: [21, 15, 13], cadre: [3, 2, 5], star: [4, 6] },
+  mil: { debut: [20, 18, 14], cadre: [8, 6, 14], star: [10] },
+  att: { debut: [19, 22, 17], cadre: [11, 17], star: [9, 7] },
+};
+
 // --- Postes -------------------------------------------------------------
 // goalRate/assistRate : rendement offensif de base par match (modulé
 // par la technique et la forme dans engine.js).
@@ -1814,7 +1826,7 @@ const COUNTRY_LANG = {
 if (typeof module !== "undefined" && module.exports) {
   const dataExports = {
     BRAND, NATIONALITIES, NAME_POOLS, LIFESTYLES, ENTOURAGES, TRAJECTORIES,
-    ARCHETYPES, POSITIONS, ORIGINS, COUNTRIES, CONTINENTAL_CUPS, NATIONAL_CUPS, NATIONS_LEAGUE, NL_STAGES, LEVELS, ROLES, ROLE_ESPOIR_MAX_AGE,
+    ARCHETYPES, POSITIONS, NAT_NUMBERS, ORIGINS, COUNTRIES, CONTINENTAL_CUPS, NATIONAL_CUPS, NATIONS_LEAGUE, NL_STAGES, LEVELS, ROLES, ROLE_ESPOIR_MAX_AGE,
     LEVEL_ORDER, DUAL_NATIONALITY, CLUBS, CLUBS_BY_LEVEL, COMPETITIONS, COACH_NAMES, TRAITS,
     AWARDS, KEY_MOMENTS,
     EVENTS, MICRO_EVENTS, RIVAL_NEWS_GOOD, RIVAL_NEWS_BAD, RIVAL_NEWS_AHEAD,

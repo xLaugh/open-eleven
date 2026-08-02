@@ -283,6 +283,7 @@
     "{n} carrières vécues · record : {best} pts": "{n} careers played · best: {best} pts",
     "{n} carrières jouées dans le monde": "{n} careers played worldwide",
     "Parcours en sélection": "International record",
+    "👕 Numéro en sélection": "👕 International squad number",
     "Jeux Olympiques": "Olympic Games",
     "Championnat continental": "Continental championship",
     "Vous avez plus de 23 ans : vous occupez l'une des trois places de surclassé que le règlement olympique autorise.": "You are over 23: you take one of the three over-age slots Olympic rules allow.",

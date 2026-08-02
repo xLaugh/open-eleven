@@ -895,6 +895,35 @@
   // plus accessible mais moins prestigieux. Le continent vient de la nationalité.
   function isContinentalYear(year) { return year % 4 === 0; }
 
+  // --- Numéro de maillot en sélection ---------------------------------------
+  // DÉRIVÉ, jamais tiré au sort : appeler rng() ici décalerait tout le flux
+  // aléatoire et changerait chaque carrière pour une même graine — donc
+  // invaliderait les duels en attente. Un hachage du nom donne la même variété
+  // d'un joueur à l'autre, tout en restant stable pour une carrière donnée.
+  const NUM_RANG = { debut: 0, cadre: 1, star: 2 };
+  function natNumberFor(s) {
+    const table = (typeof NAT_NUMBERS !== "undefined" && NAT_NUMBERS[s.position.id]) || null;
+    if (!table) return null;
+    const caps = (s.natTeam && s.natTeam.caps) || 0;
+    const rang = s.rep >= 85 && caps >= 20 ? "star" : (s.rep >= 70 || caps >= 10) ? "cadre" : "debut";
+    const pool = table[rang] || table.debut;
+    const cle = (s.name || "") + "|" + s.nationality.id + "|" + s.position.id;
+    let h = 0;
+    for (let i = 0; i < cle.length; i++) h = (h * 31 + cle.charCodeAt(i)) >>> 0;
+    return { number: pool[h % pool.length], rang };
+  }
+  // Le numéro ne PEUT que monter en prestige : décrocher le 10 puis le rendre
+  // après une saison moyenne serait vécu comme une punition arbitraire.
+  function updateNatNumber(s) {
+    const r = natNumberFor(s);
+    if (!r) return;
+    const actuel = s.natTeam.numberRank;
+    if (actuel == null || NUM_RANG[r.rang] > NUM_RANG[actuel]) {
+      s.natTeam.number = r.number;
+      s.natTeam.numberRank = r.rang;
+    }
+  }
+
   // --- Parcours en sélection -------------------------------------------------
   // Table d'étapes de chaque compétition, dans l'ORDRE croissant de valeur :
   // le rang d'un parcours, c'est son indice. On réutilise les tables du jeu
@@ -1796,6 +1825,10 @@
         if (s.age <= 20) s.flags.young_int = true;
         if (s.age <= 18) s.flags.early_cap = true;
       }
+      // Attribué à la première convocation, puis réévalué chaque saison : le
+      // statut monte, le numéro suit. Appelé APRÈS l'incrément des caps pour
+      // que le seuil « cadre » tienne compte de la saison en cours.
+      updateNatNumber(s);
       // Les matchs & buts d'un grand tournoi comptent dans le bilan sélection de
       // la saison (affiché au récap), en plus de leur propre carte dédiée.
       const euNation = ((countryOf(s.nationality.homeCountryId) || {}).continent) === "eu";
