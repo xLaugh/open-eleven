@@ -449,10 +449,32 @@
   // ---- vitrine du joueur (profil public + pool de légendes communautaires) ---
   // Auto-déclarée (non vérifiée) : c'est une VITRINE, pas un classement. Le rang
   // général, lui, vient des scores vérifiés (fonction public_profile).
+  // Une entrée de Panthéon retenue pour la publication. On ne garde QUE
+  // l'affichable : chaque entrée locale embarque aussi `career`, l'instantané
+  // complet de la carrière (des dizaines de kilo-octets), qui n'a rien à faire
+  // en base ni chez un ami.
+  const panthEntry = (e) => ({
+    name: String(e.name || "").slice(0, 40),
+    title: String(e.title || "").slice(0, 80),
+    natFlag: String(e.nationalityFlag || "").slice(0, 8),
+    natName: String(e.nationalityName || "").slice(0, 40),
+    posIcon: String(e.positionIcon || "").slice(0, 8),
+    score: Number(e.score) || 0,
+    peakOvr: Number(e.peakOvr) || 0,
+    money: Number(e.money) || 0,
+    trophies: e.trophies || {},
+  });
+
   function buildStats() {
-    let best = null, badges = 0, careers = 0, bestStreak = 0;
+    let best = null, badges = 0, careers = 0, bestStreak = 0, topRuns = [];
     try {
       const pan = JSON.parse(localStorage.getItem("destinDeChampion_pantheon") || "[]");
+      if (Array.isArray(pan) && pan.length) {
+        // Les 10 meilleures carrières, pour le profil complet réservé aux amis.
+        // Plafonné : un Panthéon monte à 20 entrées, et tout publier ferait
+        // enfler la base à chaque partie sans rien apporter de plus.
+        topRuns = pan.slice().sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10).map(panthEntry);
+      }
       if (Array.isArray(pan) && pan.length) {
         const top = pan.reduce((a, b) => ((b.score || 0) > (a.score || 0) ? b : a));
         best = {
@@ -467,7 +489,7 @@
       careers = Math.max(careers, Number(pr.careersPlayed) || 0);
       bestStreak = (pr.daily && Number(pr.daily.bestStreak)) || 0;
     } catch (_) {}
-    return { best, badges, careers, bestStreak };
+    return { best, badges, careers, bestStreak, topRuns };
   }
   async function pushProfileStats() {
     if (!session || !pseudo) return; // pseudo requis pour publier
@@ -534,6 +556,28 @@
     ".pf-best-title{font-size:.9rem;color:var(--text-1,#567);margin:1px 0 6px}" +
     ".pf-best-stats{font-weight:700;font-size:.9rem;color:var(--green-ink,#0b3b26)}" +
     ".pf-counters{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}" +
+    // --- Profil pleine page ---------------------------------------------------
+    // Le profil d'un ami n'est plus une fenêtre mais une PAGE : ancrée en haut,
+    // pleine hauteur, défilement propre. Les autres panneaux restent centrés.
+    ".acc-overlay.pf-page{align-items:flex-start;justify-content:center;padding:0}" +
+    ".pf-page .lb-box{max-width:600px;max-height:none;min-height:100vh;border-radius:0;padding:16px 18px 40px}" +
+    ".pf-head{display:flex;align-items:center;gap:10px;margin:0 0 14px}" +
+    ".pf-back{flex:none;width:auto;margin:0;padding:8px 16px;font-size:.9rem}" +
+    ".pf-name{margin:0;font-family:var(--font-display,inherit);font-size:1.35rem;color:var(--green-ink,#0b3b26);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" +
+    ".pf-section{margin:20px 0 6px;font-size:.78rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--text-1,#567)}" +
+    // Une carrière du Panthéon partagé. Même grammaire visuelle que .pf-best,
+    // en plus compact puisqu'on en empile dix.
+    ".pf-run{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:10px;background:var(--card-bg-2,#f4f7f3);margin-bottom:7px}" +
+    ".pf-run-rank{flex:none;min-width:1.8em;font-weight:800;color:var(--green,#087b4b);text-align:right}" +
+    ".pf-run-main{flex:1;min-width:0}" +
+    // display:block — sans quoi un nom et un sous-titre courts tiennent sur la
+    // MÊME ligne et la liste perd son alignement d'une entrée à l'autre.
+    ".pf-run-name{display:block;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" +
+    ".pf-run-sub{display:block;font-size:.78rem;color:var(--text-1,#567);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" +
+    ".pf-run-score{flex:none;font-weight:800;color:var(--green-ink,#0b3b26)}" +
+    // Message affiché à qui n'est pas ami : on explique, on ne se contente pas
+    // de masquer.
+    ".pf-locked{padding:14px;border-radius:12px;background:var(--panel-2,rgba(8,123,75,.08));color:var(--text-1,#567);font-size:.88rem;line-height:1.55;text-align:center}" +
     ".pf-counters span{flex:1;min-width:96px;text-align:center;padding:8px 4px;border-radius:9px;background:var(--panel-2,rgba(8,123,75,.1));font-weight:700;font-size:.82rem;color:var(--green-ink,#0b3b26)}";
   document.head.appendChild(lbStyle);
 
@@ -606,7 +650,7 @@
 
   // ---- fiche publique d'un joueur (profil par pseudo) ------------------------
   const pfOverlay = document.createElement("div");
-  pfOverlay.className = "acc-overlay acc-top";
+  pfOverlay.className = "acc-overlay acc-top pf-page";
   pfOverlay.innerHTML = '<div class="lb-box" role="dialog" aria-modal="true"></div>';
   document.body.appendChild(pfOverlay);
   const pfBox = pfOverlay.querySelector(".lb-box");
@@ -614,15 +658,30 @@
   const medalR = (r) => (r === 1 ? "🥇" : r === 2 ? "🥈" : r === 3 ? "🥉" : "#" + num(r, 1e9));
   const money = (m) => { m = num(m, 1e12); return m >= 1e6 ? (m / 1e6).toFixed(m >= 1e7 ? 0 : 1) + " M€" : m >= 1e3 ? Math.round(m / 1e3) + " k€" : m + " €"; };
 
+  // En-tête de page : « ← Retour » referme le profil et laisse la fenêtre qui
+  // l'a ouvert (amis, classement, duels) exactement là où elle était.
+  const pfHead = (titre) =>
+    '<div class="pf-head"><button class="btn btn-secondary pf-back">← Retour</button>' +
+    '<h3 class="pf-name">' + titre + "</h3></div>";
+  const pfFermer = () => {
+    const b = pfBox.querySelector(".pf-back");
+    if (b) b.onclick = () => pfOverlay.classList.remove("on");
+  };
+
   async function openProfile(who) {
-    pfBox.innerHTML = '<button class="acc-x" aria-label="Fermer">×</button><p class="lb-empty">Chargement…</p>';
-    pfBox.querySelector(".acc-x").onclick = () => pfOverlay.classList.remove("on");
+    pfBox.innerHTML = pfHead("🏛️ " + esc(who)) + '<p class="lb-empty">Chargement…</p>';
+    pfFermer();
     pfOverlay.classList.add("on");
-    let row = null;
+    pfBox.scrollTop = 0;
+    // Deux lectures distinctes et volontairement séparées : la vitrine est
+    // ouverte à tous, le Panthéon partagé est filtré par la base selon l'amitié.
+    // Un client modifié ne peut donc pas s'octroyer le profil complet.
+    let row = null, complet = null;
     try { const { data } = await sb.rpc("public_profile", { p_pseudo: who }); row = data && data[0]; } catch (_) {}
+    try { const { data } = await sb.rpc("friend_profile", { p_pseudo: who }); complet = data && data[0]; } catch (_) {}
     if (!row) {
-      pfBox.innerHTML = '<button class="acc-x" aria-label="Fermer">×</button><h3>🏛️ ' + esc(who) + "</h3><p class=\"lb-empty\">Profil introuvable.</p>";
-      pfBox.querySelector(".acc-x").onclick = () => pfOverlay.classList.remove("on");
+      pfBox.innerHTML = pfHead("🏛️ " + esc(who)) + '<p class="lb-empty">Profil introuvable.</p>';
+      pfFermer();
       return;
     }
     const st = row.stats || {};
@@ -639,14 +698,37 @@
         '<div class="pf-best-title">' + icon(b.posIcon) + " " + esc(String(b.title == null ? "" : b.title).slice(0, 80)) + "</div>" +
         '<div class="pf-best-stats">🏅 ' + num(b.score, 100000) + " pts · 📊 " + num(b.peakOvr, 99) + " · 💰 " + money(b.money) + "</div></div>"
       : '<p class="lb-sub">Aucune carrière partagée.</p>';
+    // --- Panthéon partagé : réservé aux amis -------------------------------
+    // `complet` est vide si la base a refusé (pas ami, ou non connecté). On
+    // l'explique au lieu de masquer sans un mot.
+    const runs = (complet && complet.stats && complet.stats.topRuns) || null;
+    let pantheon;
+    if (!complet) {
+      // Le pseudo passe par T() : concaténé à la main, le message n'aurait
+      // jamais correspondu à une clé du dictionnaire et serait resté français.
+      pantheon = '<div class="pf-locked">🔒 Le Panthéon complet n\'est visible que par les amis.<br>' +
+        T("Ajoutez {p} en ami pour découvrir toutes ses carrières.", { p: esc(row.pseudo || who) }) + "</div>";
+    } else if (!runs || !runs.length) {
+      pantheon = '<p class="lb-empty">Aucune carrière partagée pour l\'instant.</p>';
+    } else {
+      pantheon = runs.map((r, i) =>
+        '<div class="pf-run"><span class="pf-run-rank">' + (i + 1) + "</span>" +
+        '<span class="pf-run-main"><span class="pf-run-name">' + icon(r.natFlag) + " " + esc(String(r.name == null ? "—" : r.name).slice(0, 40)) + "</span>" +
+        '<span class="pf-run-sub">' + icon(r.posIcon) + " " + esc(String(r.title == null ? "" : r.title).slice(0, 80)) +
+        " · 📊 " + num(r.peakOvr, 99) + " · 💰 " + money(r.money) + "</span></span>" +
+        '<span class="pf-run-score">' + num(r.score, 100000) + "</span></div>"
+      ).join("");
+    }
+
     pfBox.innerHTML =
-      '<button class="acc-x" aria-label="Fermer">×</button>' +
-      "<h3>🏛️ " + esc(row.pseudo || who) + "</h3>" +
+      pfHead("🏛️ " + esc(row.pseudo || who)) +
       rankLine +
-      '<p class="acc-sub" style="margin:12px 0 2px">Meilleure carrière <span class="lb-sub">(vitrine, non vérifiée)</span></p>' +
+      '<div class="pf-counters"><span>🏆 ' + num(st.badges, 999) + " badges</span><span>🔥 " + num(st.bestStreak, 99999) + " " + T("j (série)") + "</span><span>👤 " + num(st.careers, 99999) + " " + T("carrières") + "</span></div>" +
+      '<p class="pf-section">Meilleure carrière <span class="lb-sub" style="text-transform:none;letter-spacing:0">(vitrine, non vérifiée)</span></p>' +
       bestLine +
-      '<div class="pf-counters"><span>🏆 ' + num(st.badges, 999) + " badges</span><span>🔥 " + num(st.bestStreak, 99999) + " " + T("j (série)") + "</span><span>👤 " + num(st.careers, 99999) + " " + T("carrières") + "</span></div>";
-    pfBox.querySelector(".acc-x").onclick = () => pfOverlay.classList.remove("on");
+      '<p class="pf-section">Panthéon</p>' +
+      pantheon;
+    pfFermer();
   }
 
   // ============================================================================
