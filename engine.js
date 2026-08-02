@@ -1003,7 +1003,10 @@
     s.youth = s.youth || { caps: 0, goals: 0, tiers: [] };
     s.youth.caps += games; // les JO (U23) comptent dans les sélections jeunes
     s.youth.goals += goals;
-    const ol = { year: s.year, stage: stage.id, label: stage.label, text: stage.text, games, goals, icon: "🥇", cupName: ENGINE_TEXT.olyCupName, medal: null };
+    // `overage` : le règlement olympique autorise trois joueurs de plus de 23 ans
+    // par sélection. Sans le dire, une convocation à 26 ans dans un tournoi
+    // annoncé « U23 » passe pour un bug — c'était remonté comme tel.
+    const ol = { year: s.year, stage: stage.id, label: stage.label, text: stage.text, games, goals, icon: "🥇", cupName: ENGINE_TEXT.olyCupName, medal: null, overage: s.age >= 24 };
     if (stage.id === "champion") {
       s.trophies.olympic += 1; s.olympicMedals.gold += 1; ol.medal = "gold"; ol.label = ENGINE_TEXT.olyGoldLabel;
       s.rep = clamp(s.rep + 5, 0, 100); s.moral = clamp(s.moral + 9, 5, 100);

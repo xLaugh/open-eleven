@@ -282,6 +282,7 @@
     "{n} carrière vécue · record : {best} pts": "{n} career played · best: {best} pts",
     "{n} carrières vécues · record : {best} pts": "{n} careers played · best: {best} pts",
     "{n} carrières jouées dans le monde": "{n} careers played worldwide",
+    "Vous avez plus de 23 ans : vous occupez l'une des trois places de surclassé que le règlement olympique autorise.": "You are over 23: you take one of the three over-age slots Olympic rules allow.",
     "{n}× Champion": "{n}× League title",
     "{n} clean sheets": "{n} clean sheets",
     "{n} buts": "{n} goals",

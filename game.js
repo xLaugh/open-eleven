@@ -1126,7 +1126,7 @@
     const tone = c.medal === "gold" ? "great" : (c.medal === "silver" || c.medal === "bronze") ? "good" : "bad";
     showCard(`
       <div class="card-tag"><span class="card-icon">${c.icon}</span> Jeux Olympiques ${c.year}</div>
-      <p class="event-text">${flagHtml(G.nationality)} ${esc(G.nationality.name)} dispute le tournoi olympique (U23), et vous en êtes.</p>
+      <p class="event-text">${flagHtml(G.nationality)} ${esc(G.nationality.name)} dispute le tournoi olympique (U23), et vous en êtes.${c.overage ? " " + T("Vous avez plus de 23 ans : vous occupez l'une des trois places de surclassé que le règlement olympique autorise.") : ""}</p>
       <button class="btn btn-secondary" id="btn-olympic">Vivre les Jeux</button>
     `);
     $("btn-olympic").addEventListener("click", () => runTournament(report, "olympic", () => {
