@@ -383,17 +383,20 @@
     // le joueur n'est là que pour changer son mot de passe.
     if (event === "SIGNED_IN" && !recoveryMode) { onFreshLogin(); loadPseudo().then(() => { renderModal(); pushProfileStats(); }); }
     if (event === "SIGNED_OUT") { pseudo = null; cloudStamp = null; conflictInfo = null; }
+    refreshNotifs(); // session à jour : (re)pose ou efface les pastilles Amis/Duels
   });
   // On tente d'abord la récupération : si le hash porte un jeton, il ouvre
   // directement l'écran « nouveau mot de passe » plutôt que la session normale.
   consumeRecoveryHash().then((recovered) => {
     if (recovered) return;
-    sb.auth.getSession().then(({ data }) => { session = data.session; renderModal(); if (session) loadPseudo().then(() => { renderModal(); pushProfileStats(); }); });
+    sb.auth.getSession().then(({ data }) => { session = data.session; renderModal(); if (session) loadPseudo().then(() => { renderModal(); pushProfileStats(); }); refreshNotifs(); });
   });
 
   // ---- sauvegarde auto quand on quitte / passe en arrière-plan ---------------
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden" && session && Date.now() - lastPush > 8000) { pushSave(); pushProfileStats(); }
+    // Retour sur l'onglet : une invitation a pu arriver entre-temps.
+    if (document.visibilityState === "visible" && session) refreshNotifs();
   });
 
   // ============================================================================
@@ -803,6 +806,7 @@
     if (duTab === "in") {
       let rows = [];
       try { const { data } = await sb.rpc("duels_incoming"); rows = data || []; } catch (_) {}
+      setNavBadge("btn-duels", rows.length); // pastille d'accueil synchro avec les défis reçus
       content.innerHTML = rows.length
         ? '<ul class="lb-list">' + rows.map((r, i) =>
             '<li class="lb-row"><span class="lb-name">🆚 <strong>' + esc(r.from_label || r.from_pseudo) + "</strong><br><span class=\"lb-sub\">" + T("te défie · {n} pts à battre", { n: r.from_score }) + "</span></span>" +
@@ -991,6 +995,7 @@
       const [incoming, outgoing, friends] = await Promise.all([listIncoming(), listOutgoing(), listFriends()]);
       frPending = incoming.length;
       paintPendingBadge();
+      setNavBadge("btn-friends", incoming.length); // garde la pastille d'accueil synchro (accept/refus la font varier)
       const nameCell = (p) =>
         '<span class="lb-name" data-pseudo="' + esc(p || "") + '" style="cursor:pointer">👤 ' + esc(p || "Joueur") + "</span>";
       const btn = (cls, label, i) =>
@@ -1105,11 +1110,51 @@
     } catch (_) { return null; }
   }
 
+  // ---- Pastilles de notification (accueil : Amis / Duels) --------------------
+  // Un petit compteur rouge en coin du bouton dès qu'une invitation arrive —
+  // demande d'ami sur « Amis », défi reçu sur « Duels » — pour ne plus avoir à
+  // ouvrir la fenêtre pour le savoir. Compté côté serveur, rafraîchi à la
+  // connexion, au retour sur l'onglet, après chaque action, et par un léger
+  // sondage périodique. Silencieux : une pastille ne doit jamais gêner le jeu.
+  function setNavBadge(btnId, n) {
+    const b = document.getElementById(btnId);
+    if (!b) return;
+    let badge = b.querySelector(".online-badge");
+    if (!n) { if (badge) badge.remove(); return; }
+    if (!badge) { badge = document.createElement("span"); badge.className = "online-badge"; b.appendChild(badge); }
+    const txt = n > 99 ? "99+" : String(n);
+    if (badge.textContent !== txt) badge.textContent = txt;
+  }
+  // Comptages légers : on ne résout pas les pseudos (contrairement à
+  // listIncoming), seul le nombre compte. Toute erreur → 0, jamais d'exception.
+  async function countIncomingFriends() {
+    try { return (await friendRows((q) => q.eq("friend_id", session.user.id).eq("status", "pending"))).length; }
+    catch (_) { return 0; }
+  }
+  async function countIncomingDuels() {
+    try { const { data } = await sb.rpc("duels_incoming"); return (data || []).length; }
+    catch (_) { return 0; }
+  }
+  let notifsBusy = false;
+  async function refreshNotifs() {
+    if (!session) { setNavBadge("btn-friends", 0); setNavBadge("btn-duels", 0); return; }
+    if (notifsBusy) return; // évite les appels concurrents (poll + retour d'onglet)
+    notifsBusy = true;
+    try {
+      const [f, d] = await Promise.all([countIncomingFriends(), countIncomingDuels()]);
+      setNavBadge("btn-friends", f);
+      setNavBadge("btn-duels", d);
+    } finally { notifsBusy = false; }
+  }
+  // Sondage discret : ne tourne que quand l'onglet est visible et qu'on est
+  // connecté — inutile d'interroger le serveur pour une page en arrière-plan.
+  setInterval(() => { if (document.visibilityState === "visible" && session) refreshNotifs(); }, 60000);
+
   // ---- API publique pour le jeu ----------------------------------------------
   window.OpenElevenAccount = {
     submitDaily, openLeaderboard, openProfile, getLegends, pushProfile: pushProfileStats,
     openDuels, submitDuelCreate, submitDuelRespond, openFriends,
-    bumpStat, getStats,
+    bumpStat, getStats, refreshNotifs,
   };
 
   // ---- bouton d'accueil -------------------------------------------------------

@@ -9,11 +9,11 @@
    ⚠️ À CHAQUE DÉPLOIEMENT : bumper CACHE (ci-dessous) en même temps
    que le ?v= d'index.html — l'ancien cache est alors purgé.
    ============================================================ */
-const CACHE = "open-eleven-v10.63";
+const CACHE = "open-eleven-v10.64";
 const CORE = [
   "./", "./index.html",
-  "./style.css?v=10.63", "./data-clubs.js?v=10.63", "./data-moments.js?v=10.63", "./data-events.js?v=10.63", "./data.js?v=10.63", "./engine.js?v=10.63", "./game.js?v=10.63", "./game-card.js?v=10.63", "./i18n-boot.js?v=10.63", "./i18n-data.js?v=10.63", "./i18n.js?v=10.63", "./sw-register.js?v=10.63",
-  "./src/vendor/supabase.js?v=10.63", "./src/supabase-config.js?v=10.63", "./src/badwords.js?v=10.63", "./account.js?v=10.63",
+  "./style.css?v=10.64", "./data-clubs.js?v=10.64", "./data-moments.js?v=10.64", "./data-events.js?v=10.64", "./data.js?v=10.64", "./engine.js?v=10.64", "./game.js?v=10.64", "./game-card.js?v=10.64", "./i18n-boot.js?v=10.64", "./i18n-data.js?v=10.64", "./i18n.js?v=10.64", "./sw-register.js?v=10.64",
+  "./src/vendor/supabase.js?v=10.64", "./src/supabase-config.js?v=10.64", "./src/badwords.js?v=10.64", "./account.js?v=10.64",
   "./site.webmanifest", "./favicon.svg", "./privacy.html",
   "./src/img/logo-11-mark.png",
   "./src/img/icon-512.png", "./src/img/icon-192.png", "./src/img/icon-maskable-512.png",
@@ -25,18 +25,42 @@ const CORE = [
 // exactement ce qui s'est produit avec une entrée de CORE pointant un fichier
 // absent. On met donc chaque asset en cache indépendamment : un asset manquant
 // dégrade le hors-ligne pour LUI SEUL au lieu de tout casser silencieusement.
+//
+// PAS de skipWaiting() ici : un nouveau worker reste en attente au lieu de
+// prendre la main tout seul. C'est VOULU — le cache servait parfois d'anciens
+// fichiers sans que le joueur s'en rende compte. On laisse plutôt sw-register.js
+// détecter cette attente, afficher « une mise à jour est disponible », et
+// n'activer la nouvelle version que quand le joueur clique (message SKIP_WAITING
+// ci-dessous). Repli automatique : sans clic, elle s'appliquera à la prochaine
+// fermeture complète de l'appli, comportement standard d'un worker en attente.
 self.addEventListener("install", (e) => {
   e.waitUntil(
     caches.open(CACHE)
       .then((c) => Promise.all(CORE.map((u) => c.add(u).catch(() => {}))))
-      .then(() => self.skipWaiting())
+      // Si CacheStorage est indisponible (quota plein, navigation privée stricte,
+      // certains environnements), caches.open() rejette. Sans ce catch, TOUTE
+      // l'install échoue et le worker devient « redundant » : plus de hors-ligne,
+      // ET plus de mécanisme de mise à jour. On tolère donc l'échec du précache —
+      // le worker s'installe quand même, quitte à ne pas servir hors-ligne.
+      .catch(() => {})
   );
+});
+
+// Le bouton « Mettre à jour » de la page demande au worker en attente de prendre
+// la main immédiatement. Il s'active alors, réclame les clients (clients.claim
+// ci-dessous), ce qui déclenche `controllerchange` côté page → rechargement.
+self.addEventListener("message", (e) => {
+  if (e.data && e.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      // Même prudence qu'à l'install : si la purge échoue, on réclame quand même
+      // les clients — sinon `controllerchange` ne se déclenche pas et la mise à
+      // jour acceptée ne s'applique jamais.
+      .catch(() => {})
       .then(() => self.clients.claim())
   );
 });

@@ -40,6 +40,9 @@
     "Confidentialité": "Privacy",
     "Mon compte": "My account",
     "Une carrière est en cours": "A career is in progress",
+    "Une mise à jour est disponible.": "An update is available.",
+    "Mettre à jour": "Update",
+    "Mise à jour…": "Updating…",
 
     // Écrans génériques
     "Retour": "Back",

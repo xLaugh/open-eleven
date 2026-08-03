@@ -37,6 +37,12 @@
   function showScreen(id) {
     document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
     $(id).classList.add("active");
+    // De retour sur l'accueil : recompte les invitations reçues pour rafraîchir
+    // les pastilles Amis/Duels sans attendre le prochain sondage.
+    if (id === "screen-home") {
+      const acc = window.OpenElevenAccount;
+      if (acc && acc.refreshNotifs) acc.refreshNotifs();
+    }
   }
 
   function esc(str) {
