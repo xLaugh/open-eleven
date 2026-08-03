@@ -276,6 +276,26 @@ const NATIONALITIES = [
   { id: "cd", name: "RDC", flag: "🇨🇩", img: "src/img/flag/Flag_of_RDC.png", weight: 0.35, wcWeight: 0.07, homeCountryId: "cd" },
   { id: "gn", name: "Guinée", flag: "🇬🇳", img: "src/img/flag/Flag_of_Guinea.png", weight: 0.3, wcWeight: 0.05, homeCountryId: "gn" },
   { id: "bj", name: "Bénin", flag: "🇧🇯", img: "src/img/flag/Flag_of_Benin.png", weight: 0.2, wcWeight: 0.05, homeCountryId: "bj" },
+
+  // --- Territoires HORS FIFA -------------------------------------------
+  // Non membres de la FIFA, mais dotés d'une sélection et d'un vivier bien
+  // réel. Chacun ouvre une SECONDE sélection (cf. DUAL_NATIONALITY) : on
+  // choisit son camp à la création. Aucun `img` — flagHtml retombe alors sur
+  // l'emoji, et aucune image de drapeau n'existe pour eux.
+  // `clubCountryId` : aucun de ces territoires n'a de championnat pro, on s'y
+  // forme donc dans l'État dont on dépend (un Réunionnais en France). Le
+  // drapeau, le continent et la sélection restent ceux du territoire.
+  { id: "gl", name: "Groenland", flag: "🇬🇱", img: "src/img/flag/Flag_of_Greenland.png", weight: 0.05, wcWeight: 0.005, homeCountryId: "gl", clubCountryId: "dk" },
+  { id: "gp", name: "Guadeloupe", flag: "🇬🇵", img: "src/img/flag/Flag_of_Guadeloupe.png", weight: 0.09, wcWeight: 0.005, homeCountryId: "gp", clubCountryId: "fr" },
+  { id: "mq", name: "Martinique", flag: "🇲🇶", img: "src/img/flag/Flag_of_Martinique.png", weight: 0.09, wcWeight: 0.005, homeCountryId: "mq", clubCountryId: "fr" },
+  { id: "gf", name: "Guyane française", flag: "🇬🇫", img: "src/img/flag/Flag_of_French_Guiana.png", weight: 0.07, wcWeight: 0.005, homeCountryId: "gf", clubCountryId: "fr" },
+  { id: "mf", name: "Saint-Martin", flag: "🇲🇫", img: "src/img/flag/Flag_of_Saint_Martin.png", weight: 0.04, wcWeight: 0.005, homeCountryId: "mf", clubCountryId: "fr" },
+  { id: "sx", name: "Sint Maarten", flag: "🇸🇽", img: "src/img/flag/Flag_of_Sint_Maarten.png", weight: 0.04, wcWeight: 0.005, homeCountryId: "sx", clubCountryId: "nl" },
+  { id: "bq", name: "Bonaire", flag: "🇧🇶", img: "src/img/flag/Flag_of_Bonaire.png", weight: 0.04, wcWeight: 0.005, homeCountryId: "bq", clubCountryId: "nl" },
+  { id: "zan", name: "Zanzibar", flag: "🇹🇿", img: "src/img/flag/Flag_of_Zanzibar.png", weight: 0.05, wcWeight: 0.005, homeCountryId: "zan", clubCountryId: "tz" },
+  { id: "re", name: "La Réunion", flag: "🇷🇪", img: "src/img/flag/Flag_of_Reunion.png", weight: 0.08, wcWeight: 0.005, homeCountryId: "re", clubCountryId: "fr" },
+  { id: "mp", name: "Mariannes du Nord", flag: "🇲🇵", img: "src/img/flag/Flag_of_Northern_Mariana_Islands.png", weight: 0.04, wcWeight: 0.005, homeCountryId: "mp", clubCountryId: "us" },
+  { id: "nu", name: "Niue", flag: "🇳🇺", img: "src/img/flag/Flag_of_Niue.png", weight: 0.04, wcWeight: 0.005, homeCountryId: "nu", clubCountryId: "nz" },
 ];
 
 // Prénoms/noms par nationalité (génération du joueur et du rival).
@@ -492,6 +512,19 @@ const NAME_POOLS = {
   hr: { first: ["Ivan", "Marko", "Ante", "Tomislav", "Petar", "Filip", "Domagoj", "Karlo"], last: ["Horvat", "Kovačević", "Babić", "Marić", "Jurić", "Novak", "Knežević", "Petrović"] },
   uy: { first: ["Santiago", "Mateo", "Bruno", "Joaquín", "Emiliano", "Gonzalo", "Martín", "Nicolás"], last: ["Rodríguez", "Fernández", "González", "Pérez", "García", "Martínez", "López", "Silva"] },
   cd: { first: ["Jean", "Christian", "Yannick", "Glody", "Trésor", "Gédéon", "Fiston", "Divin"], last: ["Kabongo", "Mukendi", "Ilunga", "Tshimanga", "Kalala", "Kasongo", "Mwamba", "Ngoy"] },
+
+  // --- Territoires hors FIFA -------------------------------------------
+  gl: { first: ["Nuka","Malik","Aputsiaq","Inuk","Pele","Jens","Aqqalu","Kaali"], last: ["Olsen","Kleist","Lyberth","Heilmann","Broberg","Egede","Motzfeldt","Josefsen"] },
+  gp: { first: ["Ronald","Jocelyn","Dimitri","Loïc","Steeve","Mickaël","Ludovic","Kévin"], last: ["Zandronis","Coridon","Bocaly","Gotin","Rinaldo","Sacri","Tacalfred","Bade"] },
+  mq: { first: ["Kévin","Steeven","Jordy","Daniel","Emmanuel","Mickaël","Brighton","Yann"], last: ["Parsemain","Rhodes","Delblond","Hérelle","Rivière","Marie-Sainte","Zébina","Fallet"] },
+  gf: { first: ["Sloan","Grégory","Kévin","Ludovic","Yannick","Steve","Dimitri","Jean"], last: ["Privat","Malsa","Cippelletti","Baal","Cabral","Rimane","Nossin","Thébault"] },
+  mf: { first: ["Jean","Steve","Marvin","Kevin","Jonathan","Alex","Ryan","Damien"], last: ["Richardson","Gumbs","Hodge","Carty","Brooks","Illidge","Arnell","Fleming"] },
+  sx: { first: ["Kevin","Rihairo","Shakim","Damian","Jarrick","Nathan","Owen","Devon"], last: ["Richardson","Beaumont","York","Peterson","Hazel","Wilson","Gumbs","Halley"] },
+  bq: { first: ["Jurgen","Ruben","Angelo","Daniel","Xavier","Rayan","Elton","Gilbert"], last: ["Coffie","Martis","Bomba","Frans","Nicolaas","Cicilia","Emerenciana","Anthony"] },
+  zan: { first: ["Hassan","Juma","Salum","Ali","Abdallah","Rashid","Said","Omar"], last: ["Ramadhani","Suleiman","Kombo","Haji","Makame","Ussi","Khamis","Mwinyi"] },
+  re: { first: ["Dimitri","Fabrice","Jonathan","Ludovic","Guillaume","Florent","Loïc","Bryan"], last: ["Payet","Hoarau","Técher","Grondin","Lauret","Boyer","Fontaine","Rivière"] },
+  mp: { first: ["Jason","Kevin","Nicholas","Joey","Ryan","Tyler","Justin","Brandon"], last: ["Camacho","Sablan","Tenorio","Aldan","Manglona","Taitano","Borja","Reyes"] },
+  nu: { first: ["Sione","Tama","Lote","Manu","Ioane","Fetu","Tavita","Malo"], last: ["Tongatule","Pihigia","Talagi","Vilitama","Hipa","Makaia","Funaki","Rex"] },
 };
 
 // --- Hygiène de vie (choisie à la création) ---------------------------------
@@ -806,6 +839,19 @@ const COUNTRIES = [
   { id: "mg", name: "Madagascar", flag: "🇲🇬", img: "src/img/flag/Flag_of_Madagascar.png", of: "de Madagascar", salaryMult: 0.32, growthMult: 0.76, mediaMult: 0.48, continent: "af" },
   { id: "ng", name: "Nigeria", flag: "🇳🇬", img: "src/img/flag/Flag_of_Nigeria.png", of: "du Nigeria", salaryMult: 0.45, growthMult: 0.82, mediaMult: 0.62, continent: "af" },
   { id: "jp", name: "Japon", flag: "🇯🇵", img: "src/img/flag/Flag_of_Japan.png", of: "du Japon", salaryMult: 0.7, growthMult: 0.9, mediaMult: 0.7, continent: "as" },
+
+  // --- Territoires HORS FIFA (cf. NATIONALITIES) ------------------------
+  { id: "gl", name: "Groenland", flag: "🇬🇱", img: "src/img/flag/Flag_of_Greenland.png", of: "du Groenland", salaryMult: 0.42, growthMult: 0.72, mediaMult: 0.34, continent: "am" },
+  { id: "gp", name: "Guadeloupe", flag: "🇬🇵", img: "src/img/flag/Flag_of_Guadeloupe.png", of: "de Guadeloupe", salaryMult: 0.46, growthMult: 0.8, mediaMult: 0.42, continent: "am" },
+  { id: "mq", name: "Martinique", flag: "🇲🇶", img: "src/img/flag/Flag_of_Martinique.png", of: "de Martinique", salaryMult: 0.46, growthMult: 0.8, mediaMult: 0.42, continent: "am" },
+  { id: "gf", name: "Guyane française", flag: "🇬🇫", img: "src/img/flag/Flag_of_French_Guiana.png", of: "de Guyane", salaryMult: 0.44, growthMult: 0.78, mediaMult: 0.38, continent: "am" },
+  { id: "mf", name: "Saint-Martin", flag: "🇲🇫", img: "src/img/flag/Flag_of_Saint_Martin.png", of: "de Saint-Martin", salaryMult: 0.4, growthMult: 0.72, mediaMult: 0.32, continent: "am" },
+  { id: "sx", name: "Sint Maarten", flag: "🇸🇽", img: "src/img/flag/Flag_of_Sint_Maarten.png", of: "de Sint Maarten", salaryMult: 0.4, growthMult: 0.72, mediaMult: 0.32, continent: "am" },
+  { id: "bq", name: "Bonaire", flag: "🇧🇶", img: "src/img/flag/Flag_of_Bonaire.png", of: "de Bonaire", salaryMult: 0.4, growthMult: 0.72, mediaMult: 0.32, continent: "am" },
+  { id: "zan", name: "Zanzibar", flag: "🇹🇿", img: "src/img/flag/Flag_of_Zanzibar.png", of: "de Zanzibar", salaryMult: 0.38, growthMult: 0.74, mediaMult: 0.3, continent: "af" },
+  { id: "re", name: "La Réunion", flag: "🇷🇪", img: "src/img/flag/Flag_of_Reunion.png", of: "de La Réunion", salaryMult: 0.46, growthMult: 0.8, mediaMult: 0.4, continent: "af" },
+  { id: "mp", name: "Mariannes du Nord", flag: "🇲🇵", img: "src/img/flag/Flag_of_Northern_Mariana_Islands.png", of: "des Mariannes du Nord", salaryMult: 0.4, growthMult: 0.7, mediaMult: 0.3, continent: "as" },
+  { id: "nu", name: "Niue", flag: "🇳🇺", img: "src/img/flag/Flag_of_Niue.png", of: "de Niue", salaryMult: 0.38, growthMult: 0.7, mediaMult: 0.28, continent: "oc" },
 ];
 
 // --- Coupes continentales de CLUBS (une par continent, jamais confondues) -----
@@ -913,6 +959,21 @@ const DUAL_NATIONALITY = {
   ro: ["it", "es"],
   gr: ["de", "au"],
   kr: ["us"],
+
+  // Territoires hors FIFA : la seconde sélection est celle de l'État dont
+  // ils dépendent. C'est le cœur du dispositif — jouer pour le Groenland ou
+  // pour le Danemark, il faut trancher.
+  gl: ["dk"],
+  gp: ["fr"],
+  mq: ["fr"],
+  gf: ["fr"],
+  mf: ["fr", "nl"],
+  sx: ["nl"],
+  bq: ["nl"],
+  zan: ["tz"],
+  re: ["fr"],
+  mp: ["us"],
+  nu: ["nz"],
 };
 
 // --- Statut au club (rôle) ------------------------------------------
@@ -1829,6 +1890,14 @@ const COUNTRY_LANG = {
   de: "de", at: "de", ch: "de",
   // Arabe
   dz: "ar", ma: "ar", tn: "ar", eg: "ar", sa: "ar", qa: "ar",
+  // Territoires hors FIFA, et les deux États dont ils dépendent (danois,
+  // swahili) : sans ça, un aller-retour Groenland↔Danemark passerait pour un
+  // dépaysement linguistique.
+  gl: "da", dk: "da",
+  gp: "fr", mq: "fr", gf: "fr", mf: "fr", re: "fr",
+  sx: "nl", bq: "nl",
+  zan: "sw", tz: "sw",
+  mp: "en", nu: "en",
 };
 
 if (typeof module !== "undefined" && module.exports) {

@@ -69,6 +69,13 @@
   }
 
   function countryOf(countryId) { return COUNTRIES.find((c) => c.id === countryId); }
+  // Pays où l'on se FORME et où l'on joue « au pays ». Confondu avec le pays
+  // natal partout, sauf pour les territoires hors FIFA (Guadeloupe, Groenland,
+  // Zanzibar…) : ils ont une sélection mais aucun championnat professionnel,
+  // et leurs joueurs se forment dans l'État dont ils dépendent — exactement
+  // comme dans la réalité. D'où `clubCountryId`, qui ne touche ni au drapeau,
+  // ni au continent, ni à la sélection.
+  function clubHomeOf(nat) { return (nat && (nat.clubCountryId || nat.homeCountryId)) || null; }
   function levelRank(levelId) { return LEVELS[levelId] ? LEVELS[levelId].rank : 0; }
 
   // Étiquette de division RELATIVE à la nation. Le meilleur échelon d'un pays
@@ -228,7 +235,7 @@
     else if (profile.potCap <= 76) add({ elite: -8 });
     for (const k in w) w[k] = Math.max(0, w[k]);
 
-    const homeId = profile.nationality.homeCountryId;
+    const homeId = clubHomeOf(profile.nationality);
     // Uniquement des centres du pays natal : un niveau sans club
     // domestique (ex. élite au Brésil) est simplement inaccessible.
     const clubsAt = (lvl) => CLUBS_BY_LEVEL[lvl].filter((c) => c.countryId === homeId);
@@ -666,8 +673,10 @@
     if (c.wc === true && !isWorldCupYear(s.year)) return false;
     if (c.loan === true && !s.loan) return false;
     if (c.loan === false && s.loan) return false;
-    if (c.abroad === true && s.club.countryId === s.nationality.homeCountryId) return false;
-    if (c.abroad === false && s.club.countryId !== s.nationality.homeCountryId) return false;
+    // « À l'étranger » se juge sur le pays de formation : un Réunionnais à Lyon
+    // n'est pas un expatrié, il joue chez lui.
+    if (c.abroad === true && s.club.countryId === clubHomeOf(s.nationality)) return false;
+    if (c.abroad === false && s.club.countryId !== clubHomeOf(s.nationality)) return false;
     // Événements de choc linguistique : n'ont de sens que si le pays du club
     // parle une autre langue que la langue natale (un Argentin en Espagne, non).
     if (c.foreignLang === true && !foreignLangFor(s)) return false;
@@ -2446,7 +2455,7 @@
         if (co.gulf) return false; // le Golfe ne se signe jamais par un transfert ordinaire
         if (c.id === s.club.id) return false;
         if (minorLock) return c.countryId === s.club.countryId;
-        if (spec && spec.home) return c.countryId === s.nationality.homeCountryId;
+        if (spec && spec.home) return c.countryId === clubHomeOf(s.nationality);
         if (spec && spec.domestic) return c.countryId === s.club.countryId;
         if (spec && spec.cross) return c.countryId !== s.club.countryId;
         return true;
@@ -2454,7 +2463,7 @@
     }
     if (pool.length === 0 && spec && spec.home) {
       // Aucun club du pays natal à ce niveau : élargir aux niveaux voisins
-      pool = CLUBS.filter((c) => c.countryId === s.nationality.homeCountryId && c.id !== s.club.id && !(countryOf(c.countryId) || {}).gulf);
+      pool = CLUBS.filter((c) => c.countryId === clubHomeOf(s.nationality) && c.id !== s.club.id && !(countryOf(c.countryId) || {}).gulf);
     }
     if (pool.length === 0) pool = CLUBS_BY_LEVEL[targetLevel].filter((c) => c.id !== s.club.id);
     const count = Math.min(pool.length, randInt(1, 3));
@@ -2900,7 +2909,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.59";
+  const ENGINE_VERSION = "10.63";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {
