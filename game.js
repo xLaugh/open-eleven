@@ -2325,7 +2325,7 @@
     function tryUnlock(id, cond) {
       if (cond && !progress.unlockedBadges.includes(id)) {
         progress.unlockedBadges.push(id);
-        progress.badgeContexts[id] = T("Débloqué avec {name} ({flag} {pos}, carrière {from}-{to})", { name: G.name, flag: G.nationality.flag, pos: G.position.name, from: careerStartYear(), to: G.year });
+        progress.badgeContexts[id] = T("Débloqué avec {name} ({flag} {pos}) le {date}", { name: G.name, flag: G.nationality.flag, pos: G.position.name, date: new Date().toLocaleDateString() });
         unlocked.push(id);
         track("badge_unlocked", { badge_id: id });
       }

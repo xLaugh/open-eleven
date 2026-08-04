@@ -254,7 +254,7 @@
     "✅ Défi envoyé à {who}": "✅ Duel sent to {who}",
     "↩️ Renvoyer à {who}": "↩️ Send back to {who}",
 
-    "Débloqué avec {name} ({flag} {pos}, carrière {from}-{to})": "Unlocked with {name} ({flag} {pos}, career {from}-{to})",
+    "Débloqué avec {name} ({flag} {pos}) le {date}": "Unlocked with {name} ({flag} {pos}) on {date}",
     "Nouveau badge débloqué : {names}": "New badge unlocked: {names}",
     "{done}/{total} badges · {n} carrière jouée": "{done}/{total} badges · {n} career played",
     "{done}/{total} badges · {n} carrières jouées": "{done}/{total} badges · {n} careers played",
