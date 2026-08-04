@@ -582,6 +582,7 @@
     }
     if (fx.flag) s.flags[fx.flag] = true;
     if (fx.clearFlag) delete s.flags[fx.clearFlag];
+    if (fx.clearTrait) s.traits = s.traits.filter((t) => t !== fx.clearTrait);
     if (fx.sched) s.scheduled.push({ id: fx.sched.id, age: s.age + fx.sched.inYears });
     if (fx.trophy) {
       s.seasonTrophies.push(fx.trophy);
@@ -2909,7 +2910,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.63";
+  const ENGINE_VERSION = "10.64";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {

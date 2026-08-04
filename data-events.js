@@ -413,7 +413,7 @@ const EVENTS = [
         { weight: 40, text: "L'argent tombe, le niveau aussi. Vous vous éteignez doucement, loin des projecteurs.", fx: { money: 6, salaryMult: 2.2, rep: -8, form: -8, transfer: { d: -1 } } },
       ] },
       { label: "Refuser, pour une fois", outcomes: [
-        { weight: 50, text: "Vous surprenez tout le monde, à commencer par vous. Le vestiaire vous regarde autrement.", fx: { team: 10, coach: 7, mor: 6, clearFlag: "mercenary" } },
+        { weight: 50, text: "Vous surprenez tout le monde, à commencer par vous. Le vestiaire vous regarde autrement.", fx: { team: 10, coach: 7, mor: 6, clearTrait: "mercenary" } },
         { weight: 50, text: "Vous refusez, et le regrettez chaque fin de mois.", fx: { mor: -6, m: 3 } },
       ] },
     ],
@@ -439,7 +439,7 @@ const EVENTS = [
     text: "Trop de pépins, trop souvent. Un spécialiste étranger propose une refonte totale de votre préparation — six mois de travail invisible, sans garantie.",
     options: [
       { label: "Tout reconstruire avec lui", hint: "Long", outcomes: [
-        { weight: 55, text: "Six mois d'ingratitude, puis un corps qui ne casse plus. Vous récupérez votre carrière.", fx: { p: 7, form: 5, clearFlag: "glass", mor: 8 } },
+        { weight: 55, text: "Six mois d'ingratitude, puis un corps qui ne casse plus. Vous récupérez votre carrière.", fx: { p: 7, form: 5, clearTrait: "glass", mor: 8 } },
         { weight: 45, text: "Le protocole ne prend pas. Vous avez perdu six mois et un peu d'espoir.", fx: { mor: -8, form: -4, money: -1 } },
       ] },
       { label: "Continuer à gérer au jour le jour", outcomes: [
@@ -2478,7 +2478,7 @@ const EVENTS = [
   },
   {
     id: "ev_captain_vote", cat: "Vestiaire", icon: "🗳️", w: 8,
-    cond: { aMin: 24, aMax: 31, minTeam: 62, minClubSeasons: 3 },
+    cond: { aMin: 24, aMax: 31, minTeam: 62, minClubSeasons: 3, notFlag: "captain" },
     text: "Le vestiaire vote pour son nouveau capitaine, et votre nom circule avec insistance. Le doyen du groupe, lui, estime que c'est « son tour ».",
     options: [
       { label: "Faire campagne, assumer l'ambition", outcomes: [
@@ -3776,8 +3776,8 @@ const EVENTS = [
     text: "Le coach vous tend le brassard de capitaine. Le vestiaire vous observe : saurez-vous porter tout un groupe sur vos épaules ?",
     options: [
       { label: "Accepter, devenir un leader", hint: "Patron", outcomes: [
-        { weight: 65, text: "Vous fédérez le groupe et haussez le ton au bon moment : un vrai patron est né.", fx: { rep: 5, m: 4, team: 6, mor: 5 } },
-        { weight: 35, text: "La responsabilité pèse plus lourd que prévu sur votre propre jeu.", fx: { form: -3, mor: -3, team: 2 } },
+        { weight: 65, text: "Vous fédérez le groupe et haussez le ton au bon moment : un vrai patron est né.", fx: { rep: 5, m: 4, team: 6, mor: 5, flag: "captain" } },
+        { weight: 35, text: "La responsabilité pèse plus lourd que prévu sur votre propre jeu.", fx: { form: -3, mor: -3, team: 2, flag: "captain" } },
       ] },
       { label: "Refuser, rester concentré sur soi", hint: "Discret", outcomes: [
         { weight: 100, text: "Vous préférez montrer l'exemple sans le brassard. Un choix qu'on respecte.", fx: { m: 2, mor: 1 } },
