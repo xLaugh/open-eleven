@@ -2845,6 +2845,7 @@
         const champIcon = (se.divisionTitle && !(se.trophies || []).includes("league")) ? COMPETITIONS.league.icon : "";
         const icons = champIcon + (se.trophies || []).map((tr) => (COMPETITIONS[tr] ? COMPETITIONS[tr].icon : "")).join("");
         const perf = isGk ? `${se.cleanSheets || 0} cs` : `${se.goals} b`;
+        const pd = ` · ${se.assists || 0} pd`;
         let moveArrow = "";
         if (prevSeason && prevSeason.clubName === se.clubName && se.level && prevSeason.level && se.level !== prevSeason.level) {
           moveArrow = LEVELS[se.level].rank > LEVELS[prevSeason.level].rank
@@ -2859,7 +2860,7 @@
         return `<div class="season-row">
           <span class="season-age">${se.age}</span>
           <span class="season-club">${se.level ? `<span class="level-tag level-${se.level}">${esc(seCountryId ? E.divShort(se.level, seCountryId) : LEVELS[se.level].short)}</span>` : ""}${seFlag ? `${seFlag} ` : ""}${esc(se.clubName)}${moveArrow}${se.onLoan ? ` <span class="loan-tag">Prêt</span>` : ""}</span>
-          <span class="season-stats">${se.matches} m · ${perf} · ${se.rating.toFixed(1)}</span>
+          <span class="season-stats">${se.matches} m · ${perf}${pd} · ${se.rating.toFixed(1)}</span>
           <span class="season-icons">${icons}</span>
         </div>`;
       })
