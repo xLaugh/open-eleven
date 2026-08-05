@@ -1508,6 +1508,7 @@
         streakJokers: Number(p.streakJokers) || 0,
         streakMilestone: Number(p.streakMilestone) || 0,
         jetonsFromStreaks: Number(p.jetonsFromStreaks) || 0,
+        xp: Number(p.xp) || 0,
       };
     } catch (e) {
       return {
@@ -1519,6 +1520,7 @@
         ownedPerks: [], equippedPerks: [], jetonsSpent: 0, jetonsFromCareers: 0,
         stories: {}, unlockedStories: [],
         streakJokers: 0, streakMilestone: 0, jetonsFromStreaks: 0,
+        xp: 0,
       };
     }
   }
@@ -1527,6 +1529,46 @@
   function jetonsBalance(progress) {
     const p = progress || loadProgress();
     return Math.max(0, p.questPoints + p.jetonsFromCareers + (p.jetonsFromStreaks || 0) - p.jetonsSpent);
+  }
+
+  // --- Niveau / XP (méta-progression, distincte des jetons dépensables) ----------
+  // Coût croissant par niveau (150, 220, 290…) — sur une carrière type (score
+  // médian ~128, cf. SCORE_PERCENTILES), ça place le Niveau 5 vers 13 carrières
+  // et le Niveau 10 vers 50 : une vraie progression de fond, pas un palier
+  // franchi en une poignée de parties.
+  function xpForLevel(level) { return 150 + (level - 1) * 70; }
+  // Niveau + position dans le niveau courant, à partir de l'XP total cumulé.
+  function levelInfo(totalXp) {
+    let level = 1, into = Math.max(0, totalXp || 0), need = xpForLevel(1);
+    while (into >= need) { into -= need; level++; need = xpForLevel(level); }
+    return { level, into, need };
+  }
+  // Gain d'XP en fin de carrière, proportionnel au score — même principe que
+  // awardCareerJetons mais sur une échelle propre au système de niveau.
+  function awardCareerXp(score) {
+    const gain = Math.max(8, Math.round(score * 0.6));
+    const progress = loadProgress();
+    const before = levelInfo(progress.xp);
+    progress.xp = (progress.xp || 0) + gain;
+    saveProgress(progress);
+    return { gain, leveledUp: levelInfo(progress.xp).level > before.level };
+  }
+
+  // Bannière de gain d'XP sur la fiche finale. `xpResult` est null en
+  // consultation Panthéon (rien n'est gagné en revisitant une carrière passée).
+  function xpBannerHtml(xpResult) {
+    if (!xpResult || !xpResult.gain) return "";
+    const li = levelInfo(loadProgress().xp);
+    const pct = Math.max(4, Math.round((li.into / li.need) * 100));
+    return `<div class="xp-banner">
+      <span class="xp-banner-icon">⬆️</span>
+      <div class="xp-banner-mid">
+        <p class="xp-gain">${T("+{n} points d'expérience", { n: xpResult.gain })}</p>
+        ${xpResult.leveledUp ? `<p class="xp-levelup">${T("NIVEAU SUPÉRIEUR !")}</p>` : ""}
+        <div class="xp-bar"><div class="xp-bar-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="xp-level-chip"><span class="xp-level-label">${T("NIVEAU")}</span><span class="xp-level-num">${li.level}</span></div>
+    </div>`;
   }
 
   // Petit gain de jetons en fin de carrière, proportionnel au score (et plafonné) :
@@ -2564,6 +2606,7 @@
     }
     const storyResult = G.storyId ? recordStoryResult(G.storyId, score) : null;
     const jetonBonus = awardCareerJetons(score);
+    const xpResult = awardCareerXp(score);
     track("career_end", {
       success: !G.careerEnded,
       score,
@@ -2574,9 +2617,10 @@
       quests_completed: questNotes.length,
       new_badges: newBadges.length,
       jetons_earned: jetonBonus,
+      xp_earned: xpResult.gain,
       mode: G.dailyDate ? "daily" : G.storyId ? "story" : "career",
     });
-    renderFinalScreen(newBadges, questNotes, dailyResult, jetonBonus, storyResult);
+    renderFinalScreen(newBadges, questNotes, dailyResult, jetonBonus, storyResult, false, xpResult);
     showScreen("screen-final");
   }
 
@@ -2780,7 +2824,7 @@
     return p;
   }
 
-  function renderFinalScreen(newBadges, questNotes, dailyResult, jetonBonus, storyResult, review) {
+  function renderFinalScreen(newBadges, questNotes, dailyResult, jetonBonus, storyResult, review, xpResult) {
     reviewingPantheon = !!review; // consultation depuis le Panthéon vs vraie fin de carrière
     const narrative = E.buildNarrative(G);
     const isGk = G.position.id === "gk";
@@ -2864,6 +2908,11 @@
     $("final-traits").innerHTML = G.traits.length
       ? G.traits.map((id) => { const tr = TRAITS[id]; return `<span class="trait-chip">${tr.icon} ${esc(tr.name)}</span>`; }).join("")
       : "";
+
+    const xpHtml = xpBannerHtml(xpResult);
+    const xpBlock = $("final-xp");
+    xpBlock.style.display = xpHtml ? "" : "none";
+    xpBlock.innerHTML = xpHtml;
 
     $("final-path").innerHTML = pathHtml(G);
 
@@ -3026,6 +3075,7 @@
     T: T, track: track, careerStartYear: careerStartYear,
     cardTierFor: cardTierFor, nicknameFor: nicknameFor,
     natFlagImgs: NAT_FLAG_IMGS,
+    levelInfo: levelInfo,
   };
 
   // --- Sauvegarde & reprise de la carrière en cours ------------------------------

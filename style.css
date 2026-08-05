@@ -1469,6 +1469,44 @@ body { color: var(--text-0); }
 }
 .trait-none { color: var(--text-2); font-size: 0.75rem; font-style: italic; }
 
+/* ---------- Bannière de gain d'XP (fiche finale) ---------- */
+.xp-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--panel-2);
+  border: 1px solid rgba(8, 123, 75, 0.3);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin: 4px 0 18px;
+}
+.xp-banner-icon { font-size: 1.5rem; line-height: 1; }
+.xp-banner-mid { flex: 1; min-width: 0; }
+.xp-gain { margin: 0; font-size: 0.88rem; font-weight: 800; color: var(--green-ink); }
+.xp-levelup {
+  margin: 1px 0 0;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--gold-soft);
+  animation: trophyGlow 1.8s ease-in-out infinite;
+}
+.xp-bar { height: 7px; background: rgba(0, 0, 0, 0.12); border-radius: 999px; overflow: hidden; margin-top: 7px; }
+.xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--green), var(--gold)); border-radius: 999px; }
+.xp-level-chip {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+  background: linear-gradient(180deg, var(--green), var(--green-deep));
+  color: #fff;
+  border-radius: 10px;
+  padding: 5px 12px;
+}
+.xp-level-label { font-size: 0.56rem; font-weight: 800; letter-spacing: 0.08em; opacity: 0.85; }
+.xp-level-num { font-size: 1.15rem; font-weight: 900; }
+
 .age-progress {
   height: 5px;
   background: rgba(0, 0, 0, 0.25);

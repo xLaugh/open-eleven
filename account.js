@@ -469,7 +469,7 @@
   });
 
   function buildStats() {
-    let best = null, badges = 0, careers = 0, bestStreak = 0, topRuns = [];
+    let best = null, badges = 0, careers = 0, bestStreak = 0, topRuns = [], level = 1;
     try {
       const pan = JSON.parse(localStorage.getItem("destinDeChampion_pantheon") || "[]");
       if (Array.isArray(pan) && pan.length) {
@@ -491,8 +491,11 @@
       badges = Array.isArray(pr.unlockedBadges) ? pr.unlockedBadges.length : 0;
       careers = Math.max(careers, Number(pr.careersPlayed) || 0);
       bestStreak = (pr.daily && Number(pr.daily.bestStreak)) || 0;
+      // Niveau dérivé de l'XP cumulé — formule tenue par game.js (window.OE),
+      // pour ne pas dupliquer la courbe des paliers à deux endroits.
+      if (window.OE && window.OE.levelInfo) level = window.OE.levelInfo(pr.xp).level;
     } catch (_) {}
-    return { best, badges, careers, bestStreak, topRuns };
+    return { best, badges, careers, bestStreak, topRuns, level };
   }
   async function pushProfileStats() {
     if (!session || !pseudo) return; // pseudo requis pour publier
@@ -601,14 +604,18 @@
 
   async function renderLeaderboard() {
     const today = todayKeyLocal();
+    const isLevel = lbTab === "level";
     lbBox.innerHTML =
       '<button class="acc-x" aria-label="Fermer">×</button>' +
       "<h3>🏆 Classement mondial</h3>" +
-      '<p class="acc-sub" style="margin:0 0 2px">Défi du jour — scores vérifiés par le serveur.</p>' +
+      '<p class="acc-sub" style="margin:0 0 2px">' + (isLevel
+        ? "Niveau — auto-déclaré, non vérifié par le serveur (comme la vitrine du profil)."
+        : "Défi du jour — scores vérifiés par le serveur.") + "</p>" +
       '<div class="lb-tabs">' +
       '<button class="lb-tab' + (lbTab === "today" ? " on" : "") + '" data-t="today">Aujourd\'hui</button>' +
       '<button class="lb-tab' + (lbTab === "week" ? " on" : "") + '" data-t="week">Semaine</button>' +
       '<button class="lb-tab' + (lbTab === "alltime" ? " on" : "") + '" data-t="alltime">Général</button>' +
+      '<button class="lb-tab' + (isLevel ? " on" : "") + '" data-t="level">Niveau</button>' +
       "</div>" +
       '<div class="lb-content"><p class="lb-empty">Chargement…</p></div>';
     lbBox.querySelector(".acc-x").onclick = () => lbOverlay.classList.remove("on");
@@ -616,6 +623,35 @@
     const content = lbBox.querySelector(".lb-content");
 
     try {
+      // Onglet Niveau : classement à part (colonne différente, pas de scores
+      // vérifiés) — géré séparément du reste plutôt que forcé dans la forme
+      // score/total des autres onglets.
+      if (isLevel) {
+        const { data } = await sb.rpc("level_top", { lim: 10 });
+        const rows = data || [];
+        const uid = session ? session.user.id : null;
+        let meHtml = "";
+        if (session) {
+          const { data: rk } = await sb.rpc("level_rank", { p_user: uid });
+          if (rk && rk[0]) meHtml = '<div class="lb-me">Ta place : <strong>' + medal(Number(rk[0].rank)) + "</strong> · " + T("Niveau {n}", { n: rk[0].level }) + ' <span class="lb-sub">' + T("(sur {n} joueurs)", { n: rk[0].players }) + "</span></div>";
+        } else {
+          meHtml = '<div class="lb-me lb-sub" style="font-weight:400">Connecte-toi (👤) pour apparaître au classement.</div>';
+        }
+        const list = rows.length
+          ? '<ul class="lb-list">' + rows.map((r) =>
+              '<li class="lb-row' + (uid && r.user_id === uid ? " mine" : "") + '" data-pseudo="' + esc(r.pseudo || "") + '">' +
+              '<span class="lb-rank">' + medal(Number(r.rank)) + "</span>" +
+              '<span class="lb-name">' + esc(r.pseudo || "Joueur") + "</span>" +
+              '<span class="lb-pts">' + T("Niveau {n}", { n: r.level }) + "</span></li>"
+            ).join("") + "</ul>"
+          : '<p class="lb-empty">Personne au classement pour l\'instant. Sois le premier !</p>';
+        content.innerHTML = meHtml + list;
+        content.querySelectorAll(".lb-row[data-pseudo]").forEach((el) => {
+          if (el.dataset.pseudo) el.onclick = () => openProfile(el.dataset.pseudo);
+        });
+        return;
+      }
+
       let rows, meHtml = "";
       if (lbTab === "today") {
         const best = myTodayBest();
@@ -731,7 +767,7 @@
     pfBox.innerHTML =
       pfHead("🏛️ " + esc(row.pseudo || who)) +
       rankLine +
-      '<div class="pf-counters"><span>🏆 ' + num(st.badges, 999) + " badges</span><span>🔥 " + num(st.bestStreak, 99999) + " " + T("j (série)") + "</span><span>👤 " + num(st.careers, 99999) + " " + T("carrières") + "</span></div>" +
+      '<div class="pf-counters"><span>⭐ ' + T("Niveau {n}", { n: Math.max(1, num(st.level, 9999)) }) + "</span><span>🏆 " + num(st.badges, 999) + " badges</span><span>🔥 " + num(st.bestStreak, 99999) + " " + T("j (série)") + "</span><span>👤 " + num(st.careers, 99999) + " " + T("carrières") + "</span></div>" +
       '<p class="pf-section">Meilleure carrière <span class="lb-sub" style="text-transform:none;letter-spacing:0">(vitrine, non vérifiée)</span></p>' +
       bestLine +
       '<p class="pf-section">Panthéon</p>' +
