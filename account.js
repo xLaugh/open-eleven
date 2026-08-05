@@ -48,6 +48,9 @@
   // Vrai quand on arrive depuis un lien « mot de passe oublié » : la session
   // ouverte par le jeton ne sert qu'à définir un nouveau mot de passe.
   let recoveryMode = false;
+  // Onglet actif de « Mon compte » — l'e-mail et le changement de mot de passe
+  // vivent dans Sécurité, pas sur l'écran principal.
+  let accTab = "compte";
 
   // Garde-fou de saisie. La validation qui fait foi reste celle du serveur ;
   // celle-ci évite juste d'envoyer une adresse manifestement erronée.
@@ -116,6 +119,21 @@
     try { return new Date(iso).toLocaleString(); } catch (e) { return String(iso || ""); }
   }
 
+  // Vérifie le mot de passe ACTUEL avant d'autoriser un changement. Sans ça,
+  // updateUser({password}) l'accepterait sur la seule foi de la session active
+  // — n'importe qui avec l'appareil déjà connecté (session persistée) pourrait
+  // changer le mot de passe sans jamais le connaître, et prendre le compte.
+  // Client JETABLE, persistSession:false : un signInWithPassword sur le client
+  // PRINCIPAL (sb) déclencherait onAuthStateChange(SIGNED_IN) et rouvrirait la
+  // réconciliation cloud (onFreshLogin) en pleine saisie du mot de passe.
+  async function verifyCurrentPassword(pass) {
+    try {
+      const probe = window.supabase.createClient(URL, ANON, { auth: { persistSession: false, autoRefreshToken: false } });
+      const { error } = await probe.auth.signInWithPassword({ email: session.user.email, password: pass });
+      return !error;
+    } catch (_) { return false; }
+  }
+
   // ---- UI (modale injectée) ---------------------------------------------------
   const style = document.createElement("style");
   style.textContent =
@@ -166,21 +184,53 @@
       box.innerHTML =
         '<button class="acc-x" aria-label="Fermer">×</button>' +
         "<h3>Mon compte</h3>" +
-        '<p class="acc-sub">Connecté : <span class="acc-mail">' + esc(session.user.email || "") + "</span></p>" +
+        '<div class="lb-tabs">' +
+        '<button class="lb-tab' + (accTab === "compte" ? " on" : "") + '" data-t="compte">Compte</button>' +
+        '<button class="lb-tab' + (accTab === "securite" ? " on" : "") + '" data-t="securite">Sécurité</button>' +
+        "</div>" +
         // Une sauvegarde automatique refusée ne doit pas passer inaperçue :
         // le joueur doit savoir que le cloud diverge, et pouvoir trancher.
+        // Affiché sur les DEUX onglets — trop important pour dépendre du choix.
         (conflictInfo
           ? '<p class="acc-warn">⚠️ ' + T("Une sauvegarde plus récente existe sur un autre appareil ({date}). Votre progression locale n'a pas été envoyée.", { date: esc(stampLabel(conflictInfo.serverStamp)) }) + "</p>"
           : "") +
-        '<p class="acc-sub" style="margin:0 0 4px">Pseudo au classement mondial :</p>' +
-        '<div class="acc-row"><input type="text" id="acc-pseudo" maxlength="24" placeholder="Ton pseudo" value="' + esc(pseudo || "") + '" style="margin:0" />' +
-        '<button class="acc-btn soft" id="acc-savepseudo" style="width:auto;padding:11px 14px">OK</button></div>' +
-        '<button class="acc-btn primary" id="acc-push">☁️ Sauvegarder maintenant</button>' +
-        '<button class="acc-btn soft" id="acc-profile">🏛️ Voir mon profil public</button>' +
-        '<button class="acc-btn soft" id="acc-pull">📥 Restaurer depuis le cloud</button>' +
-        '<button class="acc-btn danger" id="acc-signout">Se déconnecter</button>' +
+        (accTab === "securite"
+          ? '<p class="acc-sub">Connecté : <span class="acc-mail">' + esc(session.user.email || "") + "</span></p>" +
+            '<input type="password" id="acc-curpass" placeholder="Mot de passe actuel" autocomplete="current-password" />' +
+            '<input type="password" id="acc-newpass" placeholder="Nouveau mot de passe (8+ caractères)" autocomplete="new-password" />' +
+            '<input type="password" id="acc-newpass2" placeholder="Confirmer le nouveau mot de passe" autocomplete="new-password" />' +
+            '<button class="acc-btn primary" id="acc-changepass">Changer le mot de passe</button>'
+          : '<p class="acc-sub" style="margin:0 0 4px">Pseudo au classement mondial :</p>' +
+            '<div class="acc-row"><input type="text" id="acc-pseudo" maxlength="24" placeholder="Ton pseudo" value="' + esc(pseudo || "") + '" style="margin:0" />' +
+            '<button class="acc-btn soft" id="acc-savepseudo" style="width:auto;padding:11px 14px">OK</button></div>' +
+            '<button class="acc-btn primary" id="acc-push">☁️ Sauvegarder maintenant</button>' +
+            '<button class="acc-btn soft" id="acc-profile">🏛️ Voir mon profil public</button>' +
+            '<button class="acc-btn soft" id="acc-pull">📥 Restaurer depuis le cloud</button>' +
+            '<button class="acc-btn danger" id="acc-signout">Se déconnecter</button>') +
         '<p class="acc-msg"></p>';
       box.querySelector(".acc-x").onclick = close;
+      box.querySelectorAll(".lb-tab").forEach((b) => (b.onclick = () => { accTab = b.dataset.t; renderModal(); }));
+      if (accTab === "securite") {
+        box.querySelector("#acc-changepass").onclick = async () => {
+          const cur = box.querySelector("#acc-curpass").value;
+          const a = box.querySelector("#acc-newpass").value;
+          const b = box.querySelector("#acc-newpass2").value;
+          if (!cur) return msg("Renseigne ton mot de passe actuel.", "err");
+          if (a.length < 8) return msg("Nouveau mot de passe : 8 caractères minimum.", "err");
+          if (a !== b) return msg("Les deux mots de passe ne correspondent pas.", "err");
+          msg("Vérification…");
+          const okCur = await verifyCurrentPassword(cur);
+          if (!okCur) return msg("Mot de passe actuel incorrect.", "err");
+          msg(T("Enregistrement…"));
+          const { error } = await sb.auth.updateUser({ password: a });
+          if (error) return msg(traduire(error.message), "err");
+          box.querySelector("#acc-curpass").value = "";
+          box.querySelector("#acc-newpass").value = "";
+          box.querySelector("#acc-newpass2").value = "";
+          msg("Mot de passe mis à jour ✔", "ok");
+        };
+        return;
+      }
       box.querySelector("#acc-savepseudo").onclick = async () => {
         const r = await savePseudo(box.querySelector("#acc-pseudo").value);
         msg(r.ok ? "Pseudo enregistré ✔" : (r.error && r.error.message) || "Échec", r.ok ? "ok" : "err");
