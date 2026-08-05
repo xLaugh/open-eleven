@@ -866,6 +866,41 @@ const CONTINENTAL_CUPS = {
   oc: { name: "Coupe des Champions d'Océanie", short: "Océanie", icon: "🌊" },
 };
 
+// --- Coupes continentales de clubs SECONDAIRES (C2/C3) -------------------------
+// Pendant de CONTINENTAL_CUPS un cran plus bas, mais PAS uniforme sur les 5
+// continents (choix délibéré, pas un oubli) :
+//   • C2 (Trophée), vainqueur de Coupe Nationale toutes divisions : Europe,
+//     Asie, Afrique, Amérique.
+//   • C3 (Bouclier), division juste sous le sommet continental par défaut :
+//     Europe et Asie SEULEMENT.
+//   • Océanie : aucune des deux — elle ne dispute que sa Coupe des Champions
+//     (CONTINENTAL_CUPS.oc), inchangée.
+// L'absence d'une clé pour un continent EST la donnée : engine.js s'en sert
+// comme garde (`CONTINENTAL_CUPS2[continent]` falsy → palier non proposé).
+const CONTINENTAL_CUPS2 = {
+  eu: { name: "Trophée d'Europe", icon: "🥈" },
+  as: { name: "Trophée d'Asie", icon: "🥈" },
+  af: { name: "Trophée d'Afrique", icon: "🥈" },
+  am: { name: "Trophée d'Amérique", icon: "🥈" },
+};
+const CONTINENTAL_CUPS3 = {
+  eu: { name: "Bouclier d'Europe", icon: "🥉" },
+  as: { name: "Bouclier d'Asie", icon: "🥉" },
+};
+
+// --- Ballons d'Or continentaux --------------------------------------------------
+// Distinction PARALLÈLE au Ballon d'Or mondial (COMPETITIONS.ballon), pas un lot
+// de consolation qui l'exclurait : un joueur peut gagner les deux, la même
+// saison ou à des saisons différentes (cf. engine.rollContinentalBallon).
+// Pas de version Europe : le Ballon d'Or classique en tient déjà lieu pour les
+// joueurs européens (et l'Amérique du Sud, déjà très représentée dans son
+// histoire réelle) — réservé aux nationalités asiatiques/africaines/océaniennes.
+const CONTINENTAL_BALLON = {
+  as: { key: "ballonAsia", name: "Ballon d'Or asiatique", icon: "⭐" },
+  af: { key: "ballonAfrica", name: "Ballon d'Or africain", icon: "⭐" },
+  oc: { key: "ballonOceania", name: "Ballon d'Or océanien", icon: "⭐" },
+};
+
 // --- Championnats continentaux de SÉLECTION (l'Euro, la Copa, la CAN) ---------
 // Pendant continental de la Coupe du Monde : une compétition par continent de
 // nationalité (eu/am/af), disputée les années paires hors Mondial (cf.
@@ -1245,15 +1280,18 @@ const BALANCE = {
     eu: { elite: 0.17, d1: 0.03, d2: 0, d3: 0, regional: 0 },
     other: { elite: 0.17, d1: 0.15, d2: 0, d3: 0, regional: 0 },
   },
-  // Coupes d'Europe secondaires (clubs). C2 = Trophée d'Europe (vainqueur de
-  // Coupe Nationale, TOUTES divisions) ; C3 = Bouclier d'Europe (D1 européenne
-  // par défaut). Uniquement en Europe. Portée d'ATTEINDRE la finale (× teamBoost).
-  euroReach: {
+  // Coupes continentales secondaires de clubs (TOUS continents, pas seulement
+  // l'Europe). C2 = Trophée (vainqueur de Coupe Nationale, TOUTES divisions) ;
+  // C3 = division juste sous le sommet continental par défaut (D1 en Europe,
+  // D2 ailleurs — cf. engine.js, pas de club "élite" hors Europe). Portée
+  // d'ATTEINDRE la finale (× teamBoost). Mêmes probabilités partout : aucune
+  // raison de rendre un continent plus facile qu'un autre à ce palier.
+  subCupReach: {
     c2: { elite: 0.22, d1: 0.16, d2: 0.08, d3: 0.06, regional: 0.04 },
-    c3: { d1: 0.15 },
+    c3: { d1: 0.15, d2: 0.15 },
   },
   // Récompenses C2/C3 (le C1 garde son barème codé en dur, ternaire eu/hors-eu).
-  euroReward: {
+  subCupReward: {
     2: { money: 0.6, rep: 4, moral: 9, impact: 11, ballon: 0.7 },
     3: { money: 0.35, rep: 3, moral: 8, impact: 8, ballon: 0 },
   },
@@ -1324,6 +1362,13 @@ const BALANCE = {
   ballonSlope: 0.058, // pente : proba par point de saison au-dessus du plancher
   ballonMomentum: 1.2, // multiplicateur après un 1er ou 2e Ballon d'Or (statut)
   ballonDynasty: 0.2, // multiplicateur à partir du 4e (raréfaction extrême)
+  // Ballon d'Or CONTINENTAL (Asie/Afrique/Océanie) : barre plus basse que le
+  // mondial ci-dessus — récompense continentale, pas planétaire. Réutilise
+  // ballonMinOvr/ballonMinRep/ballonMomentum/ballonDynasty (assouplis dans
+  // engine.rollContinentalBallon) mais son propre plancher/pente/plafond.
+  ballonContPtsFloor: 1.8,
+  ballonContSlope: 0.09,
+  ballonContCap: 0.55,
   // --- Vie des clubs : montées, descentes, changements de dimension ---
   relegationChance: { d1: 0.045, d2: 0.07, d3: 0.08 }, // par saison, modulé par vos perfs
   // Les géants historiques (élite de base) ne coulent presque jamais en D2
@@ -1483,10 +1528,10 @@ const ENGINE_TEXT = {
   momCupFail: "Finale perdue",
   momCont: "Finale · {cupName}",
   momContWin: "SACRE CONTINENTAL !",
-  momCont2Win: "TROPHÉE D'EUROPE REMPORTÉ !",
-  momCont3Win: "BOUCLIER D'EUROPE REMPORTÉ !",
+  momCont2Win: "TROPHÉE REMPORTÉ !",
+  momCont3Win: "BOUCLIER REMPORTÉ !",
   momContFail: "Finale continentale perdue",
-  momContEuFail: "Finale européenne perdue",
+  momContEuFail: "Finale perdue",
   momOldClub: "Retrouvailles avec votre ancien club",
   momOldClubWin: "Retrouvailles maîtrisées",
   momOldClubFail: "Soirée compliquée",
@@ -1524,7 +1569,8 @@ const ENGINE_TEXT = {
   winOldGk: "L'élite vous juge trop vieux, mais un gardien chevronné trouve toujours preneur, un ou deux crans plus bas.",
   winTooOld: "Passé 42 ans, plus aucun cador ne mise sur vous : seuls des clubs modestes vous ouvrent encore leurs portes.",
   winTooWeak: "Trop juste pour ce niveau : le club vous remercie. Direction l'échelon inférieur pour vous relancer.",
-  lineEuroTicket: "🇪🇺 Sacre en Coupe Nationale : vous voilà qualifié pour une coupe d'Europe la saison prochaine !",
+  lineEuroTicket: "🏆 Sacre en Coupe Nationale : vous voilà qualifié pour une coupe continentale la saison prochaine !",
+  continentalBallon: "{name} {year} — le continent à vos pieds.",
 
   // --- Verdicts de rivalité (fiche finale) ---
   verdictYouEnded: "Le destin ne vous aura pas laissé la moindre chance de rivaliser. {rival} aura eu l'opportunité de construire la carrière qui vous a échappé.",
@@ -1903,7 +1949,7 @@ const COUNTRY_LANG = {
 if (typeof module !== "undefined" && module.exports) {
   const dataExports = {
     BRAND, NATIONALITIES, NAME_POOLS, LIFESTYLES, ENTOURAGES, TRAJECTORIES,
-    ARCHETYPES, POSITIONS, NAT_NUMBERS, ORIGINS, COUNTRIES, CONTINENTAL_CUPS, NATIONAL_CUPS, NATIONS_LEAGUE, NL_STAGES, LEVELS, ROLES, ROLE_ESPOIR_MAX_AGE,
+    ARCHETYPES, POSITIONS, NAT_NUMBERS, ORIGINS, COUNTRIES, CONTINENTAL_CUPS, CONTINENTAL_CUPS2, CONTINENTAL_CUPS3, CONTINENTAL_BALLON, NATIONAL_CUPS, NATIONS_LEAGUE, NL_STAGES, LEVELS, ROLES, ROLE_ESPOIR_MAX_AGE,
     LEVEL_ORDER, DUAL_NATIONALITY, CLUBS, CLUBS_BY_LEVEL, COMPETITIONS, COACH_NAMES, TRAITS,
     AWARDS, KEY_MOMENTS,
     EVENTS, MICRO_EVENTS, RIVAL_NEWS_GOOD, RIVAL_NEWS_BAD, RIVAL_NEWS_AHEAD,

@@ -352,13 +352,24 @@
           return [`${cup.icon} ${cup.name}`, n];
         })
       : [[`${CONTINENTAL_CUPS.eu.icon} ${CONTINENTAL_CUPS.eu.name}`, t.continental]];
+    // C2/C3 : portée non uniforme selon le continent (cf. CONTINENTAL_CUPS2/3,
+    // data.js) — groupées comme canvasContRows plutôt qu'un libellé Europe fixe.
+    function canvasSubCupRows(detail) {
+      const groups = {};
+      (detail || []).forEach((x) => { groups[x.continent] = (groups[x.continent] || 0) + 1; });
+      return groups;
+    }
+    const c2Groups = canvasSubCupRows(G.continental2Detail);
+    const c3Groups = canvasSubCupRows(G.continental3Detail);
+    const canvasCont2Rows = Object.entries(c2Groups).map(([cont, n]) => [`🥈 ${(CONTINENTAL_CUPS2[cont] || CONTINENTAL_CUPS2.eu).name}`, n]);
+    const canvasCont3Rows = Object.entries(c3Groups).map(([cont, n]) => [`🥉 ${(CONTINENTAL_CUPS3[cont] || CONTINENTAL_CUPS3.eu).name}`, n]);
     const trophyRows = [
       [`🏆 ${COMPETITIONS.worldCup.name}`, t.worldCup],
       [`⭐ ${COMPETITIONS.ballon.name}`, t.ballon],
       ...canvasContRows,
       // C2/C3 : n'apparaissent QUE si remportées (évite d'allonger la carte partageable)
-      ...((t.continental2 || 0) > 0 ? [[`🥈 ${COMPETITIONS.continental2.name}`, t.continental2]] : []),
-      ...((t.continental3 || 0) > 0 ? [[`🥉 ${COMPETITIONS.continental3.name}`, t.continental3]] : []),
+      ...canvasCont2Rows,
+      ...canvasCont3Rows,
       ...((t.natLeague || 0) > 0 ? [[`${NATIONS_LEAGUE.icon} ${NATIONS_LEAGUE.name}`, t.natLeague]] : []),
       [`🎖️ ${COMPETITIONS.league.name}`, t.league],
       [`🏵️ ${COMPETITIONS.cup.name}`, t.cup],
@@ -468,8 +479,15 @@
     if (t.ballon) bits.push(`${t.ballon}× Ballon d'Or`);
     if (t.worldCup) bits.push(T("{n}× Coupe du Monde", { n: t.worldCup }));
     if (t.continental) bits.push(T("{n}× Coupe des Champions", { n: t.continental }));
-    if (t.continental2) bits.push(`${t.continental2}× ${COMPETITIONS.continental2.name}`);
-    if (t.continental3) bits.push(`${t.continental3}× ${COMPETITIONS.continental3.name}`);
+    // Un "bit" par continent gagné (Trophée d'Afrique, Bouclier d'Asie…) : un
+    // total générique ferait perdre l'info de savoir LEQUEL a été remporté.
+    function subCupBits(detail, cupsMap) {
+      const groups = {};
+      (detail || []).forEach((x) => { groups[x.continent] = (groups[x.continent] || 0) + 1; });
+      return Object.entries(groups).map(([cont, n]) => T("{n}× {name}", { n, name: T((cupsMap[cont] || cupsMap.eu).name) }));
+    }
+    bits.push(...subCupBits(G.continental2Detail, CONTINENTAL_CUPS2));
+    bits.push(...subCupBits(G.continental3Detail, CONTINENTAL_CUPS3));
     if (t.league) bits.push(T("{n}× Champion", { n: t.league }));
     const isGk = G.position.id === "gk";
     const perf = isGk ? T("{n} clean sheets", { n: G.totals.cleanSheets }) : T("{n} buts", { n: G.totals.goals });

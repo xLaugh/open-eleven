@@ -286,6 +286,7 @@
     "🎽 Sélections jeunes{tiers}": "🎽 Youth caps{tiers}",
     "{n}× Coupe du Monde": "{n}× World Cup",
     "{n}× Coupe des Champions": "{n}× Champions Cup",
+    "{n}× {name}": "{n}× {name}",
     "▶️ Reprendre {what}— {name}, {age} ans{club}": "▶️ Resume {what}— {name}, {age}{club}",
     "le défi ": "the challenge ",
     "l'histoire ": "the story ",

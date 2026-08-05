@@ -314,14 +314,16 @@
       awardCounts: {},
       archetype: null,
       leagueTitlesDetail: [], // titres de champion : { countryId, level, clubId, year }
-      continentalDetail: [], // coupes continentales : { continent, year }
+      continentalDetail: [], // coupes continentales (C1) : { continent, year }
+      continental2Detail: [], // Trophées continentaux (C2) : { continent, year }
+      continental3Detail: [], // Boucliers continentaux (C3) : { continent, year }
       // Parcours en SÉLECTION, tournoi par tournoi : { comp, year, stage }.
       // Rien d'autre n'en gardait trace — seuls les TITRES survivaient à la
       // saison. Une demi-finale de Coupe du Monde disparaissait purement et
       // simplement. On n'enregistre qu'un résultat déjà décidé : aucun tirage
       // consommé, donc aucune carrière modifiée.
       natRuns: [],
-      euroCupTicket: false, // vainqueur de Coupe Nationale (club EU) → qualifié C2 la saison suivante
+      subCupTicket: false, // vainqueur de Coupe Nationale → qualifié C2 continental la saison suivante
       momentWins: 0,
       derbyWins: 0,
       bestBallonRank: null,
@@ -331,7 +333,7 @@
       olympicMedals: { gold: 0, silver: 0, bronze: 0 }, // médailles des Jeux Olympiques
       totals: { matches: 0, goals: 0, assists: 0, cleanSheets: 0 },
       captainMatches: 0, // matchs disputés avec le brassard de capitaine (bilan de fin)
-      trophies: { league: 0, cup: 0, continental: 0, continental2: 0, continental3: 0, worldCup: 0, contInt: 0, natLeague: 0, olympic: 0, ballon: 0, goldenBoot: 0 },
+      trophies: { league: 0, cup: 0, continental: 0, continental2: 0, continental3: 0, worldCup: 0, contInt: 0, natLeague: 0, olympic: 0, ballon: 0, goldenBoot: 0, ballonAsia: 0, ballonAfrica: 0, ballonOceania: 0 },
       seasons: [],
       transferHistory: [],
       history: [],
@@ -1380,7 +1382,7 @@
     // Points de saison (communs au sacre et au classement)
     let pts = (report.rating - 7) * 2.2 + (extraPts || 0);
     if (report.trophies.includes("continental")) pts += report.continentalContinent === "eu" ? 2.2 : 0.8;
-    if (report.trophies.includes("continental2")) pts += 0.7; // Trophée d'Europe (C3 : aucun poids Ballon)
+    if (report.trophies.includes("continental2")) pts += 0.7; // Trophée continental (C3 : aucun poids Ballon)
     if (report.trophies.includes("worldCup") && !extraPts) pts += 3;
     if (report.trophies.includes("league")) pts += 1.2;
     if (report.trophies.includes("cup")) pts += 0.4;
@@ -1427,6 +1429,50 @@
       if (!s.bestBallonRank || rank < s.bestBallonRank) s.bestBallonRank = rank;
       if (rank <= 10) s.rep = clamp(s.rep + 2, 0, 100);
       if (rank <= 3) s.history.push({ age: s.age, text: tx(s, "ballonPodium", { rank }), impact: 12 });
+    }
+    return false;
+  }
+
+  // Ballon d'Or continental (Asie/Afrique/Océanie) : distinction PARALLÈLE au
+  // Ballon d'Or mondial ci-dessus, pas un lot de consolation qui l'exclurait —
+  // volontairement PAS gardée par "ballon_won" : une saison assez historique
+  // peut décrocher les deux la même année (le vainqueur du Ballon d'Or mondial
+  // est de facto le meilleur joueur de son propre continent). Pas de version
+  // Europe : le Ballon d'Or classique en tient déjà lieu pour les joueurs
+  // européens. Barre plus basse que le mondial (récompense continentale, pas
+  // planétaire) mais même exigence de niveau (élite/D1) et même unicité par
+  // saison via son propre drapeau report.awards.
+  function rollContinentalBallon(s, report, extraPts) {
+    if (report.awards.includes("cballon_won")) return false;
+    const info = CONTINENTAL_BALLON[(countryOf(s.nationality.homeCountryId) || {}).continent];
+    if (!info) return false;
+    const lvl = lvlOf(s, s.club);
+    if (lvl !== "elite" && lvl !== "d1") return false;
+
+    let pts = (report.rating - 6.6) * 2.2 + (extraPts || 0);
+    if (report.trophies.includes("continental")) pts += 1.6;
+    if (report.trophies.includes("continental2") || report.trophies.includes("continental3")) pts += 0.7;
+    if (report.trophies.includes("worldCup") && !extraPts) pts += 2.2;
+    if (report.trophies.includes("league")) pts += 1.2;
+    if (report.trophies.includes("cup")) pts += 0.4;
+    if (report.trophies.includes("goldenBoot")) pts += 1.5;
+    for (const id of report.awards) pts += (AWARDS[id] && AWARDS[id].ballonPts) || 0;
+    if (s.rep >= 80) pts += 0.6;
+    if (hasTrait(s, "clutch")) pts += 0.3;
+
+    if (ovr(s) >= BALANCE.ballonMinOvr - 5 && s.rep >= BALANCE.ballonMinRep - 15 && report.rating >= 6.9) {
+      const count = s.trophies[info.key] || 0;
+      const momentum = count === 0 ? 1 : count <= 2 ? BALANCE.ballonMomentum : BALANCE.ballonDynasty;
+      const chance = clamp((pts - BALANCE.ballonContPtsFloor) * BALANCE.ballonContSlope, 0, BALANCE.ballonContCap) * momentum;
+      if (rng() < chance) {
+        s.trophies[info.key] = (s.trophies[info.key] || 0) + 1;
+        report.trophies.push(info.key);
+        report.awards.push("cballon_won");
+        s.rep = clamp(s.rep + 5, 0, 100);
+        s.money += 0.7;
+        s.history.push({ age: s.age, text: tx(s, "continentalBallon", { name: info.name }), impact: 18 });
+        return true;
+      }
     }
     return false;
   }
@@ -1601,17 +1647,17 @@
     const topDiv = divShort(lvl, s.club.countryId);
     const isTopFlight = topDiv === "D1" || topDiv === "Élite";
     const teamBoost = 1 + (rating - 6.6) * 0.12;
-    // Ticket "vainqueur de Coupe Nationale la saison PASSÉE" → C2 européen ; on
-    // le lit et le vide AVANT tout crédit de coupe de cette saison (sinon un
-    // sacre de coupe cette année ouvrirait l'Europe la même année). Aucun rng.
-    const euroTicket = !!s.euroCupTicket;
-    s.euroCupTicket = false;
+    // Ticket "vainqueur de Coupe Nationale la saison PASSÉE" → C2 continental ;
+    // on le lit et le vide AVANT tout crédit de coupe de cette saison (sinon un
+    // sacre de coupe cette année ouvrirait le C2 la même année). Aucun rng.
+    const subTicket = !!s.subCupTicket;
+    s.subCupTicket = false;
     const evTrophies = s.seasonTrophies.splice(0);
     for (const tr of evTrophies) {
       if (tr === "league") s.trophies.league += 1;
       if (tr === "cup") {
         s.trophies.cup += 1;
-        if (((countryOf(s.club.countryId) || {}).continent) === "eu") s.euroCupTicket = true; // arme le ticket pour N+1
+        s.subCupTicket = true; // arme le ticket pour N+1 (le palier C2 existe ou non selon le continent, cf. plus bas)
       }
       if (tr === "continental") {
         s.trophies.continental += 1;
@@ -1687,30 +1733,39 @@
     }
     // Coupe continentale de club : ATTEINDRE la finale se joue ici, la GAGNER se
     // joue dans un moment décisif interactif (continental_final). Hors d'Europe,
-    // la D1 est le sommet (pas de clubs "élite") → elle conteste sa Coupe des Champions.
-    // 3 tiers en Europe : élite → C1 (Coupe des Champions) ; vainqueur de Coupe
-    // Nationale (ticket) → C2 (Trophée d'Europe), TOUTES divisions ; D1 → C3
-    // (Bouclier d'Europe). Hors d'Europe : la Coupe des Champions du continent,
-    // inchangée. UN SEUL engagement/saison. Tier décidé SANS hasard ; le rng() de
-    // portée reste l'unique tirage, à sa place (même pour tier 0 : rng consommé).
+    // la D1 est le sommet (pas de clubs "élite") → elle conteste sa Coupe des
+    // Champions comme l'élite européenne conteste la sienne.
+    // 3 paliers, PAS uniformes sur les 5 continents (cf. CONTINENTAL_CUPS2/3
+    // dans data.js) : sommet (élite en Europe, D1 ailleurs) → C1 ; vainqueur de
+    // Coupe Nationale (ticket), TOUTES divisions → C2 (Europe/Asie/Afrique/
+    // Amérique SEULEMENT) ; division juste sous le sommet par défaut → C3
+    // (Europe/Asie SEULEMENT). Océanie : C1 uniquement, inchangé. UN SEUL
+    // engagement/saison. Tier décidé SANS hasard ; le rng() de portée reste
+    // l'unique tirage, à sa place (même pour tier 0 : rng consommé).
     if (!evTrophies.includes("continental") && !evTrophies.includes("continental2") && !evTrophies.includes("continental3")) {
       const continent = (countryOf(s.club.countryId) || {}).continent || "eu";
+      const topLvl = continent === "eu" ? "elite" : "d1";
+      const c3Lvl = continent === "eu" ? "d1" : "d2";
       let tier = 0, reachP = 0, cup = null;
-      if (continent === "eu") {
-        if (lvl === "elite") { tier = 1; reachP = BALANCE.continentalReach.eu.elite || 0; cup = CONTINENTAL_CUPS.eu; }
-        else if (euroTicket) { tier = 2; reachP = BALANCE.euroReach.c2[lvl] || 0; cup = COMPETITIONS.continental2; }
-        else if (lvl === "d1") { tier = 3; reachP = BALANCE.euroReach.c3.d1 || 0; cup = COMPETITIONS.continental3; }
-      } else {
-        tier = 1; reachP = BALANCE.continentalReach.other[lvl] || 0; cup = CONTINENTAL_CUPS[continent] || CONTINENTAL_CUPS.eu;
+      if (lvl === topLvl) {
+        tier = 1;
+        reachP = (continent === "eu" ? BALANCE.continentalReach.eu.elite : BALANCE.continentalReach.other[topLvl]) || 0;
+        cup = CONTINENTAL_CUPS[continent] || CONTINENTAL_CUPS.eu;
+      } else if (subTicket && CONTINENTAL_CUPS2[continent]) {
+        tier = 2; reachP = BALANCE.subCupReach.c2[lvl] || 0; cup = CONTINENTAL_CUPS2[continent];
+      } else if (lvl === c3Lvl && CONTINENTAL_CUPS3[continent]) {
+        tier = 3; reachP = BALANCE.subCupReach.c3[c3Lvl] || 0; cup = CONTINENTAL_CUPS3[continent];
       }
       // contMult : certains championnats (Pays-Bas, Portugal) placent rarement leurs
       // clubs en finale européenne malgré un bon niveau interne. Défaut 1.
       const contM = (countryOf(s.club.countryId) || {}).contMult;
+      // rng() TOUJOURS consommé, même tier 0 (reachP y vaut 0 → jamais vrai) :
+      // sauter l'appel changerait le tirage de tous les joueurs non qualifiés.
       if (rng() < reachP * teamBoost * (contM != null ? contM : 1)) {
         report.pendingMoments.push({
           type: "continental_final",
           tier,
-          continent: tier === 1 ? continent : "eu",
+          continent,
           label: tx(s, "momCont", { cupName: cup.name }),
           winLabel: tx(s, tier === 3 ? "momCont3Win" : tier === 2 ? "momCont2Win" : "momContWin"),
           failLabel: tx(s, tier === 1 ? "momContFail" : "momContEuFail"),
@@ -1882,6 +1937,7 @@
     if (s.seasonAwards) for (const id of s.seasonAwards.splice(0)) grantAward(s, report, id);
     rollSeasonAwards(s, report);
     rollBallon(s, report, 0);
+    rollContinentalBallon(s, report, 0);
 
     // Objectif du club
     const met = objectiveMet(s.objective, report);
@@ -2042,10 +2098,11 @@
         s.moral = clamp(s.moral + 8, 5, 100);
         s.history.push({ age: s.age, text: tx(s, "cupWin", { cupName: COMPETITIONS.cup.name }), impact: 9 });
         recheckObjective(s, report);
-        // Vainqueur de coupe (club européen) → qualifié pour une coupe d'Europe
-        // la saison prochaine (C2, ou C1 si le club est/passe élite). Aucun rng.
-        if (((countryOf(s.club.countryId) || {}).continent) === "eu") {
-          s.euroCupTicket = true;
+        // Vainqueur de coupe → qualifié pour une coupe continentale la saison
+        // prochaine (C2, ou C1 si le club est/passe au sommet). Aucun rng.
+        // Océanie exclue : aucun palier C2 pour ce continent (cf. data.js).
+        if (CONTINENTAL_CUPS2[(countryOf(s.club.countryId) || {}).continent]) {
+          s.subCupTicket = true;
           if (lvlOf(s, s.club) !== "elite") report.lines.push({ text: tx(s, "lineEuroTicket"), impact: 5 });
         }
       } else {
@@ -2075,13 +2132,18 @@
           s.history.push({ age: s.age, text: tx(s, "contCupLossTop", { cupName: cup.name }), impact: -5 });
         }
       } else {
-        // C2 (Trophée d'Europe) / C3 (Bouclier d'Europe) — coupes d'Europe secondaires
+        // C2 (Trophée) / C3 (Bouclier) — coupes continentales secondaires.
+        // Portée non uniforme selon le continent (cf. CONTINENTAL_CUPS2/3) :
+        // entry.continent a été posé au bon continent à la création du moment.
         const key = tier === 2 ? "continental2" : "continental3";
-        const cup = COMPETITIONS[key];
-        const rw = BALANCE.euroReward[tier];
+        const detailKey = tier === 2 ? "continental2Detail" : "continental3Detail";
+        const cont = entry.continent || "eu";
+        const cup = (tier === 2 ? CONTINENTAL_CUPS2 : CONTINENTAL_CUPS3)[cont] || CONTINENTAL_CUPS2.eu;
+        const rw = BALANCE.subCupReward[tier];
         if (res.success) {
           s.trophies[key] = (s.trophies[key] || 0) + 1; // guardé : vieilles saves sans ce compteur
           report.trophies.push(key);
+          (s[detailKey] = s[detailKey] || []).push({ continent: cont, year: s.year });
           s.money += rw.money;
           s.rep = clamp(s.rep + rw.rep, 0, 100);
           s.moral = clamp(s.moral + rw.moral, 5, 100);
@@ -2687,6 +2749,7 @@
       s.peakOvr * 1.0 + s.rep * 0.45 +
       t.worldCup * 20 + t.ballon * 18 + t.continental * 9 + (t.contInt || 0) * 11 +
       (t.natLeague || 0) * 5 + (t.olympic || 0) * 8 + (t.continental2 || 0) * 5 + (t.continental3 || 0) * 2 +
+      ((t.ballonAsia || 0) + (t.ballonAfrica || 0) + (t.ballonOceania || 0)) * 7 +
       t.league * 4 + t.cup * 2 + t.goldenBoot * 5 +
       Math.min(12, totalAwards(s) * 1.2) +
       Math.min(20, s.natTeam.caps / 6) + Math.min(15, s.totals.goals / 30) +
@@ -2913,7 +2976,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.64";
+  const ENGINE_VERSION = "10.65";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {
@@ -2926,7 +2989,7 @@
     keyMomentFor, keyMomentSuccess, playKeyMoment, isWorldCupYear,
     bestNatRuns, // meilleur parcours par compétition de sélection (fiche finale)
     playWorldCup, resolveWcFinal, isContinentalYear, playContinental, isNationsLeagueYear, playNationsLeague, isOlympicYear, playOlympics, playingTimeFactor, setSeasonObjective,
-    objectiveMet, headlineFor, grantAward, rollSeasonAwards, rollBallon,
+    objectiveMet, headlineFor, grantAward, rollSeasonAwards, rollBallon, rollContinentalBallon,
     roleForClub, roleOf, dualNatOf, dualPartnersOf,
     playSeason, resolveSeasonMoment, advanceYear, marketValue, salaryFor,
     buildOffer, offersFor, loanOffersFor, applyLoan, transferWindow,

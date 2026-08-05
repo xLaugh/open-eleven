@@ -2671,6 +2671,27 @@
       contRows = [statRowHtml(`${CONTINENTAL_CUPS.eu.icon} ${CONTINENTAL_CUPS.eu.name}`, 0, false)];
     }
 
+    // C2 (Trophée) / C3 (Bouclier) continentaux : portée non uniforme selon le
+    // continent (cf. CONTINENTAL_CUPS2/3, data.js) — pas de ligne à 0 pour un
+    // continent qui n'a jamais eu accès à ce palier, ce serait trompeur.
+    function subCupRows(detail, totalKey, cupsMap) {
+      const groups = {};
+      (detail || []).forEach((x) => { groups[x.continent] = (groups[x.continent] || 0) + 1; });
+      if (Object.keys(groups).length) {
+        return Object.entries(groups).map(([cont, n]) => {
+          const cup = cupsMap[cont] || cupsMap.eu;
+          return statRowHtml(`${cup.icon} ${cup.name}`, n, true);
+        });
+      }
+      if ((t[totalKey] || 0) > 0) {
+        // Rétrocompatibilité : total connu sans détail (anciennes sauvegardes) → Europe par défaut
+        return [statRowHtml(`${cupsMap.eu.icon} ${cupsMap.eu.name}`, t[totalKey], true)];
+      }
+      return [];
+    }
+    const cont2Rows = subCupRows(s.continental2Detail, "continental2", CONTINENTAL_CUPS2);
+    const cont3Rows = subCupRows(s.continental3Detail, "continental3", CONTINENTAL_CUPS3);
+
     const playerCont = (E.countryOf(s.nationality.homeCountryId) || {}).continent;
     const ntCup = NATIONAL_CUPS[playerCont];
     const ntCupRow = ntCup ? [statRowHtml(`${ntCup.icon} ${ntCup.name}`, t.contInt || 0, (t.contInt || 0) > 0)] : [];
@@ -2692,9 +2713,14 @@
       ...(t.ballon === 0 && s.bestBallonRank
         ? [statRowHtml(`⭐ Meilleur classement Ballon d'Or`, `${s.bestBallonRank}ᵉ`, s.bestBallonRank <= 10)]
         : []),
+      // Ballon d'Or continental : seulement pertinent pour la nationalité du
+      // joueur (Asie/Afrique/Océanie) — pas de version Europe (cf. data.js).
+      ...(CONTINENTAL_BALLON[playerCont]
+        ? [statRowHtml(`${CONTINENTAL_BALLON[playerCont].icon} ${CONTINENTAL_BALLON[playerCont].name}`, t[CONTINENTAL_BALLON[playerCont].key] || 0, (t[CONTINENTAL_BALLON[playerCont].key] || 0) > 0)]
+        : []),
       ...contRows,
-      statRowHtml(`${COMPETITIONS.continental2.icon} ${COMPETITIONS.continental2.name}`, t.continental2 || 0, (t.continental2 || 0) > 0),
-      statRowHtml(`${COMPETITIONS.continental3.icon} ${COMPETITIONS.continental3.name}`, t.continental3 || 0, (t.continental3 || 0) > 0),
+      ...cont2Rows,
+      ...cont3Rows,
       ...leagueRows,
       statRowHtml(`${COMPETITIONS.cup.icon} ${COMPETITIONS.cup.name}`, t.cup, t.cup > 0),
       statRowHtml(`${COMPETITIONS.goldenBoot.icon} ${COMPETITIONS.goldenBoot.name}`, t.goldenBoot, t.goldenBoot > 0),
