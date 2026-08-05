@@ -609,7 +609,7 @@
       '<button class="acc-x" aria-label="Fermer">×</button>' +
       "<h3>🏆 Classement mondial</h3>" +
       '<p class="acc-sub" style="margin:0 0 2px">' + (isLevel
-        ? "Niveau — auto-déclaré, non vérifié par le serveur (comme la vitrine du profil)."
+        ? "Niveau du compte, cumulé sur toutes les carrières."
         : "Défi du jour — scores vérifiés par le serveur.") + "</p>" +
       '<div class="lb-tabs">' +
       '<button class="lb-tab' + (lbTab === "today" ? " on" : "") + '" data-t="today">Aujourd\'hui</button>' +

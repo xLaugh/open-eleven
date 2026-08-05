@@ -449,7 +449,7 @@
     "Général": "Overall",
     "Ta place aujourd'hui :": "Your rank today:",
     "Ta place :": "Your rank:",
-    "Niveau — auto-déclaré, non vérifié par le serveur (comme la vitrine du profil).": "Level — self-reported, not server-verified (like the rest of the profile showcase).",
+    "Niveau du compte, cumulé sur toutes les carrières.": "Account level, accumulated across all careers.",
     "Niveau": "Level",
     "Connecte-toi (👤) pour apparaître au classement.": "Sign in (👤) to appear in the ranking.",
     "Termine le défi du jour pour entrer au classement.": "Finish the daily challenge to enter the ranking.",

@@ -2585,8 +2585,6 @@
     let guard = 0;
     if (!G.duel) offSeed(() => { while (!R.careerEnded && R.age <= E.BALANCE_REF.ageMax && guard++ < 30) E.rivalSeason(R); });
     saveToPantheon();
-    // Met à jour la vitrine publique (meilleure carrière, badges, série) si connecté.
-    if (window.OpenElevenAccount && window.OpenElevenAccount.pushProfile) window.OpenElevenAccount.pushProfile();
     const score = E.computeCareerScore(G);
     const questNotes = evaluateQuests(); // avant les badges (streak/total à jour)
     const newBadges = evaluateBadges();
@@ -2608,6 +2606,11 @@
     const storyResult = G.storyId ? recordStoryResult(G.storyId, score) : null;
     const jetonBonus = awardCareerJetons(score);
     const xpResult = awardCareerXp(score);
+    // Vitrine publique (meilleure carrière, badges, série, niveau) : APRÈS avoir
+    // mis à jour badges/jetons/XP ci-dessus — sinon la valeur envoyée au serveur
+    // était toujours celle d'AVANT cette carrière (bug : fallait rouvrir le
+    // profil, qui repousse lui-même avant de lire, pour voir l'état à jour).
+    if (window.OpenElevenAccount && window.OpenElevenAccount.pushProfile) window.OpenElevenAccount.pushProfile();
     track("career_end", {
       success: !G.careerEnded,
       score,
