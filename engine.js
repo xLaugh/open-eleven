@@ -1929,7 +1929,10 @@
     s.totals.assists += report.assists;
     s.totals.cleanSheets += report.cleanSheets;
     s.peakOvr = Math.max(s.peakOvr, ovr(s));
-    s.seasons.push({ age: s.age, year: s.year, clubName: s.club.name, countryId: s.club.countryId, level: lvl, matches, goals: report.goals, assists: report.assists, cleanSheets: report.cleanSheets, rating: report.rating, trophies: report.trophies, divisionTitle: !!report.divisionTitle, onLoan: !!s.loan, leaguePos: report.leaguePos });
+    // marketValue() est une fonction PURE de l'état (aucun rng) : la figer ici
+    // ne consomme pas de hasard et ne change donc rien au déroulé de carrière.
+    const mv = Math.round(marketValue(s) * 10) / 10;
+    s.seasons.push({ age: s.age, year: s.year, clubName: s.club.name, countryId: s.club.countryId, level: lvl, matches, goals: report.goals, assists: report.assists, cleanSheets: report.cleanSheets, rating: report.rating, trophies: report.trophies, divisionTitle: !!report.divisionTitle, onLoan: !!s.loan, leaguePos: report.leaguePos, mv });
 
     // Relations
     if (rating >= 7.4) s.coachRel = clamp(s.coachRel + 4, 5, 100);

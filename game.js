@@ -265,6 +265,7 @@
       statRowHtml("💰 Gains de carrière", E.fmtMoney(G.money)),
     ].join("");
 
+    $("profile-mvchart").innerHTML = marketValueChartHtml(G);
     $("profile-path").innerHTML = pathHtml(G);
   }
 
@@ -2686,6 +2687,36 @@
   }
 
   // Chemin parcouru : chaque étape de la carrière (club, âge, division, prix).
+  // Courbe de valeur marchande : un point par saison (marketValue est une
+  // fonction PURE de l'état, posée par le moteur sans consommer de hasard —
+  // donc calculable après coup sans rejouer, et réutilisable telle quelle en
+  // direct pendant la carrière comme sur la fiche finale).
+  function marketValueChartHtml(s) {
+    const pts = (s.seasons || []).filter((se) => se.mv != null);
+    const current = E.marketValue(s);
+    const peakSeason = pts.reduce((a, b) => (a && a.mv >= b.mv ? a : b), null);
+    const peak = peakSeason && peakSeason.mv > current ? peakSeason : { mv: current, age: s.age };
+    const header = `<div class="mv-header">
+      <div class="mv-block">${T("Valeur actuelle : {val}", { val: `<span class="mv-value">${E.fmtMoney(current)}</span>` })}</div>
+      <div class="mv-block mv-peak">${T("Valeur maximale : {val} (à {age} ans)", { val: `<span class="mv-value">${E.fmtMoney(peak.mv)}</span>`, age: peak.age })}</div>
+    </div>`;
+    if (pts.length < 2) return header;
+    const max = Math.max(...pts.map((p) => p.mv), current, 0.1);
+    const min = Math.min(...pts.map((p) => p.mv), current, 0);
+    const span = Math.max(max - min, 0.1);
+    const X = (i) => (i / (pts.length - 1)) * 100;
+    const Y = (v) => 38 - ((v - min) / span) * 34;
+    const line = pts.map((p, i) => `${X(i).toFixed(1)},${Y(p.mv).toFixed(1)}`).join(" ");
+    const dot = peakSeason && peakSeason.mv === peak.mv
+      ? `<circle class="mv-dot" cx="${X(pts.indexOf(peakSeason)).toFixed(1)}" cy="${Y(peakSeason.mv).toFixed(1)}" r="2.4" />`
+      : "";
+    return header + `<svg class="mv-chart" viewBox="0 0 100 40" preserveAspectRatio="none">
+      <polygon class="mv-area" points="0,40 ${line} 100,40"></polygon>
+      <polyline class="mv-line" points="${line}"></polyline>
+      ${dot}
+    </svg>`;
+  }
+
   function pathHtml(s) {
     return (s.transferHistory || [])
       .map((step) => {
@@ -2802,6 +2833,8 @@
       ...(((G.youth && G.youth.caps) || 0) > 0 ? [statRowHtml(T("🎽 Sélections jeunes{tiers}", { tiers: G.youth.tiers && G.youth.tiers.length ? ` (${G.youth.tiers.map((t) => t.toUpperCase()).join(" · ")})` : "" }), G.youth.caps)] : []),
       statRowHtml("💰 Fortune", E.fmtMoney(G.money)),
     ].join("");
+
+    $("final-mvchart").innerHTML = marketValueChartHtml(G);
 
     $("final-trophies").innerHTML = trophyRowsHtml(G);
 

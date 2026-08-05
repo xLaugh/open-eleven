@@ -117,6 +117,7 @@
     "Traits": "Traits",
     "Distinctions individuelles": "Individual awards",
     "Le chemin parcouru": "The road travelled",
+    "Valeur marchande": "Market value",
     "Aucun trait débloqué pour l'instant": "No trait unlocked yet",
     "Aucune récompense individuelle. Elles viennent avec les grandes saisons.": "No individual award yet. They come with great seasons.",
     "Aucun trophée pour l'instant. Tout reste à écrire.": "No trophy yet. Everything is still to be written.",
@@ -261,6 +262,8 @@
 
     "Retraite à {age} ans": "Retired at {age}",
     "Carrière écourtée à {age} ans": "Career cut short at {age}",
+    "Valeur actuelle : {val}": "Current value: {val}",
+    "Valeur maximale : {val} (à {age} ans)": "Peak value: {val} (at {age})",
     "🌍 Meilleure carrière que {p} % des destins simulés": "🌍 A better career than {p}% of simulated destinies",
     "🪙 +{n} jeton pour la boutique": "🪙 +{n} token for the shop",
     "🪙 +{n} jetons pour la boutique": "🪙 +{n} tokens for the shop",
