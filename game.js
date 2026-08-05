@@ -1216,7 +1216,7 @@
     const rivalReport = G.duel ? null : offSeed(() => E.rivalSeason(R)); // en duel : rival figé, pas de sim
     const isGk = G.position.id === "gk";
     const trophyLine = report.trophies.length
-      ? report.trophies.map((tr) => { const c = COMPETITIONS[tr]; return c ? `${c.icon} ${c.name}` : tr; }).join(" · ")
+      ? report.trophies.map((tr) => { const c = trophyInfo(tr); return c ? `${c.icon} ${c.name}` : tr; }).join(" · ")
       : "";
     const newsLine = rivalReport && Math.random() < 0.6
       ? E.rivalNewsLine(R, rivalReport, E.computeCareerScore(G) - E.computeCareerScore(R))
@@ -2634,6 +2634,14 @@
     return `<div class="stat-row${gold ? " trophy-earned" : ""}"><span class="stat-label">${label}</span><span class="stat-value">${esc(value)}</span></div>`;
   }
 
+  // Résout une clé de trophée (report.trophies / se.trophies) vers son icône +
+  // son nom — que ce soit une compétition "classique" (COMPETITIONS, indexée
+  // par clé) ou un Ballon d'Or continental (CONTINENTAL_BALLON, indexé par
+  // CONTINENT, pas par clé — d'où la recherche par .key ci-dessous).
+  function trophyInfo(tr) {
+    return COMPETITIONS[tr] || Object.values(CONTINENTAL_BALLON).find((x) => x.key === tr) || null;
+  }
+
   // ---- Rubriques partagées : fiche finale ET panneau de profil en direct ----
   // Le même palmarès doit se lire en cours de carrière et à la retraite : ces
   // trois fonctions sont l'unique source de vérité, la fiche finale et le
@@ -2955,7 +2963,7 @@
         // se.trophies (pour ne pas peser sur le Ballon d'Or) : on ajoute quand
         // même l'icône de champion ici pour qu'il apparaisse dans le tableau.
         const champIcon = (se.divisionTitle && !(se.trophies || []).includes("league")) ? COMPETITIONS.league.icon : "";
-        const icons = champIcon + (se.trophies || []).map((tr) => (COMPETITIONS[tr] ? COMPETITIONS[tr].icon : "")).join("");
+        const icons = champIcon + (se.trophies || []).map((tr) => { const c = trophyInfo(tr); return c ? c.icon : ""; }).join("");
         const perf = isGk ? `${se.cleanSheets || 0} cs` : `${se.goals} b`;
         const pd = ` · ${se.assists || 0} pd`;
         let moveArrow = "";
