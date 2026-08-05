@@ -3553,7 +3553,6 @@ window.I18N_DATA = { en: {
  "Qualifié pour le Final Four, sorti en demie au terme d'un beau parcours.": "Through to the Final Four, out in the semis after a fine run.",
  "Finale perdue de justesse : l'argent, et le goût des regrets.": "Final lost by a whisker: silver, and the taste of regret.",
  "Sacré au bout du Final Four : la Ligue des Sélections est à vous !": "Crowned at the end of the Final Four: the Nations League is yours!",
- "CHAMPION OLYMPIQUE": "OLYMPIC CHAMPION",
  "Le rêve olympique s'arrête dès les poules.": "The Olympic dream ends in the group stage.",
  "Quart de finale olympique : l'aventure s'arrête aux portes des médailles.": "Olympic quarter-final: the run ends just short of the medals.",
  "Battu en demie, mais le bronze est au bout.": "Beaten in the semis, but bronze at the end of it.",

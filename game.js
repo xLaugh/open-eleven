@@ -1560,15 +1560,16 @@
     if (!xpResult || !xpResult.gain) return "";
     const li = levelInfo(loadProgress().xp);
     const pct = Math.max(4, Math.round((li.into / li.need) * 100));
-    return `<div class="xp-banner">
-      <span class="xp-banner-icon">⬆️</span>
+    // Pas de <div class="xp-banner"> ici : le conteneur ciblé (#final-xp) porte
+    // déjà cette classe dans index.html — l'ajouter ici doublait la boîte
+    // (fond + bordure + padding rendus deux fois, imbriqués).
+    return `<span class="xp-banner-icon">⬆️</span>
       <div class="xp-banner-mid">
         <p class="xp-gain">${T("+{n} points d'expérience", { n: xpResult.gain })}</p>
         ${xpResult.leveledUp ? `<p class="xp-levelup">${T("NIVEAU SUPÉRIEUR !")}</p>` : ""}
         <div class="xp-bar"><div class="xp-bar-fill" style="width:${pct}%"></div></div>
       </div>
-      <div class="xp-level-chip"><span class="xp-level-label">${T("NIVEAU")}</span><span class="xp-level-num">${li.level}</span></div>
-    </div>`;
+      <div class="xp-level-chip"><span class="xp-level-label">${T("NIVEAU")}</span><span class="xp-level-num">${li.level}</span></div>`;
   }
 
   // Petit gain de jetons en fin de carrière, proportionnel au score (et plafonné) :

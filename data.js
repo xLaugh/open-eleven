@@ -1100,7 +1100,7 @@ const WC_STAGES = [
   { id: "quarter", label: "Quart de finale", baseW: 18, text: "Un quart de finale héroïque, perdu au bout de la nuit. La fierté domine." },
   { id: "semi", label: "Demi-finale", baseW: 12, text: "Si proche du rêve : la demi-finale se referme cruellement." },
   { id: "final", label: "Finaliste", baseW: 8, text: "Finale perdue. La deuxième plus belle équipe du monde, et le plus grand des vides." },
-  { id: "champion", label: "CHAMPION DU MONDE", baseW: 7, text: "AU BOUT DE LA NUIT ! Votre nation est sur le toit du monde, et vous au cœur de la légende !" },
+  { id: "champion", label: "VAINQUEUR", baseW: 7, text: "AU BOUT DE LA NUIT ! Votre nation est sur le toit du monde, et vous au cœur de la légende !" },
 ];
 
 // Coupe du Monde à 48 équipes (format 2026) : un tour de plus (seizièmes de
@@ -1113,7 +1113,7 @@ const WC_STAGES_48 = [
   { id: "quarter", label: "Quart de finale", baseW: 18, text: "Un quart de finale héroïque, perdu au bout de la nuit. La fierté domine." },
   { id: "semi", label: "Demi-finale", baseW: 12, text: "Si proche du rêve : la demi-finale se referme cruellement." },
   { id: "final", label: "Finaliste", baseW: 8, text: "Finale perdue. La deuxième plus belle équipe du monde, et le plus grand des vides." },
-  { id: "champion", label: "CHAMPION DU MONDE", baseW: 7, text: "AU BOUT DE LA NUIT ! Votre nation est sur le toit du monde, et vous au cœur de la légende !" },
+  { id: "champion", label: "VAINQUEUR", baseW: 7, text: "AU BOUT DE LA NUIT ! Votre nation est sur le toit du monde, et vous au cœur de la légende !" },
 ];
 
 // ── Sélections de jeunes ──────────────────────────────────────────────────────
@@ -1145,7 +1145,7 @@ const OLYMPIC_STAGES = [
   { id: "quarter", label: "Quart de finale", baseW: 22, games: 4, text: "Quart de finale olympique : l'aventure s'arrête aux portes des médailles." },
   { id: "semi", label: "Demi-finale", baseW: 14, games: 5, text: "Battu en demie, mais le bronze est au bout." },
   { id: "final", label: "Finaliste", baseW: 8, games: 6, text: "Finale olympique disputée jusqu'au dernier souffle." },
-  { id: "champion", label: "CHAMPION OLYMPIQUE", baseW: 6, games: 6, text: "Sur le toit des Jeux : l'or olympique au cou !" },
+  { id: "champion", label: "VAINQUEUR", baseW: 6, games: 6, text: "Sur le toit des Jeux : l'or olympique au cou !" },
 ];
 
 // Étapes de la Ligue des Sélections (phase de ligue → Final Four). Le nombre de
