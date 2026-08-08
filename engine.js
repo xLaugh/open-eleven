@@ -755,6 +755,21 @@
   }
 
   function resolveOption(s, option) {
+    // Chance d'échec croissante avec l'âge, réservée aux options qui la
+    // portent explicitement (ex. "Une saison de plus" passé 42 ans) : sous le
+    // seuil, ou pour toute autre option du jeu, AUCUN rng supplémentaire n'est
+    // consommé (option.ageFailChance vaut undefined presque partout).
+    if (option.ageFailChance && s.age > option.ageFailChance.fromAge) {
+      const afc = option.ageFailChance;
+      const chance = Math.min(afc.cap, (s.age - afc.fromAge) * afc.perYear);
+      if (rng() < chance) {
+        const outcome = { fx: afc.fx, text: afc.text };
+        const chips = applyFx(s, outcome.fx || {});
+        const impact = netImpact(outcome.fx);
+        s.history.push({ age: s.age, text: renderText(s, outcome.text), impact });
+        return { outcome, chips, tone: toneOf(outcome.fx, impact), movedTo: null };
+      }
+    }
     const outcome = weightedRandom(option.outcomes);
     const chips = applyFx(s, outcome.fx || {});
     let movedTo = null;
@@ -2979,7 +2994,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.66";
+  const ENGINE_VERSION = "10.67";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {

@@ -3736,5 +3736,6 @@ window.I18N_DATA = { en: {
  "Raccrocher pour une tournée d'adieux": "Retire with a farewell tour",
  "Un tour d'honneur": "A victory lap",
  "Chaque déplacement devient un hommage. Vous savourez chaque stade une dernière fois.": "Every away trip becomes a tribute. You savour every stadium one last time.",
- "Les adieux, stade après stade, finissent par peser autant qu'ils touchent.": "The farewells, ground after ground, end up weighing on you as much as they move you."
+ "Les adieux, stade après stade, finissent par peser autant qu'ils touchent.": "The farewells, ground after ground, end up weighing on you as much as they move you.",
+ "Malgré votre envie de continuer, aucun club ne vous propose de prolongation. Le corps, lui, a fini par trancher.": "Despite your wish to carry on, no club offers you an extension. Your body, in the end, made the decision for you."
 } };

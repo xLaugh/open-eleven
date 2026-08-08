@@ -3263,7 +3263,17 @@ const EVENTS = [
     id: "ev_retire_decision", cat: "Retraite", icon: "🎬", w: 1, once: false, scheduledOnly: true,
     text: "Le corps parle plus fort chaque matin. Le staff, les proches, les médias — tout le monde attend LA réponse : une saison de plus, ou tirer sa révérence maintenant ?",
     options: [
-      { label: "Une saison de plus — tant qu'il reste du jus", hint: "Repousser l'échéance", outcomes: [
+      // ageFailChance : sous 43 ans, aucun changement (pousser jusqu'à 42 ans
+      // reste garanti). Au-delà, la volonté ne suffit plus toujours — sans
+      // ça, quasiment aucune carrière n'était jamais rattrapée avant 50 ans.
+      { label: "Une saison de plus — tant qu'il reste du jus", hint: "Repousser l'échéance",
+        // Calibré par simulation (replayDuel sur seed, option par défaut à
+        // chaque choix = "on pousse toujours") : ~26% des carrières atteignent
+        // encore 50 ans avec ces valeurs, contre ~86% sans ce mécanisme et
+        // ~1% avec un réglage plus dur (12%/an, plafond 70%) — la cible demandée
+        // était ~25%.
+        ageFailChance: { fromAge: 42, perYear: 0.042, cap: 0.31, fx: { retire: true, mor: -6, clearFlag: "retire_pending" }, text: "Malgré votre envie de continuer, aucun club ne vous propose de prolongation. Le corps, lui, a fini par trancher." },
+        outcomes: [
         { weight: 55, text: "Vous rempilez, porté par l'envie. Le corps grince, mais vous êtes encore là.", fx: { mor: 5, form: 3, clearFlag: "retire_pending" } },
         { weight: 45, text: "Encore un an arraché à l'usure. Désormais, chaque entraînement se mérite.", fx: { form: -3, mor: 3, clearFlag: "retire_pending" } },
       ] },
