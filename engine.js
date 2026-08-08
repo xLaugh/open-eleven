@@ -676,6 +676,9 @@
     if (c.wc === true && !isWorldCupYear(s.year)) return false;
     if (c.loan === true && !s.loan) return false;
     if (c.loan === false && s.loan) return false;
+    // Vrai UNIQUEMENT la saison qui suit un transfert (posé par applyTransfer,
+    // effacé en fin de playSeason) — « premier jour dans le nouveau vestiaire ».
+    if (c.justTransferred === true && !s.justTransferred) return false;
     // « À l'étranger » se juge sur le pays de formation : un Réunionnais à Lyon
     // n'est pas un expatrié, il joue chez lui.
     if (c.abroad === true && s.club.countryId === clubHomeOf(s.nationality)) return false;
@@ -2976,7 +2979,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.65";
+  const ENGINE_VERSION = "10.66";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {

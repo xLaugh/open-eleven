@@ -3267,9 +3267,18 @@ const EVENTS = [
         { weight: 55, text: "Vous rempilez, porté par l'envie. Le corps grince, mais vous êtes encore là.", fx: { mor: 5, form: 3, clearFlag: "retire_pending" } },
         { weight: 45, text: "Encore un an arraché à l'usure. Désormais, chaque entraînement se mérite.", fx: { form: -3, mor: 3, clearFlag: "retire_pending" } },
       ] },
-      { label: "Raccrocher les crampons, la tête haute", outcomes: [
-        { weight: 60, text: "Vous choisissez de partir debout. L'annonce, sereine, force le respect de tout un sport.", fx: { retire: true, mor: 8, rep: 3, clearFlag: "retire_pending" } },
-        { weight: 40, text: "Une dernière saison en guise d'adieux, puis le rideau. Chaque stade se lèvera à votre passage.", fx: { retire: true, rep: 5, mor: 6, clearFlag: "retire_pending" } },
+      // « Composer la tournée d'adieux » : puisque retire_pending force CET
+      // événement à occuper tout le créneau de la saison de retrait (pickEvent
+      // le renvoie en priorité), et qu'aucune saison suivante n'existe ensuite
+      // pour un événement séparé (s.retiring arrête la boucle), le choix du
+      // COMMENT partir est une 3e option ici plutôt qu'un événement à part.
+      { label: "Raccrocher en visant un dernier titre", hint: "Un dernier coup", outcomes: [
+        { weight: 55, text: "Vous l'annoncez au club : cette saison sera la dernière, et vous comptez bien la finir sur un sacre.", fx: { retire: true, mor: 8, rep: 4, clearFlag: "retire_pending" } },
+        { weight: 45, text: "L'annonce galvanise le vestiaire, mais la pression d'un dernier coup à jouer pèse sur vos épaules.", fx: { retire: true, mor: 4, rep: 2, form: -2, clearFlag: "retire_pending" } },
+      ] },
+      { label: "Raccrocher pour une tournée d'adieux", hint: "Un tour d'honneur", outcomes: [
+        { weight: 60, text: "Chaque déplacement devient un hommage. Vous savourez chaque stade une dernière fois.", fx: { retire: true, mor: 9, c: 3, clearFlag: "retire_pending" } },
+        { weight: 40, text: "Les adieux, stade après stade, finissent par peser autant qu'ils touchent.", fx: { retire: true, mor: 5, c: 2, form: -2, clearFlag: "retire_pending" } },
       ] },
     ],
   },
@@ -4335,6 +4344,98 @@ const EVENTS = [
       ] },
       { label: "Rester libre de toute attache", hint: "Liberté", outcomes: [
         { weight: 100, text: "Vous gardez les mains libres : le terrain d'abord, les contrats plus tard.", fx: { m: 2, mor: 1 } },
+      ] },
+    ],
+  },
+  // FOURNÉE 4 : comble des trous de couverture identifiés lors de l'audit du
+  // système d'événements (origine "tardif" sans aucun événement dédié,
+  // cond.lifestyle/cond.entourage jamais exploités, rien sur l'arrivée dans
+  // un nouveau vestiaire après transfert).
+  {
+    id: "ev_late_doubt", cat: "Identité de jeu", icon: "🎙️", w: 12,
+    cond: { origin: "tardif", aMin: 19, aMax: 22, maxRep: 35 },
+    text: "Un journaliste balance en direct : « Révélé aussi tard, il n'ira jamais bien loin. » Le vestiaire a entendu, et vous regarde.",
+    options: [
+      { label: "Le prouver sur le terrain, en silence", outcomes: [
+        { weight: 60, text: "Vous répondez par des matchs pleins, sans un mot. Les critiques se taisent d'elles-mêmes.", fx: { t: 5, m: 4, mor: 6 } },
+        { weight: 40, text: "L'envie de prouver crispe votre jeu plus qu'elle ne le libère.", fx: { form: -3, mor: -2 } },
+      ] },
+      { label: "Répondre cash en interview", hint: "Coup de sang", outcomes: [
+        { weight: 50, text: "La punchline fait le tour des réseaux : le vestiaire adore, la pression monte d'un cran — pour de bon.", fx: { rep: 6, mor: 5, c: 3 } },
+        { weight: 50, text: "Les mots dépassent la pensée. Les mêmes journalistes s'en donnent à cœur joie pendant des semaines.", fx: { rep: -4, mor: -6 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_family_agent_clash", cat: "Entourage", icon: "⚖️", w: 11,
+    cond: { entourage: "family", aMin: 23, aMax: 30 },
+    text: "Vos parents gèrent votre carrière depuis vos débuts. Un agent professionnel vous propose de passer un cap — eux le vivent comme un désaveu.",
+    options: [
+      { label: "Garder la famille aux commandes", outcomes: [
+        { weight: 55, text: "Vous rassurez tout le monde : la confiance familiale reste le socle de la maison.", fx: { mor: 7, dis: 3 } },
+        { weight: 45, text: "Le confort rassure, mais une offre intéressante passe sans que personne ne la voie venir.", fx: { money: -1, mor: -4 } },
+      ] },
+      { label: "Passer à un encadrement professionnel", hint: "Rupture", outcomes: [
+        { weight: 60, text: "Le nouvel agent ouvre des portes que la famille n'aurait jamais atteintes seule.", fx: { money: 2, m: 4, mor: -5 } },
+        { weight: 40, text: "Le froid s'installe à la maison, et personne n'est encore prêt à en reparler.", fx: { money: 1, m: 2, mor: -9 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_monk_locker_room", cat: "Vestiaire", icon: "🧘", w: 10,
+    cond: { lifestyle: "pro", aMin: 20, aMax: 28 },
+    text: "Couché à 22h, diète millimétrée : le vestiaire vous surnomme « le moine » et multiplie les vannes à chaque sortie d'équipe déclinée.",
+    options: [
+      { label: "Rester inflexible", outcomes: [
+        { weight: 55, text: "Aucune entorse à la règle. Le corps suit, même si l'ambiance se refroidit un peu.", fx: { dis: 5, team: -3 } },
+        { weight: 45, text: "La rigueur paie sur le terrain : vous êtes clairement au-dessus du lot ces dernières semaines.", fx: { form: 4 } },
+      ] },
+      { label: "Se lâcher une fois, pour l'équipe", hint: "Exception", outcomes: [
+        { weight: 100, text: "Une soirée, une seule — et le vestiaire ne l'oubliera pas. Vous n'avez jamais semblé aussi proche du groupe.", fx: { team: 6, dis: -3, mor: 4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_new_locker_codes", cat: "Vestiaire", icon: "🚪", w: 12,
+    cond: { justTransferred: true },
+    text: "Premier jour dans le nouveau vestiaire : codes inconnus, hiérarchie à deviner, un groupe qui vous observe autant que vous l'observez.",
+    options: [
+      { label: "S'imposer tout de suite", hint: "Direct", outcomes: [
+        { weight: 55, text: "Le ton est donné dès la première semaine : on sait déjà qui vous êtes.", fx: { team: 5, coach: 4 } },
+        { weight: 45, text: "Le groupe juge la manière un peu trop pressée. Il faudra rattraper ça.", fx: { team: -4, coach: -3 } },
+      ] },
+      { label: "Observer avant d'exister", hint: "Patience", outcomes: [
+        { weight: 100, text: "Vous prenez le temps de comprendre la maison avant d'y laisser votre empreinte.", fx: { m: 3, team: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_def_rookie_partner", cat: "Terrain", icon: "🛡️", w: 10,
+    cond: { pos: ["def"], aMin: 24, aMax: 34, minTeam: 60 },
+    text: "Votre jeune binôme en défense enchaîne les boulettes ce mois-ci. Le coach vous laisse gérer la situation à votre manière.",
+    options: [
+      { label: "Couvrir en silence, compenser sur le terrain", outcomes: [
+        { weight: 55, text: "Vous effacez ses erreurs sans un mot. Le jeune vous voue une reconnaissance discrète mais réelle.", fx: { c: 4, m: 4, team: 3 } },
+        { weight: 45, text: "Trop de kilomètres à rattraper pour un seul homme : la fatigue s'installe.", fx: { form: -3, mor: -3 } },
+      ] },
+      { label: "Le recadrer publiquement", hint: "Coup de gueule", outcomes: [
+        { weight: 50, text: "Le message passe : le jeune se reprend, et le vestiaire salue le patron que vous devenez.", fx: { m: 5, rep: 3 } },
+        { weight: 50, text: "L'ambiance se tend. Certains jugent la méthode trop dure pour un simple débutant.", fx: { mor: -6, team: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_metabolism_shift", cat: "Physique", icon: "🍽️", w: 9,
+    cond: { aMin: 28, aMax: 36 },
+    text: "Le nutritionniste du club est formel : votre métabolisme change, et les excès d'hier commencent à se payer plus cher qu'avant.",
+    options: [
+      { label: "Adopter un régime strict", outcomes: [
+        { weight: 60, text: "La discipline alimentaire paie : le corps répond, plus sec et plus vif.", fx: { p: 3, form: 3, mor: -2 } },
+        { weight: 40, text: "Les efforts sont réels, les résultats plus lents à venir que prévu.", fx: { mor: -3 } },
+      ] },
+      { label: "Ignorer, faire confiance au corps", outcomes: [
+        { weight: 50, text: "Rien ne change vraiment, et vous préférez ne pas vous poser plus de questions.", fx: { mor: 2 } },
+        { weight: 50, text: "Le corps met du temps à suivre : les jambes sont un cran en dessous ces dernières semaines.", fx: { form: -4, p: -2 } },
       ] },
     ],
   },
