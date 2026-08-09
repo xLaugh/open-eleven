@@ -787,13 +787,20 @@ body { color: var(--text-0); }
 }
 .privacy-link:hover { color: var(--on-green); text-decoration: underline; }
 
-/* Bouton Compte : icône flottante discrète en haut à droite de l'accueil. */
+/* Bouton Compte + sélecteur de langue : rangée à PART, AU-DESSUS du titre —
+   pas de position:absolute qui les faisait flotter par-dessus le texte (le
+   titre pouvait passer dessous selon sa largeur, en mobile comme en desktop
+   où .home-side est plus étroite que le titre complet). Cf. .home-topbar,
+   index.html. */
 #screen-home { position: relative; }
-/* Les deux pastilles flottantes encadrent le titre. Un top positif les faisait
-   pendre SOUS lui (leur centre 14px plus bas), d'où l'impression de tassement :
-   -4px aligne leur centre sur celui du titre. Cf. .lang-switch, même valeur. */
+.home-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 10px 0 2px;
+}
 .account-fab {
-  position: absolute; top: -4px; right: 6px; z-index: 6;
   width: 42px; height: 42px; border-radius: 50%;
   border: 1px solid var(--on-green-line); background: var(--on-green-panel);
   color: var(--on-green); font-size: 1.15rem; line-height: 1; cursor: pointer;
@@ -805,9 +812,8 @@ body { color: var(--text-0); }
 .account-fab:focus-visible { outline: 2px solid var(--on-green); outline-offset: 2px; }
 
 /* ---------- Sélecteur de langue ----------
-   Pastille en haut à gauche de l'accueil (symétrique du bouton de compte),
-   avec un petit menu déroulant FR/EN. Reprend les tons "sur fond vert". */
-.lang-switch { position: absolute; top: -4px; left: 6px; z-index: 6; }
+   Dans .home-topbar, à côté du bouton de compte. Reprend les tons "sur fond vert". */
+.lang-switch { position: relative; z-index: 6; }
 .lang-fab {
   display: flex; align-items: center; gap: 6px;
   height: 42px; padding: 0 14px; border-radius: 999px;
