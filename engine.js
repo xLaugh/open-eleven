@@ -317,6 +317,7 @@
       continentalDetail: [], // coupes continentales (C1) : { continent, year }
       continental2Detail: [], // Trophées continentaux (C2) : { continent, year }
       continental3Detail: [], // Boucliers continentaux (C3) : { continent, year }
+      supercupDetail: [], // Supercoupes continentales (C1 vs C2) : { continent, year }
       // Parcours en SÉLECTION, tournoi par tournoi : { comp, year, stage }.
       // Rien d'autre n'en gardait trace — seuls les TITRES survivaient à la
       // saison. Une demi-finale de Coupe du Monde disparaissait purement et
@@ -333,7 +334,7 @@
       olympicMedals: { gold: 0, silver: 0, bronze: 0 }, // médailles des Jeux Olympiques
       totals: { matches: 0, goals: 0, assists: 0, cleanSheets: 0 },
       captainMatches: 0, // matchs disputés avec le brassard de capitaine (bilan de fin)
-      trophies: { league: 0, cup: 0, continental: 0, continental2: 0, continental3: 0, worldCup: 0, contInt: 0, natLeague: 0, olympic: 0, ballon: 0, goldenBoot: 0, ballonAsia: 0, ballonAfrica: 0, ballonOceania: 0 },
+      trophies: { league: 0, cup: 0, continental: 0, continental2: 0, continental3: 0, supercup: 0, worldCup: 0, contInt: 0, natLeague: 0, olympic: 0, ballon: 0, goldenBoot: 0, ballonAsia: 0, ballonAfrica: 0, ballonOceania: 0 },
       seasons: [],
       transferHistory: [],
       history: [],
@@ -1386,6 +1387,29 @@
     }
   }
 
+  // --- Supercoupe continentale (C1 vs C2) -----------------------------------------
+  // Tirée juste après un sacre C1 OU C2 : le vainqueur y affronte le tenant de
+  // l'autre coupe (adversaire abstrait, aucun club simulé — juste un tirage
+  // pondéré, comme la Supercoupe de l'UEFA joue le vainqueur LDC contre celui
+  // d'Europa League). N'existe pas en Océanie (pas de C2, cf. CONTINENTAL_SUPERCUP).
+  function rollSupercup(s, report, continent) {
+    const cup = CONTINENTAL_SUPERCUP[continent];
+    if (!cup) return;
+    if (rng() > BALANCE.supercupChance) return;
+    if (rng() < BALANCE.supercupWinChance) {
+      s.trophies.supercup = (s.trophies.supercup || 0) + 1;
+      report.trophies.push("supercup");
+      (s.supercupDetail = s.supercupDetail || []).push({ continent, year: s.year });
+      s.money += 0.3;
+      s.rep = clamp(s.rep + 3, 0, 100);
+      s.moral = clamp(s.moral + 6, 5, 100);
+      s.history.push({ age: s.age, text: tx(s, "supercupWin", { cupName: cup.name }), impact: 8 });
+    } else {
+      s.moral = clamp(s.moral - 2, 5, 100);
+      s.history.push({ age: s.age, text: tx(s, "supercupLoss", { cupName: cup.name }), impact: -2 });
+    }
+  }
+
   // --- Ballon d'Or (modèle à points de saison + classement top 30) ---------------
   // extraPts : points supplémentaires injectés après coup (sacre mondial).
   // Si la saison ne suffit pas pour le sacre, elle peut valoir une place
@@ -2144,6 +2168,7 @@
           recheckObjective(s, report);
           // Le sacre continental rebat les cartes du Ballon d'Or (comme le Mondial).
           if (!report.awards.includes("ballon_won")) rollBallon(s, report, 0);
+          rollSupercup(s, report, continent);
         } else {
           s.rep = clamp(s.rep + 2, 0, 100);
           s.moral = clamp(s.moral - 6, 5, 100);
@@ -2168,6 +2193,7 @@
           s.history.push({ age: s.age, text: tx(s, "contCupWin", { cupName: cup.name }), impact: rw.impact });
           recheckObjective(s, report);
           if (rw.ballon && !report.awards.includes("ballon_won")) rollBallon(s, report, 0);
+          if (tier === 2) rollSupercup(s, report, cont);
         } else {
           s.rep = clamp(s.rep + 1, 0, 100);
           s.moral = clamp(s.moral - (tier === 2 ? 5 : 4), 5, 100);
@@ -2994,7 +3020,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.67";
+  const ENGINE_VERSION = "10.68";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {

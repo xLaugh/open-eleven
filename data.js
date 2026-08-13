@@ -888,6 +888,17 @@ const CONTINENTAL_CUPS3 = {
   as: { name: "Bouclier d'Asie", icon: "🥉" },
 };
 
+// --- Supercoupes continentales de clubs -----------------------------------------
+// Match d'ouverture de saison entre le vainqueur du C1 et celui du C2 (comme la
+// Supercoupe de l'UEFA) : n'existe que là où les DEUX paliers coexistent, donc
+// pas d'Océanie (aucun C2, cf. CONTINENTAL_CUPS2 ci-dessus).
+const CONTINENTAL_SUPERCUP = {
+  eu: { name: "Supercoupe d'Europe", icon: "🏅" },
+  as: { name: "Supercoupe d'Asie", icon: "🏅" },
+  af: { name: "Supercoupe d'Afrique", icon: "🏅" },
+  am: { name: "Supercoupe d'Amérique", icon: "🏅" },
+};
+
 // --- Ballons d'Or continentaux --------------------------------------------------
 // Distinction PARALLÈLE au Ballon d'Or mondial (COMPETITIONS.ballon), pas un lot
 // de consolation qui l'exclurait : un joueur peut gagner les deux, la même
@@ -1040,6 +1051,7 @@ const COMPETITIONS = {
   goldenBoot: { name: "Soulier d'Or européen", icon: "👟" },
   continental2: { name: "Trophée d'Europe", icon: "🥈" },
   continental3: { name: "Bouclier d'Europe", icon: "🥉" },
+  supercup: { name: "Supercoupe d'Europe", icon: "🏅" },
 };
 
 // --- Récompenses individuelles de saison --------------------------------------
@@ -1295,6 +1307,12 @@ const BALANCE = {
     2: { money: 0.6, rep: 4, moral: 9, impact: 11, ballon: 0.7 },
     3: { money: 0.35, rep: 3, moral: 8, impact: 8, ballon: 0 },
   },
+  // Supercoupe continentale (C1 vs C2, cf. CONTINENTAL_SUPERCUP) : disputée par
+  // le vainqueur du C1 OU du C2 de la saison, contre le vainqueur de l'autre
+  // coupe (adversaire abstrait, pas de club simulé). supercupChance = probabilité
+  // d'être retenu pour ce match ; supercupWinChance = probabilité de le gagner.
+  supercupChance: 0.5,
+  supercupWinChance: 0.5,
   // --- Blessures (système « Corps & Carrière ») -------------------------------
   // Un tirage de blessure par saison (dans playSeason). Gravité graduée, durées
   // en semaines (l'échelle du jeu : injuryFactor = 1 - injuryWeeks/42). Les
@@ -1474,6 +1492,8 @@ const ENGINE_TEXT = {
   contCupWin: "Vainqueur de la {cupName} avec {club} ({year}) !",
   contCupLossTop: "Finale de {cupName} perdue en {year} — si près du toit du continent.",
   contCupLoss: "Finale de {cupName} perdue en {year}.",
+  supercupWin: "Vainqueur de la {cupName} {year} !",
+  supercupLoss: "{cupName} {year} perdue face au tenant de l'autre coupe.",
   clubInvestor: "Un investisseur propulse {club} en {div}.",
   clubUp: "{seasonClub} évolue désormais en {div} — l'ascension continue.",
   clubElite: "{seasonClub} change de dimension et rejoint l'élite européenne.",
@@ -1949,7 +1969,7 @@ const COUNTRY_LANG = {
 if (typeof module !== "undefined" && module.exports) {
   const dataExports = {
     BRAND, NATIONALITIES, NAME_POOLS, LIFESTYLES, ENTOURAGES, TRAJECTORIES,
-    ARCHETYPES, POSITIONS, NAT_NUMBERS, ORIGINS, COUNTRIES, CONTINENTAL_CUPS, CONTINENTAL_CUPS2, CONTINENTAL_CUPS3, CONTINENTAL_BALLON, NATIONAL_CUPS, NATIONS_LEAGUE, NL_STAGES, LEVELS, ROLES, ROLE_ESPOIR_MAX_AGE,
+    ARCHETYPES, POSITIONS, NAT_NUMBERS, ORIGINS, COUNTRIES, CONTINENTAL_CUPS, CONTINENTAL_CUPS2, CONTINENTAL_CUPS3, CONTINENTAL_SUPERCUP, CONTINENTAL_BALLON, NATIONAL_CUPS, NATIONS_LEAGUE, NL_STAGES, LEVELS, ROLES, ROLE_ESPOIR_MAX_AGE,
     LEVEL_ORDER, DUAL_NATIONALITY, CLUBS, CLUBS_BY_LEVEL, COMPETITIONS, COACH_NAMES, TRAITS,
     AWARDS, KEY_MOMENTS,
     EVENTS, MICRO_EVENTS, RIVAL_NEWS_GOOD, RIVAL_NEWS_BAD, RIVAL_NEWS_AHEAD,

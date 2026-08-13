@@ -361,12 +361,15 @@
     }
     const c2Groups = canvasSubCupRows(G.continental2Detail);
     const c3Groups = canvasSubCupRows(G.continental3Detail);
+    const scGroups = canvasSubCupRows(G.supercupDetail);
     const canvasCont2Rows = Object.entries(c2Groups).map(([cont, n]) => [`🥈 ${(CONTINENTAL_CUPS2[cont] || CONTINENTAL_CUPS2.eu).name}`, n]);
     const canvasCont3Rows = Object.entries(c3Groups).map(([cont, n]) => [`🥉 ${(CONTINENTAL_CUPS3[cont] || CONTINENTAL_CUPS3.eu).name}`, n]);
+    const canvasSupercupRows = Object.entries(scGroups).map(([cont, n]) => [`🏅 ${(CONTINENTAL_SUPERCUP[cont] || CONTINENTAL_SUPERCUP.eu).name}`, n]);
     const trophyRows = [
       [`🏆 ${COMPETITIONS.worldCup.name}`, t.worldCup],
       [`⭐ ${COMPETITIONS.ballon.name}`, t.ballon],
       ...canvasContRows,
+      ...canvasSupercupRows,
       // C2/C3 : n'apparaissent QUE si remportées (évite d'allonger la carte partageable)
       ...canvasCont2Rows,
       ...canvasCont3Rows,
@@ -486,6 +489,7 @@
       (detail || []).forEach((x) => { groups[x.continent] = (groups[x.continent] || 0) + 1; });
       return Object.entries(groups).map(([cont, n]) => T("{n}× {name}", { n, name: T((cupsMap[cont] || cupsMap.eu).name) }));
     }
+    bits.push(...subCupBits(G.supercupDetail, CONTINENTAL_SUPERCUP));
     bits.push(...subCupBits(G.continental2Detail, CONTINENTAL_CUPS2));
     bits.push(...subCupBits(G.continental3Detail, CONTINENTAL_CUPS3));
     if (t.league) bits.push(T("{n}× Champion", { n: t.league }));

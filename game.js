@@ -2699,6 +2699,7 @@
     }
     const cont2Rows = subCupRows(s.continental2Detail, "continental2", CONTINENTAL_CUPS2);
     const cont3Rows = subCupRows(s.continental3Detail, "continental3", CONTINENTAL_CUPS3);
+    const supercupRows = subCupRows(s.supercupDetail, "supercup", CONTINENTAL_SUPERCUP);
 
     const playerCont = (E.countryOf(s.nationality.homeCountryId) || {}).continent;
     const ntCup = NATIONAL_CUPS[playerCont];
@@ -2727,6 +2728,7 @@
         ? [statRowHtml(`${CONTINENTAL_BALLON[playerCont].icon} ${CONTINENTAL_BALLON[playerCont].name}`, t[CONTINENTAL_BALLON[playerCont].key] || 0, (t[CONTINENTAL_BALLON[playerCont].key] || 0) > 0)]
         : []),
       ...contRows,
+      ...supercupRows,
       ...cont2Rows,
       ...cont3Rows,
       ...leagueRows,
