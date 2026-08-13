@@ -12,18 +12,25 @@
    ============================================================ */
 
 // --- Niveaux de clubs ----------------------------------------------------------
-// 4 échelons, du sommet européen au football régional. Chaque niveau a un
+// 6 échelons, du sommet européen au football régional. Chaque niveau a un
 // impact réel (cf. BALANCE) : budget, infrastructures, visibilité médiatique,
 // concurrence au poste, accès à la sélection, temps de jeu.
+// "d4" : palier optionnel, inséré entre D3 et Régional, réservé aux pays dont
+// la pyramide réelle descend plus bas qu'un D3 classique (ex. National League
+// anglaise sous League Two). Les rangs sont RENUMÉROTÉS en conséquence (rien
+// n'est persisté sur ces valeurs — toujours recalculées via LEVELS[id].rank —
+// donc aucun risque pour les sauvegardes existantes) : le magic number "rang
+// de D1" utilisé par divShort (engine.js) passe de 3 à 4 en cohérence.
 const LEVELS = {
-  elite: { name: "D1 · Élite", short: "Élite", rank: 4 },
-  d1: { name: "Première division", short: "D1", rank: 3 },
-  d2: { name: "Deuxième division", short: "D2", rank: 2 },
-  d3: { name: "Troisième division", short: "D3", rank: 1 },
+  elite: { name: "D1 · Élite", short: "Élite", rank: 5 },
+  d1: { name: "Première division", short: "D1", rank: 4 },
+  d2: { name: "Deuxième division", short: "D2", rank: 3 },
+  d3: { name: "Troisième division", short: "D3", rank: 2 },
+  d4: { name: "Quatrième division", short: "D4", rank: 1 },
   regional: { name: "Football régional", short: "Rég.", rank: 0 },
 };
 
-const LEVEL_ORDER = ["regional", "d3", "d2", "d1", "elite"];
+const LEVEL_ORDER = ["regional", "d4", "d3", "d2", "d1", "elite"];
 
 // --- Clubs ----------------------------------------------------------
 // Noms inspirés de vrais clubs/villes, par pays jouable + destinations
@@ -159,6 +166,11 @@ const CLUBS = [
   { id: "en_grimsby", name: "Grimsby", level: "d3", countryId: "en", colors: "⚫⚪" },
   { id: "en_dover", name: "Dover", level: "d3", countryId: "en", colors: "⚪⚫" },
   { id: "en_canterbury", name: "Canterbury", level: "d3", countryId: "en", colors: "🟢⚪" },
+  { id: "en_redbrook", name: "Redbrook", level: "d4", countryId: "en", colors: "🔴⚫" },
+  { id: "en_hartwell", name: "Hartwell", level: "d4", countryId: "en", colors: "🟡⚫" },
+  { id: "en_sandiford", name: "Sandiford", level: "d4", countryId: "en", colors: "🔵⚪" },
+  { id: "en_kesteven", name: "Kesteven", level: "d4", countryId: "en", colors: "⚫🟡" },
+  { id: "en_marlbury", name: "Marlbury", level: "d4", countryId: "en", colors: "🟢⚫" },
   { id: "pt_lisbonne", name: "Lisbonne", level: "elite", countryId: "pt", colors: "🔴⚪" },
   { id: "pt_porto", name: "Porto", level: "elite", countryId: "pt", colors: "🔵⚪" },
   { id: "pt_sporting", name: "Sporting", level: "elite", countryId: "pt", colors: "🟢⚪" },

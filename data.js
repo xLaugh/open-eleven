@@ -1252,7 +1252,7 @@ const BALANCE = {
   // Abaissement de la barre de RÉPUTATION selon la faiblesse de la nation.
   natCallWeightRep: 24,
   // OVR attendu d'un titulaire (plus c'est haut, plus la concurrence est rude)
-  expectedLevel: { regional: 46, d3: 49, d2: 55, d1: 67, elite: 80 },
+  expectedLevel: { regional: 46, d4: 47, d3: 49, d2: 55, d1: 67, elite: 80 },
   // Statut au club (rôle) : seuils de marge (OVR − expectedLevel) → cran de rôle,
   // et probabilité qu'une recrue star débarque à ton poste (te rétrograde).
   role: { margins: [6, 2, -2, -6], starSignChance: 0.14 },
@@ -1260,7 +1260,7 @@ const BALANCE = {
   // quand il s'agit de MONTER d'un cran. Grimper se mérite — mais à 82 la barre
   // d'élite était au-dessus du peakOvr p90 : 90 % des carrières ne voyaient JAMAIS
   // l'élite (donc ni Ligue des Champions, ni Ballon d'Or, ni salaires d'élite).
-  signingBar: { regional: 40, d3: 48, d2: 56, d1: 70, elite: 78 },
+  signingBar: { regional: 40, d4: 44, d3: 48, d2: 56, d1: 70, elite: 78 },
   // Marge de l'objectif de club : la cible vaut ce % de l'espérance de production.
   // Réglé par type, car les deux formules n'ont pas la même dispersion.
   objectiveSlack: { goals: 0.95, cs: 1.08 },
@@ -1281,10 +1281,10 @@ const BALANCE = {
   // Note de saison en dessous de laquelle la relégation est DIRECTE (sans barrage) :
   // une saison catastrophique ne se rattrape pas sur un match.
   relegDirectRating: 5.6,
-  matchesByLevel: { regional: [30, 38], d3: [33, 41], d2: [36, 44], d1: [40, 48], elite: [44, 54] },
+  matchesByLevel: { regional: [30, 38], d4: [31, 39], d3: [33, 41], d2: [36, 44], d1: [40, 48], elite: [44, 54] },
   // Titre de division (ne compte comme trophée national qu'en d1/élite)
-  titleChance: { regional: 0.12, d3: 0.1, d2: 0.08, d1: 0.06, elite: 0.3 },
-  cupChance: { regional: 0.004, d3: 0.01, d2: 0.02, d1: 0.08, elite: 0.18 },
+  titleChance: { regional: 0.12, d4: 0.11, d3: 0.1, d2: 0.08, d1: 0.06, elite: 0.3 },
+  cupChance: { regional: 0.004, d4: 0.007, d3: 0.01, d2: 0.02, d1: 0.08, elite: 0.18 },
   // Chance d'ATTEINDRE la finale continentale (la gagner se joue en moment
   // décisif). Hors d'Europe, la D1 EST le sommet (pas de clubs "élite") : elle
   // conteste donc sa Coupe des Champions comme l'élite européenne conteste la sienne.
@@ -1347,15 +1347,15 @@ const BALANCE = {
     tournamentSkip: 28,    // seasonInj >= : rate la CDM / coupe continentale de la saison
   },
   // Salaire annuel de base en M€ (modulé par OVR, réputation, pays)
-  salaryBase: { regional: 0.03, d3: 0.05, d2: 0.09, d1: 0.9, elite: 5.0 },
+  salaryBase: { regional: 0.03, d4: 0.04, d3: 0.05, d2: 0.09, d1: 0.9, elite: 5.0 },
   // Indemnités que le niveau peut aligner
-  feeMult: { regional: 0.12, d3: 0.2, d2: 0.3, d1: 0.7, elite: 1.2 },
+  feeMult: { regional: 0.12, d4: 0.16, d3: 0.2, d2: 0.3, d1: 0.7, elite: 1.2 },
   // Qualité des infrastructures → vitesse de progression
-  growthInfra: { regional: 0.85, d3: 0.88, d2: 0.95, d1: 1.1, elite: 1.25 },
+  growthInfra: { regional: 0.85, d4: 0.87, d3: 0.88, d2: 0.95, d1: 1.1, elite: 1.25 },
   // Exposition médiatique → amplification des gains de réputation
-  mediaVisibility: { regional: 0.55, d3: 0.65, d2: 0.75, d1: 1.0, elite: 1.3 },
+  mediaVisibility: { regional: 0.55, d4: 0.6, d3: 0.65, d2: 0.75, d1: 1.0, elite: 1.3 },
   // Poids de base du niveau de centre de formation au départ
-  academyWeights: { regional: 34, d3: 32, d2: 30, d1: 24, elite: 12 },
+  academyWeights: { regional: 34, d4: 33, d3: 32, d2: 30, d1: 24, elite: 12 },
   academySurpriseChance: 0.05, // un grand centre mise sur un profil modeste
   microChance: 0.6, // proba d'au moins une brève de saison
   windowRandomChance: 0.12, // mercato spontané sans raison particulière
@@ -1388,10 +1388,10 @@ const BALANCE = {
   ballonContSlope: 0.09,
   ballonContCap: 0.55,
   // --- Vie des clubs : montées, descentes, changements de dimension ---
-  relegationChance: { d1: 0.045, d2: 0.07, d3: 0.08 }, // par saison, modulé par vos perfs
+  relegationChance: { d1: 0.045, d2: 0.07, d3: 0.08, d4: 0.09 }, // par saison, modulé par vos perfs
   // Les géants historiques (élite de base) ne coulent presque jamais en D2
   eliteRelegShield: 0.25,
-  playoffChance: { regional: 0.17, d3: 0.14, d2: 0.12 }, // barrage de montée si saison solide
+  playoffChance: { regional: 0.17, d4: 0.155, d3: 0.14, d2: 0.12 }, // barrage de montée si saison solide
   clubRiseSeasons: 2, // saisons consécutives dans le haut du classement pour
   clubFadeSeasons: 2, // changer de dimension (d1→élite) ou décliner (élite→d1)
   // --- Moments décisifs de saison ---
@@ -1399,7 +1399,7 @@ const BALANCE = {
   oldClubMomentChance: 0.4, // la saison qui suit un transfert
   cupFinalReachMult: 1.7, // proba d'atteindre la finale = cupChance × ce facteur
   // --- Meilleurs buteurs : titre domestique & Soulier d'Or européen ---
-  topScorerGoals: { regional: 20, d3: 21, d2: 22, d1: 24, elite: 26 }, // seuil de buts par niveau
+  topScorerGoals: { regional: 20, d4: 20, d3: 21, d2: 22, d1: 24, elite: 26 }, // seuil de buts par niveau
   // Meilleur buteur d'un tournoi de SÉLECTION : seuil de buts sur le tournoi.
   // Volontairement SANS tirage, comme la distinction du Mondial qui existait
   // déjà — aucun hasard consommé, donc aucune carrière modifiée et aucun duel
@@ -1522,6 +1522,7 @@ const ENGINE_TEXT = {
   academyD1: "Centre professionnel réputé — un cap sérieux vers le haut niveau",
   academyD2: "Club formateur solide — du temps de jeu et de vrais éducateurs",
   academyD3: "Club modeste mais structuré — peu de moyens, beaucoup de terrain",
+  academyD4: "Petit club discret — loin des projecteurs, mais un vrai tremplin",
   academyRegional: "Club local — l'école de la débrouille, près des vôtres",
 
   // --- Coupe du Monde & Jeux Olympiques (intitulés de phase) ---

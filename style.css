@@ -203,6 +203,7 @@ body {
 
   /* Niveaux de club */
   --lvl-regional: #7e8b82;
+  --lvl-d4: #6b9686;
   --lvl-d3: #56917f;
   --lvl-d2: #3d8a7a;
   --lvl-d1: #2f6fd6;
@@ -1252,6 +1253,7 @@ body { color: var(--text-0); }
   color: #fff;
 }
 .level-regional { background: var(--lvl-regional); }
+.level-d4 { background: var(--lvl-d4); }
 .level-d3 { background: var(--lvl-d3); }
 .level-d2 { background: var(--lvl-d2); }
 .level-d1 { background: var(--lvl-d1); }

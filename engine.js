@@ -92,12 +92,14 @@
     }
     return _countryTopRank[countryId];
   }
-  const _DIV_SHORTS = ["D1", "D2", "D3", ENGINE_TEXT.divRegional];
+  // 5 crans non-élite : D1/D2/D3/D4 puis Régional (le palier "d4" ne compte
+  // qu'un cran de plus, inséré entre D3 et Régional — cf. LEVEL_ORDER).
+  const _DIV_SHORTS = ["D1", "D2", "D3", "D4", ENGINE_TEXT.divRegional];
   function divShort(level, countryId) {
     if (level === "elite") return ENGINE_TEXT.divElite; // l'élite reste distincte (grands pays)
-    const baseIdx = { d1: 0, d2: 1, d3: 2, regional: 3 }[level];
+    const baseIdx = { d1: 0, d2: 1, d3: 2, d4: 3, regional: 4 }[level];
     if (baseIdx == null) return LEVELS[level] ? LEVELS[level].short : level;
-    const shift = Math.max(0, 3 - countryTopRank(countryId)); // 3 = rang de D1
+    const shift = Math.max(0, 4 - countryTopRank(countryId)); // 4 = rang de D1 (LEVELS.d1.rank)
     return _DIV_SHORTS[Math.max(0, baseIdx - shift)];
   }
 
@@ -221,7 +223,7 @@
   // Clés de ENGINE_TEXT, résolues à l'appel (et non ici) pour que la langue
   // choisie s'applique : le texte est traduit en place au chargement.
   const ACADEMY_BLURBS = {
-    elite: "academyElite", d1: "academyD1", d2: "academyD2", d3: "academyD3", regional: "academyRegional",
+    elite: "academyElite", d1: "academyD1", d2: "academyD2", d3: "academyD3", d4: "academyD4", regional: "academyRegional",
   };
   const academyBlurb = (lvl) => ENGINE_TEXT[ACADEMY_BLURBS[lvl]] || "";
 
@@ -2341,10 +2343,10 @@
       const stayed = seasonClub && s.club.id === ls.clubId && !s.loan;
       if (seasonClub) {
         const lvl = lvlOf(s, seasonClub);
-        if (ls.promoted && (lvl === "regional" || lvl === "d3" || lvl === "d2")) {
+        if (ls.promoted && (lvl === "regional" || lvl === "d4" || lvl === "d3" || lvl === "d2")) {
           const newLvl = shiftClubLevel(s, seasonClub, 1);
           if (stayed) s.history.push({ age: s.age, text: tx(s, "clubUp", { seasonClub: seasonClub.name, div: divShort(newLvl, seasonClub.countryId) }), impact: 6 });
-        } else if (ls.relegated && (lvl === "d1" || lvl === "d2" || lvl === "d3")) {
+        } else if (ls.relegated && (lvl === "d1" || lvl === "d2" || lvl === "d3" || lvl === "d4")) {
           shiftClubLevel(s, seasonClub, -1);
         } else if (stayed && lvl === "d1") {
           // Voie « le club change de dimension ». Exiger leaguePos <= 2 alors que le
@@ -2423,7 +2425,7 @@
     // la nation de naissance et la porte se referme. Aucun rng consommé.
     if (s.dualNat && s.age > 23) { s.dualNat = null; s.flags.natLocked = true; }
     if (!s.natTeam.active && !s.natTeam.retired && !s.dualNat && s.age >= 17 && seasonInj < 20) {
-      const rank = levelRank(lvlOf(s, s.club));
+      const curLvlId = lvlOf(s, s.club);
       let ovrNeed, repNeed;
       // FORCE DE LA NATION : la barre était la même pour la France et pour Saint-Marin,
       // alors qu'un international luxembourgeois n'a évidemment pas le niveau d'un
@@ -2438,8 +2440,12 @@
       else if (s.age <= 20) { ovrNeed = natBar + off.u21; repNeed = 52; }
       else if (s.age <= 23) { ovrNeed = natBar + off.u24; repNeed = 50; }
       else { ovrNeed = natBar; repNeed = 48; }
-      if (rank === 1) { ovrNeed += 2; repNeed += 8; }
-      else if (rank === 0) { ovrNeed += 5; repNeed += 16; }
+      // Comparaison sur l'ID du niveau (pas le rang numérique) : le malus visé
+      // reste celui de "d3" même si un palier "d4" existe désormais entre lui
+      // et "regional" (cf. LEVELS) — un rang absolu aurait glissé de sens.
+      if (curLvlId === "d3") { ovrNeed += 2; repNeed += 8; }
+      else if (curLvlId === "d4") { ovrNeed += 3.5; repNeed += 12; }
+      else if (curLvlId === "regional") { ovrNeed += 5; repNeed += 16; }
       if (s.flags.youth_int) repNeed -= 4;
       repNeed -= Math.round((1 - natW) * BALANCE.natCallWeightRep);
       if (s.rep >= repNeed && ovr(s) >= ovrNeed) {
@@ -2632,7 +2638,7 @@
     }
 
     // Vétéran au-delà de 42 ans : l'élite ferme ses portes. Plus aucun cador ne
-    // prolonge — seuls des clubs modestes (D3/Régional le plus souvent, rarement
+    // prolonge — seuls des clubs modestes (D3/D4/Régional le plus souvent, rarement
     // D2/D1) veulent encore d'un joueur de cet âge. Un gardien, dont l'usure est
     // moindre, tient un cran plus haut. Aucune prolongation possible : il faut
     // rebondir plus bas, saison après saison, ou raccrocher.
@@ -2640,8 +2646,8 @@
       const gk = s.position.id === "gk";
       const r = rng();
       let target = gk
-        ? (r < 0.15 ? "d1" : r < 0.55 ? "d2" : r < 0.9 ? "d3" : "regional")
-        : (r < 0.04 ? "d1" : r < 0.15 ? "d2" : r < 0.6 ? "d3" : "regional");
+        ? (r < 0.15 ? "d1" : r < 0.5 ? "d2" : r < 0.75 ? "d3" : r < 0.9 ? "d4" : "regional")
+        : (r < 0.04 ? "d1" : r < 0.13 ? "d2" : r < 0.5 ? "d3" : r < 0.75 ? "d4" : "regional");
       const curIdx = LEVEL_ORDER.indexOf(lvlOf(s, s.club));
       if (LEVEL_ORDER.indexOf(target) > curIdx) target = LEVEL_ORDER[curIdx]; // ne remonte jamais
       return {
@@ -3020,7 +3026,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.68";
+  const ENGINE_VERSION = "10.69";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {
