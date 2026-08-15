@@ -14,6 +14,7 @@
   let setup = {}; // choix de création en cours
   let currentEvent = null;
   let lastOutcome = null;
+  let lastMovedTo = null; // club d'un transfert "direct" (fx.transfer.direct), déjà appliqué par resolveOption
   let lastReport = null;
   let legendGuest = null;
   let legendGuestUsed = false;
@@ -510,9 +511,26 @@
       setup._academyKey = key;
     }
     const stars = E.potStars(setup.potCap);
+    const list = $("academy-list");
+    // Mode salle : le club de départ n'est pas un clic individuel — ce sont
+    // TOUTES les propositions du groupe qui partent en vote commun. room.js
+    // possède toute la mécanique (soumission, temps réel, vote) ; on ne lui
+    // fournit que les offres DE CE joueur et les deux éléments à peindre.
+    if (setup.roomId) {
+      if (setup._roomStep) setup._roomStep.stop();
+      setup._roomStep = window.OpenElevenRoom.renderAcademyStep(
+        setup.roomId, setup._academyOffers.map((o) => o.club.id),
+        { subEl: $("academy-sub"), listEl: list },
+        (clubId) => {
+          setup._roomStep = null;
+          const club = CLUBS.find((c) => c.id === clubId) || setup._academyOffers[0].club;
+          startCareer(club);
+        }
+      );
+      return;
+    }
     $("academy-sub").innerHTML = T("Les recruteurs ont observé votre profil.<br/>Potentiel estimé : {stars}", { stars: `<span class="pot-stars">${"★".repeat(stars)}${"☆".repeat(5 - stars)}</span>` });
     const offers = setup._academyOffers;
-    const list = $("academy-list");
     list.innerHTML = "";
     offers.forEach((offer) => {
       const cc = E.countryOf(offer.club.countryId);
@@ -536,6 +554,9 @@
     const id = active ? active.id : "";
     const idx = CREATION_ORDER.indexOf(id);
     if (idx < 0) return;
+    // Quitte l'écran académie en mode salle : coupe le canal temps réel / le
+    // sondage de secours, sinon il continuerait à tourner en arrière-plan.
+    if (id === "screen-academy" && setup._roomStep) { setup._roomStep.stop(); setup._roomStep = null; }
     if (setup.duelChoices && (id === "screen-entourage" || id === "screen-academy")) {
       setup.duelChoices.pop(); // le choix qui a mené ici va être refait
     }
@@ -619,6 +640,10 @@
       // du jour / duel / Histoire → le moteur la tire, comme le reste du profil.
       dualNat: setup.dualNat,
     });
+    // Carrière commune (room.js) : G.room survit à la sérialisation locale
+    // (saveCurrentGame stocke G tel quel) — aucune reprise particulière à
+    // écrire pour que le mode salle traverse une fermeture d'onglet.
+    if (setup.roomId) G.room = { id: setup.roomId };
     if (setup.dailyDate) {
       G.dailyDate = setup.dailyDate; // Défi du jour : aucun avantage (équité)
       G.choiceLog = (setup.duelChoices || []).slice(); // journal pour le classement vérifié
@@ -659,6 +684,28 @@
     renderSeasonEvent();
   }
 
+  // Point d'entrée « carrière commune » (room.js) : même garde que le bouton
+  // solo "Commencer ma carrière" (une partie en cours serait sinon écrasée en
+  // silence), mais entryScreen porte roomId — l'écran académie (plus haut)
+  // s'en sert pour dérouter vers le vote de groupe au lieu du choix libre.
+  async function startRoomCareer(roomId) {
+    if (readCurrentGame()) {
+      const ok = await confirmModal({
+        icon: "⚠️",
+        title: "Une carrière est en cours",
+        message: "Configurer ton profil pour cette salle effacera définitivement votre carrière actuelle. Vous pouvez la reprendre depuis l'accueil.",
+        confirmLabel: "Continuer",
+        cancelLabel: "Annuler",
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    track("career_start");
+    setup = { entryScreen: "screen-nationality", roomId };
+    E.clearSeed();
+    showScreen("screen-nationality");
+  }
+
   // --- Boucle de saison ---------------------------------------------------------
   function renderSeasonEvent() {
     if (G.careerEnded) { finalize(); return; }
@@ -693,6 +740,7 @@
     setTimeout(() => {
       const res = E.resolveOption(G, opt);
       lastOutcome = res.outcome;
+      lastMovedTo = res.movedTo || null;
       updateHeader();
       let text = E.renderText(G, res.outcome.text, { rival: R ? R.name : null });
       showCard(`
@@ -707,9 +755,43 @@
 
   function onResultContinue() {
     if (G.careerEnded) { finalize(); return; }
+    // Les transferts "direct" ont déjà été appliqués par resolveOption — pour
+    // CE joueur, irréversible. Mode salle : un vote A POSTERIORI décide si
+    // les 3 autres suivent (candidats [clubId, "stay"], réutilise le moteur
+    // de vote générique via renderRelocationVoteStep — le meneur a déjà son
+    // propre bulletin posé côté serveur).
+    if (G.room && lastMovedTo) {
+      const clubId = lastMovedTo.id;
+      lastMovedTo = null;
+      window.OpenElevenRoom.renderRelocationVoteStep(G.room.id, clubId, showCard, (result) => {
+        if (result && result.choice && result.choice !== "stay" && G.club.id !== result.choice) {
+          const off = E.offersFor(G, { clubId: result.choice });
+          if (off.length) E.applyTransfer(G, off[0]);
+        }
+        updateHeader();
+        proceedToSeason();
+      });
+      return;
+    }
     // Les transferts "direct" ont déjà été appliqués par resolveOption
     if (lastOutcome && lastOutcome.fx && lastOutcome.fx.transfer && !lastOutcome.fx.transfer.direct) {
-      renderTransferChoice(E.offersFor(G, lastOutcome.fx.transfer), null);
+      const offers = E.offersFor(G, lastOutcome.fx.transfer);
+      // Mode salle : ce choix de club devient un vote — immédiat, sans
+      // barrière (cf. room.js renderNarrativeVoteStep), car rien ne garantit
+      // que les 3 autres membres soient à un point comparable de LEUR saison.
+      if (G.room) {
+        if (!offers.length) { proceedToSeason(); return; } // rien à trancher, pas de vote
+        window.OpenElevenRoom.renderNarrativeVoteStep(G.room.id, offers.map((o) => o.club.id), true, showCard, (result) => {
+          if (result && result.choice && result.choice !== "stay") {
+            const off = E.offersFor(G, { clubId: result.choice });
+            if (off.length) E.applyTransfer(G, off[0]);
+          }
+          updateHeader();
+          proceedToSeason();
+        });
+        return;
+      }
+      renderTransferChoice(offers, null);
       return;
     }
     if (lastOutcome && lastOutcome.fx && lastOutcome.fx.loan) {
@@ -1282,6 +1364,24 @@
     if (G.careerEnded) { renderCareerEndInjury(lastReport); return; }
     if (G.retiring || G.age >= E.BALANCE_REF.ageMax) { finalize(); return; }
     const window = E.transferWindow(G, lastReport);
+    // Mode salle : la décision (rester/partir) devient collective — barrière
+    // de fin de saison, cf. room.js renderSeasonBarrierStep. `window` masque
+    // ici le global du même nom (idiome déjà utilisé par renderTransferChoice
+    // plus haut) : on passe par globalThis, pas par `window.OpenElevenRoom`.
+    if (G.room) {
+      const myPendingOffer = window ? { offers: window.offers.map((o) => o.club.id), forced: !!window.noStay } : null;
+      globalThis.OpenElevenRoom.renderSeasonBarrierStep(G.room.id, myPendingOffer, showCard, (result) => {
+        if (result && result.choice && result.choice !== "stay") {
+          const offers = E.offersFor(G, { clubId: result.choice });
+          if (offers.length) E.applyTransfer(G, offers[0]);
+        } else if (result && result.choice === "stay" && window && window.contractUp) {
+          E.renewContract(G, window);
+        }
+        updateHeader();
+        nextSeason();
+      });
+      return;
+    }
     if (window) { renderTransferChoice(window.offers, window); return; }
     nextSeason();
   }
@@ -2586,6 +2686,16 @@
     if (!G.duel) offSeed(() => { while (!R.careerEnded && R.age <= E.BALANCE_REF.ageMax && guard++ < 30) E.rivalSeason(R); });
     saveToPantheon();
     const score = E.computeCareerScore(G);
+    // Mode salle : signale la fin de CETTE carrière — le membre devient
+    // spectateur (sort du dénominateur des votes futurs), la salle continue
+    // pour les autres (décision produit : pas d'arrêt collectif anticipé).
+    // Best-effort, jamais bloquant (cf. room.js markCareerEnded).
+    if (G.room && window.OpenElevenRoom && window.OpenElevenRoom.markCareerEnded) {
+      window.OpenElevenRoom.markCareerEnded(G.room.id, score, {
+        name: G.name, position: G.position ? G.position.name : null,
+        club: G.club ? G.club.name : null, seasons: (G.seasons || []).length,
+      });
+    }
     const questNotes = evaluateQuests(); // avant les badges (streak/total à jour)
     const newBadges = evaluateBadges();
     const dailyResult = G.dailyDate ? recordDailyResult(G.dailyDate, score) : null;
@@ -3116,6 +3226,7 @@
     cardTierFor: cardTierFor, nicknameFor: nicknameFor,
     natFlagImgs: NAT_FLAG_IMGS,
     levelInfo: levelInfo,
+    startRoomCareer: startRoomCareer,
   };
 
   // --- Sauvegarde & reprise de la carrière en cours ------------------------------
@@ -3177,7 +3288,7 @@
     legendGuest = snap.legendGuest || null;
     legendGuestUsed = !!snap.legendGuestUsed;
     prevOvr = null;
-    currentEvent = null; lastOutcome = null; lastReport = null;
+    currentEvent = null; lastOutcome = null; lastMovedTo = null; lastReport = null;
     track("career_resumed", { age: G.age, year: G.year });
     showScreen("screen-game");
     updateHeader();
@@ -3271,7 +3382,7 @@
     backTarget = "screen-home";
     G = null; R = null; setup = {};
     E.clearSeed(); // retour à l'accueil : plus de graine active
-    currentEvent = null; lastOutcome = null; lastReport = null;
+    currentEvent = null; lastOutcome = null; lastMovedTo = null; lastReport = null;
     initNationalityScreen();
     initPositionScreen();
     initOriginScreen();
@@ -3337,18 +3448,19 @@
     document.querySelectorAll(".creation-random-all").forEach((b) => b.addEventListener("click", randomizeAllCreation));
     $("btn-resume").addEventListener("click", resumeCareer);
     $("daily-panel").addEventListener("click", startDailyChallenge);
-    // Bloc « Compétition en ligne » (Classement + Duels) : révélé seulement si le
-    // compte est configuré (Supabase). Le classement se lit sans connexion.
+    // Bloc « Compétition en ligne » (Classement + Amis & Duels) : révélé
+    // seulement si le compte est configuré (Supabase). Le classement se lit
+    // sans connexion. Amis et duels partagent un seul bouton/panneau
+    // (openSocial) — les deux servaient au même besoin (retrouver un joueur
+    // par pseudo, jouer contre lui).
     const onlineGroup = $("online-group");
     const acc = window.OpenElevenAccount;
-    if (onlineGroup && acc && (acc.openLeaderboard || acc.openDuels || acc.openFriends)) {
+    if (onlineGroup && acc && (acc.openLeaderboard || acc.openSocial)) {
       onlineGroup.hidden = false;
       const lbBtn = $("btn-leaderboard");
       if (lbBtn && acc.openLeaderboard) lbBtn.addEventListener("click", () => acc.openLeaderboard());
-      const duelsBtn = $("btn-duels");
-      if (duelsBtn && acc.openDuels) duelsBtn.addEventListener("click", () => acc.openDuels());
-      const friendsBtn = $("btn-friends");
-      if (friendsBtn && acc.openFriends) friendsBtn.addEventListener("click", () => acc.openFriends());
+      const socialBtn = $("btn-social");
+      if (socialBtn && acc.openSocial) socialBtn.addEventListener("click", () => acc.openSocial());
     }
     $("btn-replay").addEventListener("click", () => {
       if (reviewingPantheon) { reviewingPantheon = false; renderPantheonScreen(); showScreen("screen-pantheon"); }

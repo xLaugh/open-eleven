@@ -843,105 +843,9 @@
   function submitDuelCreate(o) { return callDuel({ action: "create", seed: o.seed, choices: o.choices, toPseudo: o.toPseudo, label: o.label, v: EV }); }
   function submitDuelRespond(o) { return callDuel({ action: "respond", id: o.id, choices: o.choices, label: o.label, v: EV }); }
 
-  const duOverlay = document.createElement("div");
-  duOverlay.className = "acc-overlay";
-  duOverlay.innerHTML = '<div class="lb-box" role="dialog" aria-modal="true"></div>';
-  document.body.appendChild(duOverlay);
-  const duBox = duOverlay.querySelector(".lb-box");
-  duOverlay.addEventListener("click", (e) => { if (e.target === duOverlay) duOverlay.classList.remove("on"); });
-  let duTab = "send";
-
-  async function renderDuels() {
-    duBox.innerHTML =
-      '<button class="acc-x" aria-label="Fermer">×</button><h3>⚔️ Duels</h3>' +
-      '<div class="lb-tabs">' +
-      '<button class="lb-tab' + (duTab === "send" ? " on" : "") + '" data-t="send">Défier</button>' +
-      '<button class="lb-tab' + (duTab === "in" ? " on" : "") + '" data-t="in">Reçus</button>' +
-      '<button class="lb-tab' + (duTab === "hist" ? " on" : "") + '" data-t="hist">Historique</button>' +
-      "</div><div class=\"lb-content\"><p class=\"lb-empty\">Chargement…</p></div>";
-    duBox.querySelector(".acc-x").onclick = () => duOverlay.classList.remove("on");
-    duBox.querySelectorAll(".lb-tab").forEach((b) => (b.onclick = () => { duTab = b.dataset.t; renderDuels(); }));
-    const content = duBox.querySelector(".lb-content");
-
-    if (!session) { content.innerHTML = '<p class="lb-empty">Connecte-toi (👤) pour défier des joueurs.</p>'; return; }
-    if (!pseudo) { content.innerHTML = '<p class="lb-empty">Choisis d\'abord un pseudo dans « Mon compte ».</p>'; return; }
-
-    if (duTab === "send") {
-      content.innerHTML =
-        '<p class="acc-sub" style="margin:4px 0 8px">Entre le pseudo d\'un ami. Tu joues ta carrière, ton défi lui est envoyé (même parcours pour vous deux).</p>' +
-        '<input type="text" id="du-pseudo" maxlength="24" placeholder="Pseudo de l\'adversaire" style="width:100%;box-sizing:border-box;margin:0 0 8px;padding:11px 13px;border:1.5px solid rgba(12,45,30,.18);border-radius:10px;font-size:1rem" />' +
-        '<button class="acc-btn primary" id="du-go" style="margin:0">🆚 Lancer le défi</button><p class="acc-msg"></p>';
-      const go = async () => {
-        const p = duBox.querySelector("#du-pseudo").value.trim();
-        const m = duBox.querySelector(".acc-msg");
-        if (p.length < 2) { m.textContent = "Pseudo trop court."; m.className = "acc-msg err"; return; }
-        if (p.toLowerCase() === (pseudo || "").toLowerCase()) { m.textContent = "Tu ne peux pas te défier toi-même."; m.className = "acc-msg err"; return; }
-        // Vérifie que le pseudo existe AVANT de jouer (évite un run perdu sur une faute).
-        m.textContent = "Vérification…"; m.className = "acc-msg";
-        const esc = p.replace(/[\\%_]/g, "\\$&");
-        const { data } = await sb.from("profiles").select("pseudo").ilike("pseudo", esc).limit(1);
-        if (!data || !data.length) { m.textContent = "Aucun joueur avec ce pseudo."; m.className = "acc-msg err"; return; }
-        duOverlay.classList.remove("on");
-        // Utilise la casse exacte du profil trouvé.
-        if (window.OpenElevenGame && window.OpenElevenGame.startDuelVsPseudo) window.OpenElevenGame.startDuelVsPseudo(data[0].pseudo);
-      };
-      duBox.querySelector("#du-go").onclick = go;
-      return;
-    }
-
-    if (duTab === "in") {
-      let rows = [];
-      try { const { data } = await sb.rpc("duels_incoming"); rows = data || []; } catch (_) {}
-      setNavBadge("btn-duels", rows.length); // pastille d'accueil synchro avec les défis reçus
-      content.innerHTML = rows.length
-        ? '<ul class="lb-list">' + rows.map((r, i) =>
-            '<li class="lb-row"><span class="lb-name">🆚 <strong>' + esc(r.from_label || r.from_pseudo) + "</strong><br><span class=\"lb-sub\">" + T("te défie · {n} pts à battre", { n: r.from_score }) + "</span></span>" +
-            '<button class="acc-btn soft du-accept" data-i="' + i + '" style="width:auto;margin:0;padding:8px 12px">Relever</button></li>'
-          ).join("") + "</ul>"
-        : '<p class="lb-empty">Aucun défi en attente.</p>';
-      content.querySelectorAll(".du-accept").forEach((b) => (b.onclick = () => {
-        const r = rows[Number(b.dataset.i)];
-        duOverlay.classList.remove("on");
-        if (window.OpenElevenGame && window.OpenElevenGame.acceptServerDuel) window.OpenElevenGame.acceptServerDuel(r);
-      }));
-      return;
-    }
-
-    // historique (+ défis envoyés encore en attente, annulables)
-    let out = [], hist = [];
-    try { const a = await sb.rpc("duels_outgoing"); out = a.data || []; } catch (_) {}
-    try { const b = await sb.rpc("duels_history"); hist = b.data || []; } catch (_) {}
-    let html = "";
-    if (out.length) {
-      html += '<p class="acc-sub" style="margin:6px 0 4px;font-weight:700">En attente (envoyés)</p><ul class="lb-list">' +
-        out.map((r, i) =>
-          '<li class="lb-row"><span class="lb-name">vs <strong>' + esc(r.to_pseudo) + '</strong> <span class="lb-sub">' + T("{n} pts · en attente", { n: r.from_score }) + "</span></span>" +
-          '<button class="acc-btn danger du-cancel" data-i="' + i + '" style="width:auto;margin:0;padding:7px 10px">Annuler</button></li>'
-        ).join("") + "</ul>";
-    }
-    if (hist.length) {
-      if (out.length) html += '<p class="acc-sub" style="margin:12px 0 4px;font-weight:700">Terminés</p>';
-      html += '<ul class="lb-list">' + hist.map((r) => {
-        const mine = r.i_am, myScore = mine === "from" ? r.from_score : r.to_score, opp = mine === "from" ? r.to_pseudo : r.from_pseudo, oppScore = mine === "from" ? r.to_score : r.from_score;
-        const res = r.winner === "tie" ? '<span style="color:var(--text-1,#567)">Nul</span>' : (r.winner === mine ? '<span style="color:var(--green,#087b4b);font-weight:800">Victoire</span>' : '<span style="color:#b3261e;font-weight:800">Défaite</span>');
-        return '<li class="lb-row"><span class="lb-name">vs <strong>' + esc(opp) + "</strong> <span class=\"lb-sub\">" + myScore + " – " + oppScore + "</span></span>" +
-          '<span class="lb-pts" style="display:flex;align-items:center;gap:8px">' + res +
-          '<button class="acc-btn soft du-rematch" data-opp="' + esc(opp) + '" style="width:auto;margin:0;padding:6px 9px;font-size:.78rem">Revanche</button></span></li>';
-      }).join("") + "</ul>";
-    }
-    content.innerHTML = html || '<p class="lb-empty">Aucun duel pour l\'instant.</p>';
-    content.querySelectorAll(".du-cancel").forEach((b) => (b.onclick = async () => {
-      const r = out[Number(b.dataset.i)];
-      b.disabled = true; b.textContent = "…";
-      try { await sb.rpc("duel_cancel", { p_id: r.id }); } catch (_) {}
-      renderDuels();
-    }));
-    content.querySelectorAll(".du-rematch").forEach((b) => (b.onclick = () => {
-      duOverlay.classList.remove("on");
-      if (window.OpenElevenGame && window.OpenElevenGame.startDuelVsPseudo) window.OpenElevenGame.startDuelVsPseudo(b.dataset.opp);
-    }));
-  }
-  function openDuels() { duTab = "send"; renderDuels(); duOverlay.classList.add("on"); }
+  // Duels et Amis vivent désormais dans UN SEUL panneau à onglets (soOverlay,
+  // plus bas) : regroupe défier/reçus/historique/classement/gérer-amis, avec
+  // un raccourci "⚔️ Défier" directement sur chaque ami. Voir renderSocial().
 
   // ============================================================================
   //  Amis (suivi par pseudo) + classement entre amis
@@ -1044,129 +948,239 @@
     try { await sb.from("friends").delete().eq("user_id", session.user.id).eq("friend_id", toId); } catch (_) {}
   }
 
-  const frOverlay = document.createElement("div");
-  frOverlay.className = "acc-overlay";
-  frOverlay.innerHTML = '<div class="lb-box" role="dialog" aria-modal="true"></div>';
-  document.body.appendChild(frOverlay);
-  const frBox = frOverlay.querySelector(".lb-box");
-  frOverlay.addEventListener("click", (e) => { if (e.target === frOverlay) frOverlay.classList.remove("on"); });
-  let frTab = "today";
-  // Pastille sur l'onglet « Gérer » : sans elle, une demande reçue resterait
+  // Panneau unique « Amis & Duels » : les deux anciens panneaux (duOverlay,
+  // frOverlay) tenaient des rôles très proches (retrouver quelqu'un par
+  // pseudo, jouer contre lui) — regroupés ici en 5 onglets, avec un
+  // raccourci "⚔️ Défier" directement sur chaque ami (onglet Amis).
+  const soOverlay = document.createElement("div");
+  soOverlay.className = "acc-overlay";
+  soOverlay.innerHTML = '<div class="lb-box" role="dialog" aria-modal="true"></div>';
+  document.body.appendChild(soOverlay);
+  const soBox = soOverlay.querySelector(".lb-box");
+  soOverlay.addEventListener("click", (e) => { if (e.target === soOverlay) soOverlay.classList.remove("on"); });
+  let soTab = "challenge";
+  let rankTab = "today"; // sous-onglet du Classement (today/week/alltime)
+  // Pastille sur l'onglet « Amis » : sans elle, une demande reçue resterait
   // invisible tant qu'on n'ouvre pas l'onglet.
-  let frPending = 0;
+  let soPending = 0;
   function paintPendingBadge() {
-    const tab = frBox.querySelector('.lb-tab[data-t="manage"]');
-    if (tab) tab.innerHTML = "Gérer" + (frPending ? ' <span class="fr-badge">' + frPending + "</span>" : "");
+    const tab = soBox.querySelector('.lb-tab[data-t="friends"]');
+    if (tab) tab.innerHTML = "Amis" + (soPending ? ' <span class="fr-badge">' + soPending + "</span>" : "");
   }
 
-  // `msg` : retour à afficher après une action ({ text, cls }), le rendu
-  // reconstruisant tout le panneau.
-  async function renderFriends(msg) {
-    frBox.innerHTML =
-      '<button class="acc-x" aria-label="Fermer">×</button><h3>👥 Amis</h3>' +
+  // `msg` : retour à afficher après une action ({ text, cls }). `prefill` :
+  // pseudo pré-rempli en arrivant sur l'onglet Défier (raccourci "⚔️ Défier"
+  // depuis la liste d'amis).
+  async function renderSocial(msg, prefill) {
+    soBox.innerHTML =
+      '<button class="acc-x" aria-label="Fermer">×</button><h3>👥 Amis &amp; Duels</h3>' +
       '<div class="lb-tabs">' +
-      '<button class="lb-tab' + (frTab === "today" ? " on" : "") + '" data-t="today">Aujourd\'hui</button>' +
-      '<button class="lb-tab' + (frTab === "week" ? " on" : "") + '" data-t="week">Semaine</button>' +
-      '<button class="lb-tab' + (frTab === "alltime" ? " on" : "") + '" data-t="alltime">Général</button>' +
-      '<button class="lb-tab' + (frTab === "manage" ? " on" : "") + '" data-t="manage">Gérer</button>' +
+      '<button class="lb-tab' + (soTab === "challenge" ? " on" : "") + '" data-t="challenge">Défier</button>' +
+      '<button class="lb-tab' + (soTab === "incoming" ? " on" : "") + '" data-t="incoming">Reçus</button>' +
+      '<button class="lb-tab' + (soTab === "history" ? " on" : "") + '" data-t="history">Historique</button>' +
+      '<button class="lb-tab' + (soTab === "ranking" ? " on" : "") + '" data-t="ranking">Classement</button>' +
+      '<button class="lb-tab' + (soTab === "friends" ? " on" : "") + '" data-t="friends">Amis</button>' +
       "</div><div class=\"lb-content\"><p class=\"lb-empty\">Chargement…</p></div>";
-    frBox.querySelector(".acc-x").onclick = () => frOverlay.classList.remove("on");
-    frBox.querySelectorAll(".lb-tab").forEach((b) => (b.onclick = () => { frTab = b.dataset.t; renderFriends(); }));
+    soBox.querySelector(".acc-x").onclick = () => soOverlay.classList.remove("on");
+    soBox.querySelectorAll(".lb-tab").forEach((b) => (b.onclick = () => { soTab = b.dataset.t; renderSocial(); }));
     paintPendingBadge();
-    const content = frBox.querySelector(".lb-content");
+    const content = soBox.querySelector(".lb-content");
 
-    if (!session) { content.innerHTML = '<p class="lb-empty">Connecte-toi (👤) pour gérer tes amis.</p>'; return; }
+    if (!session) { content.innerHTML = '<p class="lb-empty">Connecte-toi (👤) pour défier des joueurs et gérer tes amis.</p>'; return; }
 
-    if (frTab === "manage") {
-      const [incoming, outgoing, friends] = await Promise.all([listIncoming(), listOutgoing(), listFriends()]);
-      frPending = incoming.length;
-      paintPendingBadge();
-      setNavBadge("btn-friends", incoming.length); // garde la pastille d'accueil synchro (accept/refus la font varier)
-      const nameCell = (p) =>
-        '<span class="lb-name" data-pseudo="' + esc(p || "") + '" style="cursor:pointer">👤 ' + esc(p || "Joueur") + "</span>";
-      const btn = (cls, label, i) =>
-        '<button class="acc-btn ' + cls + '" data-i="' + i + '" style="width:auto;margin:0;padding:6px 10px;font-size:.78rem">' + label + "</button>";
-      const group = (title, rows, html) =>
-        rows.length ? '<p class="fr-head">' + title + "</p><ul class=\"lb-list\">" + rows.map(html).join("") + "</ul>" : "";
-
+    // ---- Défier -------------------------------------------------------------
+    if (soTab === "challenge") {
+      if (!pseudo) { content.innerHTML = '<p class="lb-empty">Choisis d\'abord un pseudo dans « Mon compte ».</p>'; return; }
+      const friends = await listFriends();
       content.innerHTML =
-        '<div class="acc-row" style="margin:2px 0 6px"><input type="text" id="fr-pseudo" maxlength="24" placeholder="Inviter un ami par pseudo" style="margin:0" />' +
-        '<button class="acc-btn soft" id="fr-add" style="width:auto;padding:11px 14px">Inviter</button></div><p class="acc-msg"></p>' +
-        group("Demandes reçues", incoming, (f, i) =>
-          '<li class="lb-row">' + nameCell(f.from_pseudo) +
-          '<span class="fr-acts">' + btn("soft fr-ok", "Accepter", i) + btn("danger fr-no", "Refuser", i) + "</span></li>") +
-        group("Invitations envoyées", outgoing, (f, i) =>
-          '<li class="lb-row">' + nameCell(f.friend_pseudo) +
-          '<span class="fr-acts"><span class="lb-sub">En attente</span>' + btn("danger fr-cancel", "Annuler", i) + "</span></li>") +
+        '<p class="acc-sub" style="margin:4px 0 8px">Entre un pseudo, ou choisis un ami ci-dessous. Tu joues ta carrière, ton défi lui est envoyé (même parcours pour vous deux).</p>' +
+        '<input type="text" id="du-pseudo" maxlength="24" placeholder="Pseudo de l\'adversaire" value="' + esc(prefill || "") + '" style="width:100%;box-sizing:border-box;margin:0 0 8px;padding:11px 13px;border:1.5px solid rgba(12,45,30,.18);border-radius:10px;font-size:1rem" />' +
+        '<button class="acc-btn primary" id="du-go" style="margin:0">🆚 Lancer le défi</button><p class="acc-msg"></p>' +
         (friends.length
-          ? group("Amis", friends, (f, i) => '<li class="lb-row">' + nameCell(f.friend_pseudo) + btn("danger fr-del", "Retirer", i) + "</li>")
-          : '<p class="lb-empty">Aucun ami pour l\'instant. Invite un pseudo ci-dessus : il devra accepter ta demande.</p>');
-
-      // Le message survit au re-rendu : il est repeint APRÈS, sinon
-      // renderFriends() l'effacerait aussitôt écrit.
-      const m = content.querySelector(".acc-msg");
-      if (msg) { m.textContent = msg.text; m.className = "acc-msg " + msg.cls; }
-
-      const doAdd = async () => {
-        const r = await addFriend(content.querySelector("#fr-pseudo").value);
-        if (!r.ok) {
-          m.textContent = (r.error && r.error.message) || T("Échec");
-          m.className = "acc-msg err";
-          return;
-        }
-        renderFriends({
-          text: T(r.accepted ? "Vous êtes maintenant amis avec {p} ✔" : "Invitation envoyée à {p} ✔", { p: r.pseudo }),
-          cls: "ok",
-        });
+          ? '<p class="fr-head">Tes amis</p><ul class="lb-list">' + friends.map((f) =>
+              '<li class="lb-row"><span class="lb-name">👤 ' + esc(f.friend_pseudo) + '</span>' +
+              '<button class="acc-btn soft du-pick" data-p="' + esc(f.friend_pseudo) + '" style="width:auto;margin:0;padding:6px 10px;font-size:.78rem">⚔️ Défier</button></li>'
+            ).join("") + "</ul>"
+          : "");
+      const go = async () => {
+        const p = content.querySelector("#du-pseudo").value.trim();
+        const m = content.querySelector(".acc-msg");
+        if (p.length < 2) { m.textContent = "Pseudo trop court."; m.className = "acc-msg err"; return; }
+        if (p.toLowerCase() === (pseudo || "").toLowerCase()) { m.textContent = "Tu ne peux pas te défier toi-même."; m.className = "acc-msg err"; return; }
+        // Vérifie que le pseudo existe AVANT de jouer (évite un run perdu sur une faute).
+        m.textContent = "Vérification…"; m.className = "acc-msg";
+        const escp = p.replace(/[\\%_]/g, "\\$&");
+        const { data } = await sb.from("profiles").select("pseudo").ilike("pseudo", escp).limit(1);
+        if (!data || !data.length) { m.textContent = "Aucun joueur avec ce pseudo."; m.className = "acc-msg err"; return; }
+        soOverlay.classList.remove("on");
+        // Utilise la casse exacte du profil trouvé.
+        if (window.OpenElevenGame && window.OpenElevenGame.startDuelVsPseudo) window.OpenElevenGame.startDuelVsPseudo(data[0].pseudo);
       };
-      content.querySelector("#fr-add").onclick = doAdd;
-      content.querySelector("#fr-pseudo").addEventListener("keydown", (e) => { if (e.key === "Enter") doAdd(); });
-
-      const act = (sel, fn) => content.querySelectorAll(sel).forEach((b) => (b.onclick = async () => {
-        b.disabled = true;
-        renderFriends(await fn(Number(b.dataset.i)));
-      }));
-      act(".fr-ok", async (i) => {
-        const who = incoming[i].from_pseudo;
-        const r = await acceptRequest(incoming[i].user_id, who);
-        return r.ok
-          ? { text: T("Vous êtes maintenant amis avec {p} ✔", { p: who }), cls: "ok" }
-          : { text: T("Échec, réessaie."), cls: "err" };
-      });
-      act(".fr-no", (i) => declineRequest(incoming[i].user_id));
-      act(".fr-cancel", (i) => cancelRequest(outgoing[i].friend_id));
-      act(".fr-del", (i) => removeFriend(friends[i].friend_id));
-      content.querySelectorAll("[data-pseudo]").forEach((el) => { if (el.dataset.pseudo) el.onclick = () => openProfile(el.dataset.pseudo); });
+      content.querySelector("#du-go").onclick = go;
+      content.querySelectorAll(".du-pick").forEach((b) => (b.onclick = () => { content.querySelector("#du-pseudo").value = b.dataset.p; go(); }));
       return;
     }
 
-    // classement entre amis (moi + suivis)
-    try {
-      let rows, isRange = frTab !== "today";
-      if (frTab === "today") { const { data } = await sb.rpc("friends_daily", { d: todayKeyLocal(), lim: 100 }); rows = data || []; }
-      else { const { data } = await sb.rpc("friends_range", { since: frTab === "week" ? weekSince() : "", lim: 100 }); rows = data || []; }
+    // ---- Reçus ----------------------------------------------------------------
+    if (soTab === "incoming") {
+      let rows = [];
+      try { const { data } = await sb.rpc("duels_incoming"); rows = data || []; } catch (_) {}
+      refreshNotifs(); // garde la pastille d'accueil synchro (compte combiné amis+duels)
       content.innerHTML = rows.length
-        ? '<ul class="lb-list">' + rows.map((r) => {
-            const val = isRange ? r.total : r.score;
-            const sub = isRange ? ' <span class="lb-sub">· ' + r.days + " j</span>" : "";
-            return '<li class="lb-row' + (r.is_me ? " mine" : "") + '" data-pseudo="' + esc(r.pseudo || "") + '">' +
-              '<span class="lb-rank">' + medalR(Number(r.rank)) + "</span>" +
-              '<span class="lb-name">' + esc(r.pseudo || "Joueur") + (r.is_me ? " <span class=\"lb-sub\">(toi)</span>" : "") + "</span>" +
-              '<span class="lb-pts">' + val + ' <span class="lb-sub">pts</span>' + sub + "</span></li>";
-          }).join("") + "</ul>"
-        : '<p class="lb-empty">Personne n\'a encore joué le défi. Invite des amis dans « Gérer ».</p>';
-      content.querySelectorAll(".lb-row[data-pseudo]").forEach((el) => { if (el.dataset.pseudo) el.onclick = () => openProfile(el.dataset.pseudo); });
-    } catch (e) {
-      content.innerHTML = '<p class="lb-empty">Classement indisponible pour le moment.</p>';
+        ? '<ul class="lb-list">' + rows.map((r, i) =>
+            '<li class="lb-row"><span class="lb-name">🆚 <strong>' + esc(r.from_label || r.from_pseudo) + "</strong><br><span class=\"lb-sub\">" + T("te défie · {n} pts à battre", { n: r.from_score }) + "</span></span>" +
+            '<button class="acc-btn soft du-accept" data-i="' + i + '" style="width:auto;margin:0;padding:8px 12px">Relever</button></li>'
+          ).join("") + "</ul>"
+        : '<p class="lb-empty">Aucun défi en attente.</p>';
+      content.querySelectorAll(".du-accept").forEach((b) => (b.onclick = () => {
+        const r = rows[Number(b.dataset.i)];
+        soOverlay.classList.remove("on");
+        if (window.OpenElevenGame && window.OpenElevenGame.acceptServerDuel) window.OpenElevenGame.acceptServerDuel(r);
+      }));
+      return;
     }
+
+    // ---- Historique (+ défis envoyés encore en attente, annulables) -----------
+    if (soTab === "history") {
+      let out = [], hist = [];
+      try { const a = await sb.rpc("duels_outgoing"); out = a.data || []; } catch (_) {}
+      try { const b = await sb.rpc("duels_history"); hist = b.data || []; } catch (_) {}
+      let html = "";
+      if (out.length) {
+        html += '<p class="acc-sub" style="margin:6px 0 4px;font-weight:700">En attente (envoyés)</p><ul class="lb-list">' +
+          out.map((r, i) =>
+            '<li class="lb-row"><span class="lb-name">vs <strong>' + esc(r.to_pseudo) + '</strong> <span class="lb-sub">' + T("{n} pts · en attente", { n: r.from_score }) + "</span></span>" +
+            '<button class="acc-btn danger du-cancel" data-i="' + i + '" style="width:auto;margin:0;padding:7px 10px">Annuler</button></li>'
+          ).join("") + "</ul>";
+      }
+      if (hist.length) {
+        if (out.length) html += '<p class="acc-sub" style="margin:12px 0 4px;font-weight:700">Terminés</p>';
+        html += '<ul class="lb-list">' + hist.map((r) => {
+          const mine = r.i_am, myScore = mine === "from" ? r.from_score : r.to_score, opp = mine === "from" ? r.to_pseudo : r.from_pseudo, oppScore = mine === "from" ? r.to_score : r.from_score;
+          const res = r.winner === "tie" ? '<span style="color:var(--text-1,#567)">Nul</span>' : (r.winner === mine ? '<span style="color:var(--green,#087b4b);font-weight:800">Victoire</span>' : '<span style="color:#b3261e;font-weight:800">Défaite</span>');
+          return '<li class="lb-row"><span class="lb-name">vs <strong>' + esc(opp) + "</strong> <span class=\"lb-sub\">" + myScore + " – " + oppScore + "</span></span>" +
+            '<span class="lb-pts" style="display:flex;align-items:center;gap:8px">' + res +
+            '<button class="acc-btn soft du-rematch" data-opp="' + esc(opp) + '" style="width:auto;margin:0;padding:6px 9px;font-size:.78rem">Revanche</button></span></li>';
+        }).join("") + "</ul>";
+      }
+      content.innerHTML = html || '<p class="lb-empty">Aucun duel pour l\'instant.</p>';
+      content.querySelectorAll(".du-cancel").forEach((b) => (b.onclick = async () => {
+        const r = out[Number(b.dataset.i)];
+        b.disabled = true; b.textContent = "…";
+        try { await sb.rpc("duel_cancel", { p_id: r.id }); } catch (_) {}
+        renderSocial();
+      }));
+      content.querySelectorAll(".du-rematch").forEach((b) => (b.onclick = () => {
+        soOverlay.classList.remove("on");
+        if (window.OpenElevenGame && window.OpenElevenGame.startDuelVsPseudo) window.OpenElevenGame.startDuelVsPseudo(b.dataset.opp);
+      }));
+      return;
+    }
+
+    // ---- Classement entre amis (moi + suivis) ----------------------------------
+    if (soTab === "ranking") {
+      const rankLabel = { today: "Aujourd'hui", week: "Semaine", alltime: "Général" };
+      content.innerHTML =
+        '<div class="lb-tabs" style="margin-bottom:8px">' + ["today", "week", "alltime"].map((t) =>
+          '<button class="lb-tab so-rank' + (rankTab === t ? " on" : "") + '" data-r="' + t + '">' + rankLabel[t] + "</button>"
+        ).join("") + '</div><div id="so-rank-body"><p class="lb-empty">Chargement…</p></div>';
+      content.querySelectorAll(".so-rank").forEach((b) => (b.onclick = () => { rankTab = b.dataset.r; renderSocial(); }));
+      const body = content.querySelector("#so-rank-body");
+      try {
+        let rows, isRange = rankTab !== "today";
+        if (rankTab === "today") { const { data } = await sb.rpc("friends_daily", { d: todayKeyLocal(), lim: 100 }); rows = data || []; }
+        else { const { data } = await sb.rpc("friends_range", { since: rankTab === "week" ? weekSince() : "", lim: 100 }); rows = data || []; }
+        body.innerHTML = rows.length
+          ? '<ul class="lb-list">' + rows.map((r) => {
+              const val = isRange ? r.total : r.score;
+              const sub = isRange ? ' <span class="lb-sub">· ' + r.days + " j</span>" : "";
+              return '<li class="lb-row' + (r.is_me ? " mine" : "") + '" data-pseudo="' + esc(r.pseudo || "") + '">' +
+                '<span class="lb-rank">' + medalR(Number(r.rank)) + "</span>" +
+                '<span class="lb-name">' + esc(r.pseudo || "Joueur") + (r.is_me ? " <span class=\"lb-sub\">(toi)</span>" : "") + "</span>" +
+                '<span class="lb-pts">' + val + ' <span class="lb-sub">pts</span>' + sub + "</span></li>";
+            }).join("") + "</ul>"
+          : '<p class="lb-empty">Personne n\'a encore joué le défi. Invite des amis dans « Amis ».</p>';
+        body.querySelectorAll(".lb-row[data-pseudo]").forEach((el) => { if (el.dataset.pseudo) el.onclick = () => openProfile(el.dataset.pseudo); });
+      } catch (e) {
+        body.innerHTML = '<p class="lb-empty">Classement indisponible pour le moment.</p>';
+      }
+      return;
+    }
+
+    // ---- Amis (ex-« Gérer ») : demandes + liste, avec raccourci Défier --------
+    const [incoming, outgoing, friends] = await Promise.all([listIncoming(), listOutgoing(), listFriends()]);
+    soPending = incoming.length;
+    paintPendingBadge();
+    refreshNotifs(); // garde la pastille d'accueil synchro (accept/refus la font varier)
+    const nameCell = (p) =>
+      '<span class="lb-name" data-pseudo="' + esc(p || "") + '" style="cursor:pointer">👤 ' + esc(p || "Joueur") + "</span>";
+    const btn = (cls, label, i) =>
+      '<button class="acc-btn ' + cls + '" data-i="' + i + '" style="width:auto;margin:0;padding:6px 10px;font-size:.78rem">' + label + "</button>";
+    const group = (title, rows, html) =>
+      rows.length ? '<p class="fr-head">' + title + "</p><ul class=\"lb-list\">" + rows.map(html).join("") + "</ul>" : "";
+
+    content.innerHTML =
+      '<div class="acc-row" style="margin:2px 0 6px"><input type="text" id="fr-pseudo" maxlength="24" placeholder="Inviter un ami par pseudo" style="margin:0" />' +
+      '<button class="acc-btn soft" id="fr-add" style="width:auto;padding:11px 14px">Inviter</button></div><p class="acc-msg"></p>' +
+      group("Demandes reçues", incoming, (f, i) =>
+        '<li class="lb-row">' + nameCell(f.from_pseudo) +
+        '<span class="fr-acts">' + btn("soft fr-ok", "Accepter", i) + btn("danger fr-no", "Refuser", i) + "</span></li>") +
+      group("Invitations envoyées", outgoing, (f, i) =>
+        '<li class="lb-row">' + nameCell(f.friend_pseudo) +
+        '<span class="fr-acts"><span class="lb-sub">En attente</span>' + btn("danger fr-cancel", "Annuler", i) + "</span></li>") +
+      (friends.length
+        ? group("Amis", friends, (f, i) =>
+            '<li class="lb-row">' + nameCell(f.friend_pseudo) +
+            '<span class="fr-acts">' + btn("soft fr-challenge", "⚔️ Défier", i) + btn("danger fr-del", "Retirer", i) + "</span></li>")
+        : '<p class="lb-empty">Aucun ami pour l\'instant. Invite un pseudo ci-dessus : il devra accepter ta demande.</p>');
+
+    // Le message survit au re-rendu : il est repeint APRÈS, sinon
+    // renderSocial() l'effacerait aussitôt écrit.
+    const m = content.querySelector(".acc-msg");
+    if (msg) { m.textContent = msg.text; m.className = "acc-msg " + msg.cls; }
+
+    const doAdd = async () => {
+      const r = await addFriend(content.querySelector("#fr-pseudo").value);
+      if (!r.ok) {
+        m.textContent = (r.error && r.error.message) || T("Échec");
+        m.className = "acc-msg err";
+        return;
+      }
+      renderSocial({
+        text: T(r.accepted ? "Vous êtes maintenant amis avec {p} ✔" : "Invitation envoyée à {p} ✔", { p: r.pseudo }),
+        cls: "ok",
+      });
+    };
+    content.querySelector("#fr-add").onclick = doAdd;
+    content.querySelector("#fr-pseudo").addEventListener("keydown", (e) => { if (e.key === "Enter") doAdd(); });
+
+    const act = (sel, fn) => content.querySelectorAll(sel).forEach((b) => (b.onclick = async () => {
+      b.disabled = true;
+      renderSocial(await fn(Number(b.dataset.i)));
+    }));
+    act(".fr-ok", async (i) => {
+      const who = incoming[i].from_pseudo;
+      const r = await acceptRequest(incoming[i].user_id, who);
+      return r.ok
+        ? { text: T("Vous êtes maintenant amis avec {p} ✔", { p: who }), cls: "ok" }
+        : { text: T("Échec, réessaie."), cls: "err" };
+    });
+    act(".fr-no", (i) => declineRequest(incoming[i].user_id));
+    act(".fr-cancel", (i) => cancelRequest(outgoing[i].friend_id));
+    act(".fr-del", (i) => removeFriend(friends[i].friend_id));
+    content.querySelectorAll(".fr-challenge").forEach((b) => (b.onclick = () => {
+      soTab = "challenge";
+      renderSocial(null, friends[Number(b.dataset.i)].friend_pseudo);
+    }));
+    content.querySelectorAll("[data-pseudo]").forEach((el) => { if (el.dataset.pseudo) el.onclick = () => openProfile(el.dataset.pseudo); });
   }
-  function openFriends() {
-    frTab = "today";
-    renderFriends();
-    frOverlay.classList.add("on");
-    // Compté en arrière-plan : la pastille doit apparaître dès l'ouverture,
-    // sans attendre que l'on aille dans « Gérer ».
-    if (session) listIncoming().then((r) => { frPending = r.length; paintPendingBadge(); }).catch(() => {});
+  function openSocial() {
+    soTab = "challenge";
+    renderSocial();
+    soOverlay.classList.add("on");
+    // Compté en arrière-plan : la pastille de l'onglet Amis doit apparaître
+    // dès l'ouverture, sans attendre qu'on y clique.
+    if (session) listIncoming().then((r) => { soPending = r.length; paintPendingBadge(); }).catch(() => {});
   }
 
   // ---- pool de légendes communautaires (invité du mercato) -------------------
@@ -1196,12 +1210,13 @@
     } catch (_) { return null; }
   }
 
-  // ---- Pastilles de notification (accueil : Amis / Duels) --------------------
+  // ---- Pastille de notification (accueil : Amis & Duels) ---------------------
   // Un petit compteur rouge en coin du bouton dès qu'une invitation arrive —
-  // demande d'ami sur « Amis », défi reçu sur « Duels » — pour ne plus avoir à
-  // ouvrir la fenêtre pour le savoir. Compté côté serveur, rafraîchi à la
-  // connexion, au retour sur l'onglet, après chaque action, et par un léger
-  // sondage périodique. Silencieux : une pastille ne doit jamais gêner le jeu.
+  // demande d'ami ou défi reçu, comptés ensemble sur le bouton unique — pour
+  // ne plus avoir à ouvrir la fenêtre pour le savoir. Compté côté serveur,
+  // rafraîchi à la connexion, au retour sur l'onglet, après chaque action, et
+  // par un léger sondage périodique. Silencieux : une pastille ne doit jamais
+  // gêner le jeu.
   function setNavBadge(btnId, n) {
     const b = document.getElementById(btnId);
     if (!b) return;
@@ -1223,13 +1238,12 @@
   }
   let notifsBusy = false;
   async function refreshNotifs() {
-    if (!session) { setNavBadge("btn-friends", 0); setNavBadge("btn-duels", 0); return; }
+    if (!session) { setNavBadge("btn-social", 0); return; }
     if (notifsBusy) return; // évite les appels concurrents (poll + retour d'onglet)
     notifsBusy = true;
     try {
       const [f, d] = await Promise.all([countIncomingFriends(), countIncomingDuels()]);
-      setNavBadge("btn-friends", f);
-      setNavBadge("btn-duels", d);
+      setNavBadge("btn-social", f + d);
     } finally { notifsBusy = false; }
   }
   // Sondage discret : ne tourne que quand l'onglet est visible et qu'on est
@@ -1239,8 +1253,12 @@
   // ---- API publique pour le jeu ----------------------------------------------
   window.OpenElevenAccount = {
     submitDaily, openLeaderboard, openProfile, getLegends, pushProfile: pushProfileStats,
-    openDuels, submitDuelCreate, submitDuelRespond, openFriends,
+    submitDuelCreate, submitDuelRespond, openSocial,
     bumpStat, getStats, refreshNotifs,
+    // Exposés pour room.js (mode « carrière commune ») : ce module reste
+    // autonome (aucune notion de salle ici), il ne fait qu'exposer ce qu'il
+    // sait déjà (client Supabase, session, liste d'amis acceptés).
+    getClient: () => sb, getSession: () => session, listFriends,
   };
 
   // ---- bouton d'accueil -------------------------------------------------------
