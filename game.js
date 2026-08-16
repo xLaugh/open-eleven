@@ -144,9 +144,23 @@
   // cassés sur certains systèmes, ex. Angleterre), sinon emoji.
   function flagHtml(entity) {
     if (!entity) return "";
-    if (entity.img) return `<img class="flag-mini" src="${encodeURI(entity.img)}" alt="${esc(entity.name || "")}" onerror="this.remove()" />`;
+    if (entity.img) return `<img class="flag-mini" src="${encodeURI(entity.img)}" alt="${esc(entity.name || "")}" />`;
     return entity.flag || "";
   }
+  // Secours des images de drapeau/logo cassées. Un onerror="..." inline serait
+  // bloqué par la CSP stricte (script-src 'self', sans unsafe-hashes) — d'où
+  // cette délégation en phase de CAPTURE ("error" ne remonte pas en bulles),
+  // qui couvre toutes les images de secours en un seul point, où qu'elles
+  // soient insérées (innerHTML dispersés dans tout le fichier).
+  document.addEventListener("error", (e) => {
+    const img = e.target;
+    if (!(img instanceof HTMLImageElement)) return;
+    if (img.classList.contains("nat-flag-img")) {
+      img.outerHTML = `<span class="nat-flag">${img.dataset.fallbackFlag || ""}</span>`;
+    } else if (img.classList.contains("flag-mini") || img.classList.contains("club-logo")) {
+      img.remove();
+    }
+  }, true);
 
   // Ré-affiche la carte de jeu avec une animation d'entrée.
   function showCard(html, tone) {
@@ -178,7 +192,7 @@
     const dualFlag = dual ? ` <span class="dual-nat" title="${T("Éligible à la sélection {nat}", { nat: esc(dual.name) })}">${flagHtml(dual)}</span>` : "";
     $("hh-player").innerHTML = `${flagHtml(G.nationality)}${dualFlag} ${esc(G.name)}`;
     $("hh-age").textContent = `${G.age} ans · ${G.year}`;
-    const clubImg = G.club.img ? `<img class="club-logo" src="${encodeURI(G.club.img)}" alt="" onerror="this.remove()" />` : "";
+    const clubImg = G.club.img ? `<img class="club-logo" src="${encodeURI(G.club.img)}" alt="" />` : "";
     const lvl = E.lvlOf(G, G.club);
     const role = E.roleOf(G);
     const roleChip = (!G.loan && role) ? ` <span class="role-chip role-${role.id}" title="${esc(role.desc)}">${role.icon} ${esc(role.label)}</span>` : "";
@@ -349,7 +363,7 @@
       const card = document.createElement("button");
       card.className = "nat-card";
       const flag = nat.img
-        ? `<img class="nat-flag-img" src="${encodeURI(nat.img)}" alt="${esc(nat.name)}" onerror="this.outerHTML='<span class=nat-flag>${nat.flag}</span>'" />`
+        ? `<img class="nat-flag-img" src="${encodeURI(nat.img)}" alt="${esc(nat.name)}" data-fallback-flag="${esc(nat.flag)}" />`
         : `<span class="nat-flag">${nat.flag}</span>`;
       card.innerHTML = `${flag}<span class="nat-name">${esc(nat.name)}</span>`;
       card.addEventListener("click", () => showDualPicker(nat));
@@ -384,7 +398,7 @@
       const card = document.createElement("button");
       card.className = "nat-card";
       const flag = other.img
-        ? `<img class="nat-flag-img" src="${encodeURI(other.img)}" alt="${esc(other.name)}" onerror="this.outerHTML='<span class=nat-flag>${other.flag}</span>'" />`
+        ? `<img class="nat-flag-img" src="${encodeURI(other.img)}" alt="${esc(other.name)}" data-fallback-flag="${esc(other.flag)}" />`
         : `<span class="nat-flag">${other.flag}</span>`;
       // Le poids Mondial dit d'un coup d'œil si c'est une nation qui va loin.
       const w = other.wcWeight != null ? other.wcWeight : other.weight;
@@ -519,7 +533,7 @@
     if (setup.roomId) {
       if (setup._roomStep) setup._roomStep.stop();
       setup._roomStep = window.OpenElevenRoom.renderAcademyStep(
-        setup.roomId, setup._academyOffers.map((o) => o.club.id),
+        setup.roomId, setup._academyOffers, // offres complètes : room.js en a besoin pour peindre des cartes aussi riches qu'en solo (drapeau, description)
         { subEl: $("academy-sub"), listEl: list },
         (clubId) => {
           setup._roomStep = null;
@@ -892,7 +906,7 @@
     }
     offers.forEach((offer, i) => {
       const cc = E.countryOf(offer.club.countryId);
-      const img = offer.club.img ? `<img class="club-logo" src="${encodeURI(offer.club.img)}" alt="" onerror="this.remove()" />` : "";
+      const img = offer.club.img ? `<img class="club-logo" src="${encodeURI(offer.club.img)}" alt="" />` : "";
       const role = ROLES[offer.role != null ? offer.role : 2];
       const roleChip = role ? `<span class="role-chip role-${role.id}" title="${esc(role.desc)}">${role.icon} ${esc(role.label)}</span>` : "";
       buttons += `<button class="opt-btn" data-offer="${i}">
@@ -944,6 +958,17 @@
     }
 
     lastReport = E.playSeason(G);
+    // Mode salle : publie un instantané pour le tableau de comparaison en direct
+    // des autres membres. Best-effort (pushLiveStats avale ses propres erreurs).
+    if (G.room) {
+      window.OpenElevenRoom.pushLiveStats(G.room.id, {
+        name: G.name, age: G.age,
+        club: G.club.name, level: lastReport.level, countryId: G.club.countryId,
+        seasonGoals: lastReport.goals, seasonAssists: lastReport.assists, seasonRating: lastReport.rating,
+        totalGoals: G.totals.goals, totalAssists: G.totals.assists, totalMatches: G.totals.matches,
+        ovr: E.ovr(G),
+      });
+    }
     updateHeader();
     processMomentQueue();
   }
@@ -1369,7 +1394,12 @@
     // ici le global du même nom (idiome déjà utilisé par renderTransferChoice
     // plus haut) : on passe par globalThis, pas par `window.OpenElevenRoom`.
     if (G.room) {
-      const myPendingOffer = window ? { offers: window.offers.map((o) => o.club.id), forced: !!window.noStay } : null;
+      // Une seule offre par membre (la première) : avec 2-4 fenêtres × 2-4
+      // offres chacune, l'union complète produisait 6-8 candidats illisibles
+      // au vote — une par membre suffit, comme le club de départ (room_launch).
+      // window.offers peut être vide (fenêtre sans offre concrète, cf. solo) :
+      // traité comme "pas de proposition", comme si la fenêtre n'existait pas.
+      const myPendingOffer = window && window.offers.length ? { offers: [window.offers[0].club.id], forced: !!window.noStay } : null;
       globalThis.OpenElevenRoom.renderSeasonBarrierStep(G.room.id, myPendingOffer, showCard, (result) => {
         if (result && result.choice && result.choice !== "stay") {
           const offers = E.offersFor(G, { clubId: result.choice });
@@ -3227,6 +3257,7 @@
     natFlagImgs: NAT_FLAG_IMGS,
     levelInfo: levelInfo,
     startRoomCareer: startRoomCareer,
+    flagHtml: flagHtml, // pour room.js : mêmes cartes de club riches qu'en solo
   };
 
   // --- Sauvegarde & reprise de la carrière en cours ------------------------------

@@ -62,8 +62,16 @@
     KEYS.forEach((k) => { const v = localStorage.getItem(k); if (v != null) d[k] = v; });
     return d;
   }
+  // ⚠️ Doit couvrir LES TROIS clés de KEYS, "openEleven_current" (carrière en
+  // cours) y compris — l'oubli de cette dernière causait une boucle de
+  // rechargement infinie : un compte avec une sauvegarde cloud contenant une
+  // carrière en cours mais AUCUNE carrière terminée (donc ni panthéon ni
+  // progression) repassait chaque fois par la branche "aucune donnée locale"
+  // ci-dessous (applyLocal + location.reload), qui rechargeait la page sans
+  // jamais satisfaire la condition — reload à l'infini, repéré via un compte
+  // de test resté coincé en pleine carrière de salle.
   function hasLocalData() {
-    return !!localStorage.getItem("destinDeChampion_pantheon") || !!localStorage.getItem("destinDeChampion_progress");
+    return !!localStorage.getItem("openEleven_current") || !!localStorage.getItem("destinDeChampion_pantheon") || !!localStorage.getItem("destinDeChampion_progress");
   }
   function applyLocal(data) {
     KEYS.forEach((k) => { if (data && typeof data[k] === "string") localStorage.setItem(k, data[k]); });

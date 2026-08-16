@@ -30,6 +30,9 @@
   if (btn) btn.style.display = "";
   const sb = acc.getClient();
   const E = window.Engine; // CLUBS, lui, est un global de script classique (data-clubs.js), accessible tel quel
+  // Exposé par game.js (chargé avant room.js) : mêmes cartes de club riches
+  // (drapeau du pays) qu'en solo, sans dupliquer la logique NAT_FLAG_IMGS ici.
+  const flagHtml = (window.OE && window.OE.flagHtml) || (() => "");
 
   function setNavBadge(n) {
     if (!btn) return;
@@ -178,8 +181,14 @@
         const playRow = room.phase === "season_vote"
           ? '<div class="acc-row" style="margin:6px 0 2px">' + btnHtml("soft rm-vote-now", "Voter maintenant", room.id) + "</div>"
           : '<div class="acc-row" style="margin:6px 0 2px">' + btnHtml("soft rm-play", playLabel, room.id) + "</div>";
+        // Le comparatif n'a de sens qu'une fois la salle lancée (avant, live_stats
+        // est vide pour tout le monde — cf. pushLiveStats, appelé après chaque
+        // saison jouée en mode salle).
+        const statsRow = room.status === "active"
+          ? '<div class="acc-row" style="margin:6px 0 2px">' + btnHtml("soft rm-stats", "📊 Comparer les stats", room.id) + "</div>"
+          : "";
         return group("Salle · " + esc(phaseLabel) + " (" + room.members.filter((m) => m.status === "joined").length + "/4)",
-          '<ul class="lb-list">' + rows + "</ul>" + inviteRow + playRow +
+          '<ul class="lb-list">' + rows + "</ul>" + inviteRow + playRow + statsRow +
           '<div class="acc-row" style="margin:6px 0 2px">' + btnHtml("danger rm-leave", "Quitter la salle", room.id) + "</div>");
       }).join("");
     } else if (!incoming.length) {
@@ -224,6 +233,7 @@
       render(error ? { text: T("Échec de l'invitation."), cls: "err" } : { text: T("Invitation envoyée ✔"), cls: "ok" });
     }));
     content.querySelectorAll(".rm-vote-now").forEach((b) => (b.onclick = () => renderVoteInline(b.dataset.i)));
+    content.querySelectorAll(".rm-stats").forEach((b) => (b.onclick = () => renderStatsInline(b.dataset.i)));
     content.querySelectorAll(".rm-kick").forEach((b) => (b.onclick = async () => {
       const [roomId, targetId] = b.dataset.i.split("|");
       b.disabled = true;
@@ -275,10 +285,16 @@
       content.innerHTML =
         '<p class="lb-sub">' + esc(T("{n}/{t} ont voté.", { n: (ballots || []).length, t: (members || []).length })) + "</p>" +
         '<ul class="lb-list">' + vote.candidates.map((c) => {
-          const label = c === "stay" ? T("Rester au club actuel") : (function () {
-            const club = CLUBS.find((x) => x.id === c);
-            return club ? esc(club.name) + (club.colors ? " " + club.colors : "") : esc(c);
-          })();
+          if (c === "stay") {
+            return '<li class="lb-row"><span class="lb-name">' + T("Rester au club actuel") + "</span>" +
+              '<button class="acc-btn soft rm-tv-opt" data-c="stay" style="width:auto;padding:6px 10px;font-size:.78rem"' +
+              (mine && mine.choice === "stay" ? " disabled" : "") + ">" + (mine && mine.choice === "stay" ? "✔" : T("Voter")) + "</button></li>";
+          }
+          const club = CLUBS.find((x) => x.id === c);
+          if (!club) return "";
+          const cc = E.countryOf(club.countryId);
+          const label = '<span class="level-tag level-' + esc(club.level) + '">' + esc(E.divShort(club.level, club.countryId)) + "</span> " +
+            esc(club.name) + (club.colors ? " " + club.colors : "") + " " + flagHtml(cc);
           return '<li class="lb-row"><span class="lb-name">' + label + "</span>" +
             '<button class="acc-btn soft rm-tv-opt" data-c="' + esc(c) + '" style="width:auto;padding:6px 10px;font-size:.78rem"' +
             (mine && mine.choice === c ? " disabled" : "") + ">" + (mine && mine.choice === c ? "✔" : T("Voter")) + "</button></li>";
@@ -288,9 +304,62 @@
     back();
     content.querySelectorAll(".rm-tv-opt").forEach((b) => (b.onclick = async () => {
       b.disabled = true;
-      await sb.rpc("room_cast_vote", { p_vote_id: vote.id, p_choice: b.dataset.c });
+      const { error } = await sb.rpc("room_cast_vote", { p_vote_id: vote.id, p_choice: b.dataset.c });
+      if (!error) sb.rpc("room_maybe_resolve_vote", { p_vote_id: vote.id }).catch(() => {});
       renderVoteInline(roomId);
     }));
+  }
+
+  // Comparatif des statistiques en direct des membres, alimenté par
+  // pushLiveStats (game.js, appelé après chaque saison jouée en mode salle).
+  // Pas de sondage automatique ici : l'utilisateur a explicitement demandé
+  // d'éviter le clignotement d'un rafraîchissement en boucle sur ce genre de
+  // vue — un bouton Actualiser suffit, la vue reste stable tant qu'on ne le
+  // presse pas.
+  async function renderStatsInline(roomId) {
+    box.innerHTML = '<button class="acc-x" aria-label="Fermer">×</button><h3>📊 Statistiques de la salle</h3><div class="lb-content"><p class="lb-empty">Chargement…</p></div>';
+    box.querySelector(".acc-x").onclick = () => overlay.classList.remove("on");
+    const content = box.querySelector(".lb-content");
+
+    async function draw() {
+      const { data: members } = await sb.from("room_members")
+        .select("user_id, pseudo, status, career_ended, live_stats")
+        .eq("room_id", roomId).eq("status", "joined");
+      const rows = (members || []).slice().sort((a, b) =>
+        (((b.live_stats || {}).totalGoals) || 0) - (((a.live_stats || {}).totalGoals) || 0));
+
+      const lines = rows.map((m, i) => {
+        const s = m.live_stats;
+        const statusTag = m.career_ended ? ' <span class="lb-sub">🏁 ' + esc(T("carrière terminée")) + "</span>" : "";
+        if (!s) {
+          return '<li class="lb-row" style="flex-direction:column;align-items:flex-start;gap:4px">' +
+            '<span class="lb-name">👤 ' + esc(m.pseudo) + statusTag + "</span>" +
+            '<span class="lb-sub">' + esc(T("Pas encore de données pour cette carrière.")) + "</span></li>";
+        }
+        const rank = i === 0 && s.totalGoals ? "🥇 " : "";
+        const cc = s.countryId ? E.countryOf(s.countryId) : null;
+        const clubLine = s.club
+          ? '<span class="lb-sub">' + (s.level ? '<span class="level-tag level-' + esc(s.level) + '">' + esc(E.divShort(s.level, s.countryId)) + "</span> " : "") +
+            esc(s.club) + (cc ? " " + flagHtml(cc) : "") + (s.age != null ? " · " + esc(s.age) + " ans" : "") + "</span>"
+          : "";
+        const seasonPart = s.seasonGoals != null
+          ? s.seasonGoals + " ⚽ " + (s.seasonAssists || 0) + " 🅰️" + (s.seasonRating != null ? " · " + s.seasonRating : "")
+          : "?";
+        const careerPart = (s.totalGoals != null ? s.totalGoals : "?") + " ⚽ " + (s.totalAssists != null ? s.totalAssists : "?") +
+          " 🅰️ · " + (s.totalMatches != null ? s.totalMatches : "?") + " " + esc(T("matchs")) +
+          (s.ovr != null ? " · " + s.ovr + " OVR" : "");
+        const statLine = '<span class="lb-sub">' + esc(T("Saison")) + " : " + seasonPart + " — " + esc(T("Carrière")) + " : " + careerPart + "</span>";
+        return '<li class="lb-row" style="flex-direction:column;align-items:flex-start;gap:4px">' +
+          '<span class="lb-name">' + rank + "👤 " + esc(m.pseudo) + statusTag + "</span>" + clubLine + statLine + "</li>";
+      }).join("");
+
+      content.innerHTML = (rows.length ? '<ul class="lb-list">' + lines + "</ul>" : '<p class="lb-empty">' + esc(T("Aucun membre actif.")) + "</p>") +
+        '<div class="acc-row" style="margin:6px 0 2px">' + '<button class="acc-btn soft" id="rm-stats-refresh" style="width:auto;padding:11px 14px">' + esc(T("Actualiser")) + "</button></div>" +
+        '<button class="acc-btn soft" id="rm-back" style="margin-top:6px">← Retour</button>';
+      content.querySelector("#rm-back").onclick = () => render();
+      content.querySelector("#rm-stats-refresh").onclick = draw;
+    }
+    draw();
   }
 
   // ---- Phase B : vote du club de départ + temps réel ------------------------
@@ -352,7 +421,7 @@
   // Pas de vote à plusieurs candidats ici (trop de points de blocage à
   // tester à 2-4, cf. rooms-votes.sql) : SEUL le créateur de la salle choisit
   // parmi SES propres offres, et son choix s'applique direct à tout le monde.
-  function renderAcademyStep(roomId, offerClubIds, els, onReadyToStart) {
+  function renderAcademyStep(roomId, offers, els, onReadyToStart) {
     const { subEl, listEl } = els;
     let stopped = false, started = false;
     let stop = null;
@@ -361,7 +430,7 @@
       if (stopped) return;
       const st = await getRoomState(roomId);
       if (!st || stopped) return;
-      const { room, me } = st;
+      const { room, members, me } = st;
 
       if (room.status === "active" && room.club_id) {
         if (started) return;
@@ -373,14 +442,26 @@
         return;
       }
 
-      if (room.created_by === me) {
-        subEl.textContent = T("Choisissez le club de départ — la salle se lance pour tout le monde dès votre choix.");
-        listEl.innerHTML = offerClubIds.map((clubId) => {
-          const club = CLUBS.find((c) => c.id === clubId);
-          if (!club) return "";
-          return '<button class="origin-card academy-card rm-offer-pick" data-club="' + esc(clubId) + '">' +
-            '<p class="origin-name"><span class="level-tag level-' + esc(club.level) + '">' + esc(E.divShort(club.level, club.countryId)) + "</span> " +
-            esc(club.name) + (club.colors ? " " + club.colors : "") + "</p></button>";
+      // Si le créateur a quitté la salle AVANT de lancer, plus personne ne
+      // pouvait choisir : les autres attendaient indéfiniment (le bug
+      // "coincé sur la page d'accueil" remonté par un joueur). N'importe quel
+      // membre encore joint prend alors le relais (cf. room_launch, à jour
+      // côté serveur pour accepter ce cas).
+      const creatorActive = members.some((m) => m.user_id === room.created_by && m.status === "joined");
+      const canLaunch = room.created_by === me || !creatorActive;
+
+      if (canLaunch) {
+        subEl.textContent = creatorActive
+          ? T("Choisissez le club de départ — la salle se lance pour tout le monde dès votre choix.")
+          : T("Le créateur a quitté la salle avant de la lancer — choisissez un club pour la relancer.");
+        // Mêmes cartes qu'en solo (renderAcademyScreen, game.js) : niveau,
+        // drapeau du pays, description du centre de formation.
+        listEl.innerHTML = offers.map((offer) => {
+          const cc = E.countryOf(offer.club.countryId);
+          return '<button class="origin-card academy-card rm-offer-pick" data-club="' + esc(offer.club.id) + '">' +
+            '<p class="origin-name"><span class="level-tag level-' + esc(offer.level) + '">' + esc(E.divShort(offer.level, offer.club.countryId)) + "</span> " +
+            esc(offer.club.name) + (offer.club.colors ? " " + offer.club.colors : "") + " " + flagHtml(cc) + "</p>" +
+            '<p class="origin-desc">' + esc(offer.blurb || "") + (offer.surprise ? " — <strong>" + esc(T("contre toute attente, ils vous veulent VOUS.")) + "</strong>" : "") + "</p></button>";
         }).join("");
         listEl.querySelectorAll(".rm-offer-pick").forEach((b) => (b.onclick = async () => {
           listEl.querySelectorAll(".rm-offer-pick").forEach((x) => (x.disabled = true));
@@ -435,6 +516,16 @@
     function cardHtml(inner) {
       return '<div class="card-tag"><span class="card-icon">💼</span> ' + esc(T("Salle — mercato")) + "</div>" + inner;
     }
+    // renderFn (showCard côté jeu) rejoue une animation d'ENTRÉE à chaque
+    // appel — sur un sondage de 5 s, ça faisait clignoter la carte même quand
+    // rien n'avait changé (ex. "0/2 ont voté" repeint identique en boucle).
+    // On ne peint que si le HTML a réellement changé depuis le dernier rendu.
+    let lastHtml = null;
+    function paint(html) {
+      if (html === lastHtml) return;
+      lastHtml = html;
+      renderFn(html);
+    }
     function finish() {
       resolved = true;
       if (stop) stop();
@@ -456,45 +547,79 @@
         const { data: mine } = await sb.from("room_progress").select("ready")
           .eq("room_id", roomId).eq("user_id", session.user.id).maybeSingle();
         if (mine && mine.ready === true) {
-          renderFn(cardHtml('<p class="event-text">' + esc(T("En attente des autres membres de la salle…")) + "</p>"));
+          paint(cardHtml('<p class="event-text">' + esc(T("En attente des autres membres de la salle…")) + "</p>"));
           return;
         }
         return finish(); // ready retombé à false : barrière franchie (ou vote clos)
       }
 
-      if (room.phase !== "season_vote") { renderFn(cardHtml('<p class="event-text">' + esc(T("En attente des autres membres de la salle…")) + "</p>")); return; }
+      if (room.phase !== "season_vote") { paint(cardHtml('<p class="event-text">' + esc(T("En attente des autres membres de la salle…")) + "</p>")); return; }
 
       const { data: votes } = await sb.from("room_votes")
         .select("*").eq("room_id", roomId).eq("status", "open")
         .order("opened_at", { ascending: false }).limit(1);
       const vote = votes && votes[0];
-      if (!vote) { renderFn(cardHtml('<p class="event-text">' + esc(T("Vote en préparation…")) + "</p>")); return; }
+      if (!vote) {
+        // La salle affiche 'season_vote' mais aucun vote OUVERT n'existe : soit
+        // un tout dernier vote vient tout juste de se clore sans que la salle
+        // soit encore repassée 'in_season' (course bénigne, la prochaine
+        // synchro règle ça), soit — plus rare — la clôture a laissé la salle
+        // sur cette phase. Auto-guérison : on cherche le dernier vote clos et,
+        // s'il y en a un, on le traite comme résolu plutôt que de rester
+        // bloqué sur "en préparation" indéfiniment.
+        const { data: last } = await sb.from("room_votes")
+          .select("*").eq("room_id", roomId).in("kind", ["transfer", "follow_relocation"]).eq("status", "closed")
+          .order("closed_at", { ascending: false }).limit(1);
+        if (last && last[0]) { return finish(); }
+        paint(cardHtml('<p class="event-text">' + esc(T("Vote en préparation…")) + '</p><button class="btn btn-secondary rm-refresh">' + esc(T("Actualiser")) + "</button>"));
+        const rb = document.querySelector(".rm-refresh");
+        if (rb) rb.onclick = refresh;
+        return;
+      }
       if (vote.kind === "kick") {
         // Vote d'exclusion : se vote depuis l'overlay 🏟️ Salle (contexte
         // différent — cible nommée, pas de club en jeu), pas depuis l'écran
         // de jeu. On informe et on continue de suivre l'état, sans bloquer.
-        renderFn(cardHtml('<p class="event-text">' + esc(T("Un vote d'exclusion est en cours dans la salle — ouvre 🏟️ Salle pour y participer.")) + "</p>"));
+        paint(cardHtml('<p class="event-text">' + esc(T("Un vote d'exclusion est en cours dans la salle — ouvre 🏟️ Salle pour y participer.")) + "</p>"));
         return;
       }
       const { data: ballots } = await sb.from("room_ballots").select("*").eq("vote_id", vote.id);
       const { data: members } = await sb.from("room_members").select("user_id").eq("room_id", roomId).eq("status", "joined");
       const me = acc.getSession().user.id;
       const mine = (ballots || []).find((b) => b.user_id === me);
+      // Mêmes cartes que le mercato solo (renderTransferChoice, game.js) :
+      // niveau + drapeau du pays, pas juste le nom sec du club.
       const optionsHtml = vote.candidates.map((c) => {
-        const label = c === "stay" ? T("Rester à votre club actuel") : (function () {
-          const club = CLUBS.find((x) => x.id === c);
-          return club ? esc(club.name) + (club.colors ? " " + club.colors : "") : esc(c);
-        })();
+        if (c === "stay") {
+          return '<button class="opt-btn rm-tv-opt" data-c="stay"' + (mine && mine.choice === "stay" ? " disabled" : "") + ">" +
+            T("Rester à votre club actuel") + (mine && mine.choice === "stay" ? " ✔" : "") + "</button>";
+        }
+        const club = CLUBS.find((x) => x.id === c);
+        if (!club) return "";
+        const cc = E.countryOf(club.countryId);
         return '<button class="opt-btn rm-tv-opt" data-c="' + esc(c) + '"' + (mine && mine.choice === c ? " disabled" : "") + ">" +
-          label + (mine && mine.choice === c ? " ✔" : "") + "</button>";
+          '<span class="opt-hint">' + esc(E.divShort(club.level, club.countryId)) + "</span>" +
+          esc(club.name) + (club.colors ? " " + club.colors : "") + " " + flagHtml(cc) + (mine && mine.choice === c ? " ✔" : "") + "</button>";
       }).join("");
-      renderFn(cardHtml(
+      paint(cardHtml(
         '<p class="event-text">' + esc(T("Vote collectif de la salle — {n}/{t} ont voté.", { n: (ballots || []).length, t: (members || []).length })) + "</p>" +
         '<div class="event-options">' + optionsHtml + "</div>"
       ));
       document.querySelectorAll(".rm-tv-opt").forEach((b) => (b.onclick = async () => {
         document.querySelectorAll(".rm-tv-opt").forEach((x) => (x.disabled = true));
-        await sb.rpc("room_cast_vote", { p_vote_id: vote.id, p_choice: b.dataset.c });
+        const { error } = await sb.rpc("room_cast_vote", { p_vote_id: vote.id, p_choice: b.dataset.c });
+        if (error) {
+          document.querySelectorAll(".rm-tv-opt").forEach((x) => (x.disabled = false));
+          const p = document.createElement("p");
+          p.className = "lb-empty"; p.style.color = "#b3261e";
+          p.textContent = T("Erreur : {msg}", { msg: error.message });
+          document.querySelector(".event-options").after(p);
+          return;
+        }
+        // Filet de sécurité : room_cast_vote tente déjà la résolution en
+        // interne, mais un nudge explicite ici ne coûte rien et couvre le cas
+        // où ce dernier bulletin n'aurait pas déclenché la clôture.
+        sb.rpc("room_maybe_resolve_vote", { p_vote_id: vote.id }).catch(() => {});
         refresh();
       }));
     }
@@ -550,6 +675,13 @@
     try { await sb.rpc("room_mark_career_ended", { p_room_id: roomId, p_score: score, p_summary: summary }); } catch (_) {}
   }
 
+  // Publie un instantané de carrière (club, âge, buts…) — appelé après chaque
+  // saison jouée en mode salle (game.js). Best-effort, comme markCareerEnded :
+  // ne doit jamais interrompre le déroulé d'une saison.
+  async function pushLiveStats(roomId, stats) {
+    try { await sb.rpc("room_update_stats", { p_room_id: roomId, p_stats: stats }); } catch (_) {}
+  }
+
   // ---- pastille d'accueil : compte des invitations reçues, sondage 60 s ----
   // Même discipline que account.js (refreshNotifs) : actif seulement onglet
   // visible + session active, jamais de canal ouvert en permanence (le temps
@@ -562,6 +694,6 @@
   refreshBadge();
   setInterval(() => { if (document.visibilityState === "visible" && acc.getSession()) refreshBadge(); }, 60000);
 
-  window.OpenElevenRoom = { open, renderAcademyStep, renderSeasonBarrierStep, renderNarrativeVoteStep, renderRelocationVoteStep, markCareerEnded };
+  window.OpenElevenRoom = { open, renderAcademyStep, renderSeasonBarrierStep, renderNarrativeVoteStep, renderRelocationVoteStep, markCareerEnded, pushLiveStats };
   if (btn) btn.addEventListener("click", open);
 })();

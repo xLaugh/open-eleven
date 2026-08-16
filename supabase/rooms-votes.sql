@@ -148,18 +148,36 @@ $$;
 -- blocage possibles à tester à 2-4. SEUL le créateur choisit, et son choix
 -- s'applique directement à toute la salle : un geste, une décision, personne
 -- n'attend personne pour démarrer.
+-- Si le créateur a quitté AVANT de lancer, la salle restait bloquée pour
+-- toujours (personne d'autre n'avait le droit de choisir) : n'importe quel
+-- membre encore joint peut alors prendre le relais.
 create or replace function public.room_launch(p_room_id uuid, p_club_id text)
 returns void
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_creator_active boolean;
 begin
-  if not exists (
-    select 1 from public.rooms where id = p_room_id and created_by = auth.uid() and phase = 'profile_setup'
+  select exists (
+    select 1 from public.room_members m
+      join public.rooms r on r.id = m.room_id
+     where m.room_id = p_room_id and m.user_id = r.created_by and m.status = 'joined'
+  ) into v_creator_active;
+
+  if v_creator_active then
+    if not exists (
+      select 1 from public.rooms where id = p_room_id and created_by = auth.uid() and phase = 'profile_setup'
+    ) then
+      raise exception 'only the room creator can launch, and only before it has started';
+    end if;
+  elsif not exists (
+    select 1 from public.room_members where room_id = p_room_id and user_id = auth.uid() and status = 'joined'
   ) then
-    raise exception 'only the room creator can launch, and only before it has started';
+    raise exception 'not a joined member';
   end if;
+
   update public.rooms
      set club_id = p_club_id, status = 'active', phase = 'in_season', started_at = now()
    where id = p_room_id and phase = 'profile_setup';
