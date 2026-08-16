@@ -212,6 +212,11 @@
     const pct = ((G.age - E.BALANCE_REF.ageMin) / (E.BALANCE_REF.ageMax - E.BALANCE_REF.ageMin)) * 100;
     $("age-progress-fill").style.width = `${pct}%`;
 
+    // Onglet "Salle" du panneau de profil : visible seulement en carrière
+    // commune (G.room posé par startCareer en mode salle, cf. room.js).
+    const roomTab = $("ptab-room");
+    if (roomTab) roomTab.style.display = G.room ? "" : "none";
+
     // Panneau profil : rendu paresseux. updateHeader() est appelé à chaque
     // événement ; reconstruire les quatre onglets alors que le panneau est
     // fermé serait du travail perdu. On note simplement qu'il a vieilli.
@@ -300,6 +305,12 @@
       $("profile-panel").querySelectorAll(".ppane").forEach((p) => {
         p.classList.toggle("active", p.id === `ppane-${id}`);
       });
+      // Onglet "Salle" : chargé à la demande au clic (pas de sondage — même
+      // logique anti-scintillement que le reste du mode salle), puisque G.room
+      // n'existe qu'en carrière commune (cf. updateHeader, qui masque l'onglet sinon).
+      if (id === "room" && G.room && window.OpenElevenRoom) {
+        window.OpenElevenRoom.renderMembersStats(G.room.id, $("profile-room"));
+      }
     });
   }
 
@@ -1400,7 +1411,15 @@
       // window.offers peut être vide (fenêtre sans offre concrète, cf. solo) :
       // traité comme "pas de proposition", comme si la fenêtre n'existait pas.
       const myPendingOffer = window && window.offers.length ? { offers: [window.offers[0].club.id], forced: !!window.noStay } : null;
-      globalThis.OpenElevenRoom.renderSeasonBarrierStep(G.room.id, myPendingOffer, showCard, (result) => {
+      // Trophées CLUB de la saison qui vient de se jouer — liste BLANCHE
+      // volontaire (pas une exclusion) : report.trophies peut aussi porter
+      // "worldCup", "ballon", "goldenBoot" ou un Ballon d'Or continental
+      // ("ballonAsia"...), tous individuels/sélection, jamais partagés entre
+      // coéquipiers de club (cf. rooms-trophies.sql, engine.js creditClubTrophies).
+      const CLUB_TROPHY_KEYS = ["league", "cup", "continental", "continental2", "continental3", "supercup"];
+      const myClubTrophies = (lastReport.trophies || []).filter((t) => CLUB_TROPHY_KEYS.includes(t));
+      if (lastReport.divisionTitle && !myClubTrophies.includes("league")) myClubTrophies.push("league");
+      globalThis.OpenElevenRoom.renderSeasonBarrierStep(G.room.id, myPendingOffer, myClubTrophies, showCard, (result) => {
         if (result && result.choice && result.choice !== "stay") {
           const offers = E.offersFor(G, { clubId: result.choice });
           if (offers.length) E.applyTransfer(G, offers[0]);
@@ -3258,6 +3277,17 @@
     levelInfo: levelInfo,
     startRoomCareer: startRoomCareer,
     flagHtml: flagHtml, // pour room.js : mêmes cartes de club riches qu'en solo
+    // Mode salle : crédite les trophées CLUB gagnés par un coéquipier que MA
+    // propre simulation locale n'a pas tirés (cf. rooms-trophies.sql). On
+    // exclut d'abord ce que lastReport m'attribue déjà cette saison — sinon
+    // un trophée que j'ai moi-même gagné serait compté deux fois.
+    creditClubTrophies: (keys) => {
+      if (!G || !G.room || !keys || !keys.length) return;
+      const mine = new Set((lastReport && lastReport.trophies) || []);
+      if (lastReport && lastReport.divisionTitle) mine.add("league");
+      const toAdd = keys.filter((k) => !mine.has(k));
+      if (toAdd.length) E.creditClubTrophies(G, toAdd);
+    },
   };
 
   // --- Sauvegarde & reprise de la carrière en cours ------------------------------

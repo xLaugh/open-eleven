@@ -310,56 +310,78 @@
     }));
   }
 
-  // Comparatif des statistiques en direct des membres, alimenté par
-  // pushLiveStats (game.js, appelé après chaque saison jouée en mode salle).
-  // Pas de sondage automatique ici : l'utilisateur a explicitement demandé
-  // d'éviter le clignotement d'un rafraîchissement en boucle sur ce genre de
-  // vue — un bouton Actualiser suffit, la vue reste stable tant qu'on ne le
-  // presse pas.
+  // Construit la liste HTML de comparaison des membres — utilisée à la fois
+  // par l'overlay Salle (renderStatsInline) ET par l'onglet "Salle" du
+  // panneau de profil en jeu (renderMembersStats), pour ne pas dupliquer le
+  // rendu entre les deux points d'entrée.
+  async function buildStatsListHtml(roomId) {
+    const { data: members } = await sb.from("room_members")
+      .select("user_id, pseudo, status, career_ended, live_stats")
+      .eq("room_id", roomId).eq("status", "joined");
+    const rows = (members || []).slice().sort((a, b) =>
+      (((b.live_stats || {}).totalGoals) || 0) - (((a.live_stats || {}).totalGoals) || 0));
+    if (!rows.length) return '<p class="lb-empty">' + esc(T("Aucun membre actif.")) + "</p>";
+
+    const lines = rows.map((m, i) => {
+      const s = m.live_stats;
+      const statusTag = m.career_ended ? ' <span class="lb-sub">🏁 ' + esc(T("carrière terminée")) + "</span>" : "";
+      if (!s) {
+        return '<li class="lb-row" style="flex-direction:column;align-items:flex-start;gap:4px">' +
+          '<span class="lb-name">👤 ' + esc(m.pseudo) + statusTag + "</span>" +
+          '<span class="lb-sub">' + esc(T("Pas encore de données pour cette carrière.")) + "</span></li>";
+      }
+      const rank = i === 0 && s.totalGoals ? "🥇 " : "";
+      const cc = s.countryId ? E.countryOf(s.countryId) : null;
+      const clubLine = s.club
+        ? '<span class="lb-sub">' + (s.level ? '<span class="level-tag level-' + esc(s.level) + '">' + esc(E.divShort(s.level, s.countryId)) + "</span> " : "") +
+          esc(s.club) + (cc ? " " + flagHtml(cc) : "") + (s.age != null ? " · " + esc(s.age) + " ans" : "") + "</span>"
+        : "";
+      const seasonPart = s.seasonGoals != null
+        ? s.seasonGoals + " ⚽ " + (s.seasonAssists || 0) + " 🅰️" + (s.seasonRating != null ? " · " + s.seasonRating : "")
+        : "?";
+      const careerPart = (s.totalGoals != null ? s.totalGoals : "?") + " ⚽ " + (s.totalAssists != null ? s.totalAssists : "?") +
+        " 🅰️ · " + (s.totalMatches != null ? s.totalMatches : "?") + " " + esc(T("matchs")) +
+        (s.ovr != null ? " · " + s.ovr + " OVR" : "");
+      const statLine = '<span class="lb-sub">' + esc(T("Saison")) + " : " + seasonPart + " — " + esc(T("Carrière")) + " : " + careerPart + "</span>";
+      return '<li class="lb-row" style="flex-direction:column;align-items:flex-start;gap:4px">' +
+        '<span class="lb-name">' + rank + "👤 " + esc(m.pseudo) + statusTag + "</span>" + clubLine + statLine + "</li>";
+    }).join("");
+    return '<ul class="lb-list">' + lines + "</ul>";
+  }
+
+  // Comparatif des statistiques en direct des membres, consulté depuis
+  // l'overlay 🏟️ Salle. Pas de sondage automatique ici : l'utilisateur a
+  // explicitement demandé d'éviter le clignotement d'un rafraîchissement en
+  // boucle sur ce genre de vue — un bouton Actualiser suffit.
   async function renderStatsInline(roomId) {
     box.innerHTML = '<button class="acc-x" aria-label="Fermer">×</button><h3>📊 Statistiques de la salle</h3><div class="lb-content"><p class="lb-empty">Chargement…</p></div>';
     box.querySelector(".acc-x").onclick = () => overlay.classList.remove("on");
     const content = box.querySelector(".lb-content");
 
     async function draw() {
-      const { data: members } = await sb.from("room_members")
-        .select("user_id, pseudo, status, career_ended, live_stats")
-        .eq("room_id", roomId).eq("status", "joined");
-      const rows = (members || []).slice().sort((a, b) =>
-        (((b.live_stats || {}).totalGoals) || 0) - (((a.live_stats || {}).totalGoals) || 0));
-
-      const lines = rows.map((m, i) => {
-        const s = m.live_stats;
-        const statusTag = m.career_ended ? ' <span class="lb-sub">🏁 ' + esc(T("carrière terminée")) + "</span>" : "";
-        if (!s) {
-          return '<li class="lb-row" style="flex-direction:column;align-items:flex-start;gap:4px">' +
-            '<span class="lb-name">👤 ' + esc(m.pseudo) + statusTag + "</span>" +
-            '<span class="lb-sub">' + esc(T("Pas encore de données pour cette carrière.")) + "</span></li>";
-        }
-        const rank = i === 0 && s.totalGoals ? "🥇 " : "";
-        const cc = s.countryId ? E.countryOf(s.countryId) : null;
-        const clubLine = s.club
-          ? '<span class="lb-sub">' + (s.level ? '<span class="level-tag level-' + esc(s.level) + '">' + esc(E.divShort(s.level, s.countryId)) + "</span> " : "") +
-            esc(s.club) + (cc ? " " + flagHtml(cc) : "") + (s.age != null ? " · " + esc(s.age) + " ans" : "") + "</span>"
-          : "";
-        const seasonPart = s.seasonGoals != null
-          ? s.seasonGoals + " ⚽ " + (s.seasonAssists || 0) + " 🅰️" + (s.seasonRating != null ? " · " + s.seasonRating : "")
-          : "?";
-        const careerPart = (s.totalGoals != null ? s.totalGoals : "?") + " ⚽ " + (s.totalAssists != null ? s.totalAssists : "?") +
-          " 🅰️ · " + (s.totalMatches != null ? s.totalMatches : "?") + " " + esc(T("matchs")) +
-          (s.ovr != null ? " · " + s.ovr + " OVR" : "");
-        const statLine = '<span class="lb-sub">' + esc(T("Saison")) + " : " + seasonPart + " — " + esc(T("Carrière")) + " : " + careerPart + "</span>";
-        return '<li class="lb-row" style="flex-direction:column;align-items:flex-start;gap:4px">' +
-          '<span class="lb-name">' + rank + "👤 " + esc(m.pseudo) + statusTag + "</span>" + clubLine + statLine + "</li>";
-      }).join("");
-
-      content.innerHTML = (rows.length ? '<ul class="lb-list">' + lines + "</ul>" : '<p class="lb-empty">' + esc(T("Aucun membre actif.")) + "</p>") +
+      content.innerHTML = await buildStatsListHtml(roomId) +
         '<div class="acc-row" style="margin:6px 0 2px">' + '<button class="acc-btn soft" id="rm-stats-refresh" style="width:auto;padding:11px 14px">' + esc(T("Actualiser")) + "</button></div>" +
         '<button class="acc-btn soft" id="rm-back" style="margin-top:6px">← Retour</button>';
       content.querySelector("#rm-back").onclick = () => render();
       content.querySelector("#rm-stats-refresh").onclick = draw;
     }
     draw();
+  }
+
+  // Même comparatif, mais peint directement dans l'onglet "Salle" du panneau
+  // de profil EN JEU (à côté de Statistiques/Palmarès/Distinctions/Parcours)
+  // — c'est là que l'utilisateur veut le trouver en cours de partie, pas
+  // seulement depuis l'overlay lobby. Appelé par game.js (initProfileTabs)
+  // au clic sur l'onglet ; targetEl reste vide/masqué tant qu'on ne l'ouvre
+  // pas (même logique de rendu paresseux que le reste du panneau de profil).
+  async function renderMembersStats(roomId, targetEl) {
+    targetEl.innerHTML = '<p class="lb-empty">Chargement…</p>';
+    const html = await buildStatsListHtml(roomId);
+    targetEl.innerHTML = html +
+      '<div class="acc-row" style="margin:6px 0 2px">' +
+      '<button class="acc-btn soft rm-stats-refresh-inline" style="width:auto;padding:11px 14px">' + esc(T("Actualiser")) + "</button></div>";
+    const rb = targetEl.querySelector(".rm-stats-refresh-inline");
+    if (rb) rb.onclick = () => renderMembersStats(roomId, targetEl);
   }
 
   // ---- Phase B : vote du club de départ + temps réel ------------------------
@@ -550,6 +572,14 @@
           paint(cardHtml('<p class="event-text">' + esc(T("En attente des autres membres de la salle…")) + "</p>"));
           return;
         }
+        // Barrière franchie : la saison qui vient de se terminer peut avoir
+        // vu un coéquipier gagner un trophée club que MA propre simulation
+        // n'a pas tiré (RNG locale indépendante, cf. rooms-trophies.sql) —
+        // room.season_trophies porte l'union posée par room_maybe_advance_season
+        // juste avant cette bascule. game.js filtre ce que j'ai déjà.
+        if (room.season_trophies && room.season_trophies.length && window.OE && window.OE.creditClubTrophies) {
+          window.OE.creditClubTrophies(room.season_trophies);
+        }
         return finish(); // ready retombé à false : barrière franchie (ou vote clos)
       }
 
@@ -632,12 +662,15 @@
   // Barrière de fin de saison (mercato), appelée depuis offseason() en mode
   // salle. myPendingOffer = null (pas de fenêtre pour ce membre) ou
   // { offers: [clubId,...], forced: bool } (comme E.transferWindow, mais
-  // réduit aux IDs). onResolved(result) reçoit soit null (personne n'avait de
-  // fenêtre, rien à appliquer), soit { choice: clubId | "stay" }.
-  function renderSeasonBarrierStep(roomId, myPendingOffer, renderFn, onResolved) {
+  // réduit aux IDs). myClubTrophies = trophées CLUB de la saison qui vient de
+  // se jouer, MA simulation locale (cf. rooms-trophies.sql — sert à créditer
+  // les coéquipiers qui ne les ont pas tirés eux-mêmes). onResolved(result)
+  // reçoit soit null (personne n'avait de fenêtre, rien à appliquer), soit
+  // { choice: clubId | "stay" }.
+  function renderSeasonBarrierStep(roomId, myPendingOffer, myClubTrophies, renderFn, onResolved) {
     return watchTransferPhase(
       roomId,
-      () => sb.rpc("room_report_season", { p_room_id: roomId, p_pending_offer: myPendingOffer }),
+      () => sb.rpc("room_report_season", { p_room_id: roomId, p_pending_offer: myPendingOffer, p_club_trophies: myClubTrophies || [] }),
       true, renderFn, onResolved
     );
   }
@@ -694,6 +727,6 @@
   refreshBadge();
   setInterval(() => { if (document.visibilityState === "visible" && acc.getSession()) refreshBadge(); }, 60000);
 
-  window.OpenElevenRoom = { open, renderAcademyStep, renderSeasonBarrierStep, renderNarrativeVoteStep, renderRelocationVoteStep, markCareerEnded, pushLiveStats };
+  window.OpenElevenRoom = { open, renderAcademyStep, renderSeasonBarrierStep, renderNarrativeVoteStep, renderRelocationVoteStep, markCareerEnded, pushLiveStats, renderMembersStats };
   if (btn) btn.addEventListener("click", open);
 })();
