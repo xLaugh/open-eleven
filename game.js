@@ -880,7 +880,11 @@
   function renderLoanChoice(offers) {
     const buttons = offers.map((offer, i) => {
       const cc = E.countryOf(offer.club.countryId);
-      return `<button class="opt-btn" data-offer="${i}"><span class="opt-hint">${esc(E.divShort(offer.club.level, offer.club.countryId))}</span>${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)} — ${T("prêt d'une saison")}</button>`;
+      // E.lvlOf, PAS offer.club.level : un club promu/relégué pendant CETTE
+      // carrière doit afficher son niveau ACTUEL (G.clubLevels), pas son
+      // niveau statique d'origine — sinon un club monté en Elite puis
+      // recroisé plus tard réaffiche son ancien D4 (bug remonté par un joueur).
+      return `<button class="opt-btn" data-offer="${i}"><span class="opt-hint">${esc(E.divShort(E.lvlOf(G, offer.club), offer.club.countryId))}</span>${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)} — ${T("prêt d'une saison")}</button>`;
     }).join("");
     showCard(`
       <div class="card-tag"><span class="card-icon">🔄</span> Prêt · ${G.age} ans</div>
@@ -921,7 +925,7 @@
       const role = ROLES[offer.role != null ? offer.role : 2];
       const roleChip = role ? `<span class="role-chip role-${role.id}" title="${esc(role.desc)}">${role.icon} ${esc(role.label)}</span>` : "";
       buttons += `<button class="opt-btn" data-offer="${i}">
-        <span class="opt-hint">${offer.gulf ? "💰 " : ""}${esc(E.divShort(offer.club.level, offer.club.countryId))}</span>
+        <span class="opt-hint">${offer.gulf ? "💰 " : ""}${esc(E.divShort(E.lvlOf(G, offer.club), offer.club.countryId))}</span>
         ${img}${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)} — ${E.fmtMoney(offer.salary)}/an · indemnité ${E.fmtMoney(offer.fee)}
         <span class="opt-role">Statut proposé : ${roleChip}</span></button>`;
     });
@@ -1423,7 +1427,7 @@
   function renderForcedLoanChoice(offers) {
     const buttons = offers.map((offer, i) => {
       const cc = E.countryOf(offer.club.countryId);
-      return `<button class="opt-btn" data-offer="${i}"><span class="opt-hint">${esc(E.divShort(offer.club.level, offer.club.countryId))}</span>${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)} — ${T("prêt d'une saison")}</button>`;
+      return `<button class="opt-btn" data-offer="${i}"><span class="opt-hint">${esc(E.divShort(E.lvlOf(G, offer.club), offer.club.countryId))}</span>${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)} — ${T("prêt d'une saison")}</button>`;
     }).join("");
     showCard(`
       <div class="card-tag"><span class="card-icon">📉</span> ${T("Mis à l'écart")} · ${G.age} ${T("ans")}</div>

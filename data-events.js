@@ -4449,6 +4449,130 @@ const EVENTS = [
       ] },
     ],
   },
+
+  // ══════════════ Ajouts (lot suivant) — ajoutés en fin de tableau,
+  // conformément à la règle d'ordre déterministe rappelée en tête de fichier.
+  {
+    id: "ev_coach_final_warning", cat: "Vestiaire", icon: "⚠️", w: 11,
+    cond: { aMin: 19, maxCoach: 30 },
+    text: "Le coach vous convoque dans son bureau : « Je ne vais pas y aller par quatre chemins. C'est un dernier avertissement, avant que la direction ne s'en mêle. »",
+    options: [
+      { label: "Encaisser et se remettre au travail", hint: "Profil bas", outcomes: [
+        { weight: 55, text: "Vous ravalez votre fierté et redoublez d'efforts à l'entraînement. Le message a été entendu.", fx: { dis: 4, coach: 6, m: 2 } },
+        { weight: 45, text: "Vous vous accrochez, mais le naturel revient vite au galop.", fx: { coach: 2, mor: -3 } },
+      ] },
+      { label: "Défendre votre bilan, front contre front", hint: "Confrontation", outcomes: [
+        { weight: 40, text: "Votre aplomb impressionne : le coach revoit son jugement, à froid.", fx: { coach: 5, rep: 3 } },
+        { weight: 60, text: "Mauvaise pioche : le ton monte, et la relation se dégrade encore un peu plus.", fx: { coach: -8, mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_boot_sponsor_pitch", cat: "Réseaux", icon: "👟", w: 9,
+    cond: { aMin: 18, minRep: 30 },
+    text: "Un équipementier outsider vous propose des crampons collector, à condition de les porter aussi… tous les jours, à l'entraînement, caméras autorisées.",
+    options: [
+      { label: "Signer, jouer le jeu de la marque", hint: "Visibilité", outcomes: [
+        { weight: 45, text: "Le pari marketing fonctionne : votre image gagne en reconnaissance, sans nuire à votre jeu.", fx: { rep: 6, c: 3, money: 0.4 } },
+        { weight: 30, text: "Le vestiaire se moque gentiment de vos crampons fluo. Ambiance bon enfant.", fx: { rep: 3, team: 2 } },
+        { weight: 25, text: "Le coach déteste le cirque médiatique autour d'un simple entraînement.", fx: { coach: -4, rep: 2 } },
+      ] },
+      { label: "Décliner, rester sur ses appuis habituels", hint: "Sobriété", outcomes: [
+        { weight: 60, text: "Vous préférez le silence des crampons neutres au bruit des projecteurs.", fx: { m: 2, dis: 2 } },
+        { weight: 40, text: "L'occasion manquée fait grincer des dents du côté de votre entourage.", fx: { mor: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_analytics_revolution", cat: "Identité de jeu", icon: "📊", w: 8,
+    cond: { aMin: 20, levels: ["d1", "elite"] },
+    text: "Le club recrute un data analyst qui veut réorganiser votre routine entière selon les statistiques avancées — cartes de chaleur, xG, tout y passe.",
+    options: [
+      { label: "Adopter la méthode à la lettre", hint: "Data", outcomes: [
+        { weight: 55, text: "Les chiffres affinent vraiment vos choix sur le terrain : un cran plus efficace.", fx: { t: 4, p: 2 } },
+        { weight: 45, text: "Le jeu devient trop mécanique à votre goût — vous jouez juste, sans y prendre plaisir.", fx: { t: 2, mor: -5 } },
+      ] },
+      { label: "Rester instinctif, ignorer les tableurs", hint: "Instinct", outcomes: [
+        { weight: 50, text: "Votre spontanéité continue de faire la différence, chiffres ou pas.", fx: { m: 3, c: 3 } },
+        { weight: 50, text: "L'analyste vous cite en exemple négatif dans son rapport. Le coach l'a lu.", fx: { coach: -3, rep: -1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_veteran_mentor", cat: "Vestiaire", icon: "🧓", w: 10,
+    cond: { aMin: 19, aMax: 24, minTeam: 45 },
+    text: "Un vétéran du vestiaire, en fin de carrière, vous prend sous son aile : « Je n'ai plus rien à prouver. Autant que ça serve à quelqu'un. »",
+    options: [
+      { label: "Écouter ses conseils à la lettre", hint: "Apprentissage", outcomes: [
+        { weight: 60, text: "Des années d'expérience condensées en quelques mois : vous progressez vite.", fx: { m: 5, t: 2, team: 4 } },
+        { weight: 40, text: "Ses méthodes datent un peu — pas tout n'est transposable à votre jeu.", fx: { m: 2, team: 3 } },
+      ] },
+      { label: "Tracer votre propre route", hint: "Indépendance", outcomes: [
+        { weight: 50, text: "Poli mais ferme, vous forgez votre style sans copier personne. Il respecte le choix.", fx: { c: 3, m: 2 } },
+        { weight: 50, text: "Le vétéran se vexe de l'offre déclinée. Un froid s'installe côté vestiaire.", fx: { team: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_insomnia_pressure", cat: "Hygiène de vie", icon: "🌙", w: 9,
+    cond: { minMor: 0, maxMor: 40 },
+    text: "Les nuits sont courtes, la pression pèse plus que d'habitude. Un coéquipier, discrètement, vous glisse le contact d'un préparateur mental.",
+    options: [
+      { label: "Prendre rendez-vous", hint: "Aide", outcomes: [
+        { weight: 65, text: "Quelques séances suffisent à desserrer l'étau. Vous retrouvez un vrai sommeil.", fx: { mor: 10, form: 3 } },
+        { weight: 35, text: "L'exercice est utile, mais la source du stress, elle, reste entière.", fx: { mor: 4 } },
+      ] },
+      { label: "Serrer les dents, seul", hint: "Fierté", outcomes: [
+        { weight: 45, text: "Vous tenez bon à force de volonté. Ça passe, cette fois.", fx: { m: 3, mor: 2 } },
+        { weight: 55, text: "La fatigue nerveuse finit par se voir sur le terrain.", fx: { form: -5, mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_retirement_ambassador_offer", cat: "Retraite", icon: "🤝", w: 8,
+    cond: { aMin: 33 },
+    text: "La direction vous propose déjà un rôle d'ambassadeur pour l'après-carrière — généreux, mais qui suppose de lever un peu le pied dès maintenant.",
+    options: [
+      { label: "Accepter, sécuriser l'avenir", hint: "Raisonnable", outcomes: [
+        { weight: 60, text: "Le contrat signé, vous jouez plus léger, débarrassé d'une inquiétude.", fx: { money: 0.6, rep: 3, mor: 5 } },
+        { weight: 40, text: "Le costume d'ambassadeur, déjà, grignote un peu votre statut de joueur aux yeux du vestiaire.", fx: { money: 0.6, team: -3 } },
+      ] },
+      { label: "Refuser, jouer jusqu'au bout", hint: "Compétiteur", outcomes: [
+        { weight: 55, text: "Le message est clair : vous n'avez pas fini d'écrire votre histoire sur le terrain.", fx: { m: 3, mor: 6 } },
+        { weight: 45, text: "La direction retient la leçon — l'offre ne se représentera pas de sitôt.", fx: { mor: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_unlucky_var", cat: "Insolite", icon: "📺", w: 8,
+    cond: { aMin: 18 },
+    text: "Un but refusé après quatre minutes d'arbitrage vidéo déclenche une polémique nationale — les caméras se braquent sur votre réaction, en direct.",
+    options: [
+      { label: "Rester stoïque devant les caméras", hint: "Sang-froid", outcomes: [
+        { weight: 55, text: "Votre calme tranche avec le tumulte général. Les éditorialistes saluent la classe.", fx: { rep: 5, c: 3 } },
+        { weight: 45, text: "Le calme affiché cache mal une frustration qui couve encore la semaine suivante.", fx: { mor: -3 } },
+      ] },
+      { label: "Exploser de rage, capté en direct", hint: "Instinct", outcomes: [
+        { weight: 40, text: "Le clip devient viral pour de bonnes raisons : le public se reconnaît dans votre colère.", fx: { rep: 4, mor: 3 } },
+        { weight: 60, text: "La fédération n'apprécie pas le numéro : un rappel à l'ordre, et une image écornée.", fx: { rep: -5, mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_local_derby_ticket_scandal", cat: "Supporters", icon: "🎟️", w: 7,
+    cond: { aMin: 18 },
+    text: "Un scandale de revente de billets de derby éclabousse plusieurs joueurs du vestiaire. Votre nom circule, à tort, dans les commentaires.",
+    options: [
+      { label: "Démentir publiquement", hint: "Communication", outcomes: [
+        { weight: 60, text: "Votre mise au point, claire et rapide, éteint la rumeur avant qu'elle n'enfle.", fx: { rep: 3, c: 2 } },
+        { weight: 40, text: "Le démenti alimente encore plus la polémique, comme souvent sur ce genre de sujet.", fx: { rep: -2, mor: -3 } },
+      ] },
+      { label: "Laisser passer, sans réagir", hint: "Silence", outcomes: [
+        { weight: 55, text: "L'orage médiatique passe de lui-même, en quelques jours à peine.", fx: { mor: -1 } },
+        { weight: 45, text: "Le silence, mal interprété, est pris pour un aveu par une partie des supporters.", fx: { rep: -4, mor: -4 } },
+      ] },
+    ],
+  },
 ];
 
 /* ============================================================

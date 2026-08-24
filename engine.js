@@ -57,6 +57,34 @@
     return out;
   }
 
+  // Comme sampleN, mais répartit les tirages sur des PAYS distincts avant
+  // d'en reprendre un second dans le même pays. Sans ça, un palier dominé par
+  // un seul pays (l'Angleterre, souvent, à l'élite) produisait régulièrement
+  // 2-3 offres du même pays d'affilée — statistiquement normal, mais perçu
+  // comme un manque de variété (retour joueur). N'a d'effet que si le pool
+  // couvre déjà plusieurs pays ; sinon se comporte comme sampleN.
+  function sampleDiverseByCountry(pool, n) {
+    const byCountry = {};
+    pool.forEach((c) => { (byCountry[c.countryId] = byCountry[c.countryId] || []).push(c); });
+    let countries = Object.keys(byCountry);
+    for (let i = countries.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = countries[i]; countries[i] = countries[j]; countries[j] = t; }
+    const out = [];
+    // Une passe = un club de plus par pays encore disponible, dans l'ordre
+    // (mélangé) ci-dessus. Consomme exactement 1 rng() par club RETENU, plus
+    // le mélange initial des pays — pas un par club du pool entier.
+    while (out.length < n && countries.length) {
+      const next = [];
+      for (const cid of countries) {
+        if (out.length >= n) break;
+        const g = byCountry[cid];
+        out.push(g.splice(Math.floor(rng() * g.length), 1)[0]);
+        if (g.length) next.push(cid);
+      }
+      countries = next;
+    }
+    return out;
+  }
+
   function weightedRandom(items, weightFn) {
     const getW = weightFn || ((it) => (it.weight != null ? it.weight : it.w));
     const total = items.reduce((s, it) => s + getW(it), 0);
@@ -2633,7 +2661,7 @@
     }
     if (pool.length === 0) pool = CLUBS_BY_LEVEL[targetLevel].filter((c) => c.id !== s.club.id);
     const count = Math.min(pool.length, randInt(1, 3));
-    const offers = sampleN(pool, count).map((club) => buildOffer(s, club));
+    const offers = sampleDiverseByCountry(pool, count).map((club) => buildOffer(s, club));
     // Une clause libératoire rend le joueur plus abordable → plus d'offres sérieuses
     if (s.flags.release_clause) offers.forEach((o) => { o.fee = Math.round(o.fee * 0.75 * 10) / 10; });
     return offers;
@@ -3160,7 +3188,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.70";
+  const ENGINE_VERSION = "10.72";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {
