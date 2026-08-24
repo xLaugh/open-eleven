@@ -346,6 +346,10 @@
       retiring: false,
       careerEnded: false,
       careerEndReason: null,
+      sponsorDeal: null, // contrat sponsor actif { id, label, mult, yearsLeft } — cf. SPONSOR_PROFILES (data.js)
+      disfavorStreak: 0, // saisons consécutives de confiance coach au plancher (cf. fin de playSeason)
+      frozenOut: false, // mise à l'écart décidée : appliquée puis consommée dès la saison suivante
+      forcedLoanNext: false, // défiance persistante malgré la mise à l'écart : prêt forcé programmé
     };
     const st = opts.origin.startStats;
     s.stats = { t: st.t, p: st.p, m: st.m, c: st.c };
@@ -1252,6 +1256,12 @@
     // ton statut. Un vrai levier, pas un détail cosmétique.
     if (s.coachRel < 22) pt -= 0.32;
     else if (s.coachRel < 38) pt -= 0.13;
+    // Mise à l'écart décidée par le club (défiance persistante, cf. fin de
+    // playSeason) : un cran au-dessus de la simple pénalité de confiance
+    // ci-dessus. Fonction volontairement PURE (appelée deux fois par saison,
+    // depuis setSeasonObjective ET ici) : la consommation du flag se fait
+    // ailleurs, dans playSeason, une seule fois.
+    if (s.frozenOut) pt -= 0.35;
     if (s.loan) pt += 0.22;
     if (s.flags.prodigy && s.age <= 20) pt += 0.2; // on lance les cracks très tôt
     // Rotation du vétéran : après 32 ans, la jeunesse pousse et le temps de jeu
@@ -1602,6 +1612,11 @@
     // Temps de jeu et matchs
     const pt = playingTimeFactor(s);
     report.pt = pt;
+    // Consommation du flag de mise à l'écart : une seule saison d'effet. Fait
+    // ICI (pas dans playingTimeFactor, appelée deux fois par saison) pour ne
+    // le clore qu'une fois — report.frozenOutActive garde la trace pour la
+    // vérification de fin de saison plus bas (escalade vers le prêt forcé).
+    if (s.frozenOut) { report.frozenOutActive = true; s.frozenOut = false; }
 
     // --- Blessures : dette chronique reversée, puis tirage de saison -----------
     // (avant injuryFactor : une blessure ampute les matchs de cette saison)
@@ -1997,11 +2012,19 @@
       s.moral = clamp(s.moral - 3, 5, 100);
     }
 
-    // Revenus
-    const sponsors = (s.rep / 100) * (s.stats.c / 100) * visibilityOf(s) * 1.8;
+    // Revenus — un contrat sponsor ACTIF (choisi en fin de saison, cf.
+    // sponsorOffersFor/applySponsorDeal) remplace l'ancien multiplicateur fixe :
+    // même base (réputation × charisme × visibilité), mais le profil choisi
+    // pèse différemment sur argent/réputation/discipline. Tant qu'aucun choix
+    // n'a encore été fait (tout début de carrière), 1.8 reproduit exactement
+    // l'ancien calcul.
+    const dealMult = s.sponsorDeal ? s.sponsorDeal.mult : 1.8;
+    const sponsors = (s.rep / 100) * (s.stats.c / 100) * visibilityOf(s) * dealMult;
     const income = s.contract.salary * 0.55 + sponsors * rand(0.6, 1.2);
     s.money += income;
     report.income = income + (report.objectiveBonus || 0);
+    report.sponsorLabel = s.sponsorDeal ? s.sponsorDeal.label : null;
+    if (s.sponsorDeal) s.sponsorDeal.yearsLeft -= 1;
     const prize = report.trophies.length * 0.3;
     if (prize) s.money += prize;
 
@@ -2046,6 +2069,33 @@
     s.lastSeason = { clubId: s.club.id, leaguePos: report.leaguePos, promoted: !!report.promoted, relegated: !!report.relegated, rating: report.rating, wonLeague: report.trophies.includes("league") };
     reviewRole(s, report); // statut dynamique : promotion / rétrogradation / recrue concurrente
     report.headline = headlineFor(s, report);
+
+    // Confiance critique : si la relation avec le coach termine la saison au
+    // plancher DEUX fois de suite, le club passe à l'action — mise à l'écart
+    // la saison suivante. Si la défiance reste au plancher PENDANT cette
+    // mise à l'écart (report.frozenOutActive, posé plus haut cette même
+    // saison), la sanction est jugée insuffisante → prêt forcé direct, sans
+    // exiger un second compteur de deux saisons (déjà purgé au passage
+    // précédent). Un prêté dépend déjà d'un autre club : pas de double
+    // sanction pendant un prêt.
+    if (!s.loan) {
+      if (report.frozenOutActive) {
+        if (s.coachRel <= 18) {
+          s.forcedLoanNext = true;
+          report.forcedLoanWarning = tx(s, "forcedLoanWarning");
+          s.history.push({ age: s.age, text: report.forcedLoanWarning, impact: -10 });
+        }
+        s.disfavorStreak = 0;
+      } else {
+        s.disfavorStreak = s.coachRel <= 18 ? (s.disfavorStreak || 0) + 1 : 0;
+        if (s.disfavorStreak >= 2) {
+          s.frozenOut = true;
+          report.frozenOutWarning = tx(s, "frozenOutWarning");
+          s.history.push({ age: s.age, text: report.frozenOutWarning, impact: -8 });
+          s.disfavorStreak = 0;
+        }
+      }
+    }
     return report;
   }
 
@@ -2617,6 +2667,24 @@
     s.history.push({ age: s.age, text: tx(s, "loanOut", { toClub: offer.club.name }), impact: 4 });
   }
 
+  // Sponsor dû : aucun contrat encore signé, ou contrat arrivé à échéance
+  // (yearsLeft décompté à chaque saison dans playSeason). Pas de rng : sûr à
+  // appeler pour un simple affichage/vérification.
+  function sponsorDealDue(s) {
+    return !s.sponsorDeal || s.sponsorDeal.yearsLeft <= 0;
+  }
+  // Catalogue fixe (aucun rng) : l'ORDRE doit rester stable, l'appelant (UI
+  // ou replayRun) référence un choix par INDEX dans cette liste.
+  function sponsorOffersFor() {
+    return Object.values(SPONSOR_PROFILES);
+  }
+  function applySponsorDeal(s, profile) {
+    s.sponsorDeal = { id: profile.id, label: profile.label, mult: profile.mult, yearsLeft: profile.years };
+    if (profile.repDelta) s.rep = clamp(s.rep + profile.repDelta, 0, 100);
+    if (profile.disciplineDelta) s.discipline = clamp(s.discipline + profile.disciplineDelta, 0, 100);
+    s.history.push({ age: s.age, text: tx(s, "sponsorSigned", { dealLabel: profile.label }), impact: (profile.repDelta || profile.disciplineDelta) ? 3 : 0 });
+  }
+
   function transferWindow(s, report) {
     if (s.age >= BALANCE.ageMax) return null;
     if (s.loan) return null;
@@ -2893,6 +2961,12 @@
     if (report.wc && report.wc.finalPending) resolveWcFinal(r, report, null);
     while (report.pendingMoments.length) resolveSeasonMoment(r, report, report.pendingMoments.shift(), null);
     if (r.careerEnded) return report; // blessure fatale en cours de saison : le rival ne transfère/vieillit plus
+    if (r.forcedLoanNext) {
+      r.forcedLoanNext = false;
+      const l = loanOffersFor(r);
+      if (l.length) { applyLoan(r, pick(l)); advanceYear(r); return report; }
+    }
+    if (sponsorDealDue(r)) applySponsorDeal(r, pick(sponsorOffersFor()));
     const window = transferWindow(r, report);
     if (window) {
       if (window.offers.length && rng() < 0.6) applyTransfer(r, pick(window.offers));
@@ -3004,6 +3078,24 @@
       }
       if (s.careerEnded) break;
       if (s.retiring || s.age >= BALANCE.ageMax) break;
+      // Miroir EXACT de offseason()/offseasonTransfer() côté game.js : même
+      // ordre de vérification, même consommation de choiceLog (une entrée
+      // SEULEMENT si un écran a réellement été montré côté joueur).
+      if (s.forcedLoanNext) {
+        s.forcedLoanNext = false;
+        const l = loanOffersFor(s);
+        if (l.length) {
+          const ch = next();
+          applyLoan(s, l[ch] || l[0]);
+          advanceYear(s);
+          continue;
+        }
+      }
+      if (sponsorDealDue(s)) {
+        const offers = sponsorOffersFor();
+        const ch = next();
+        applySponsorDeal(s, offers[ch] || offers[0]);
+      }
       const window = transferWindow(s, report);
       if (window) {
         const ch = next();
@@ -3068,7 +3160,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.69";
+  const ENGINE_VERSION = "10.70";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {
@@ -3085,6 +3177,7 @@
     roleForClub, roleOf, dualNatOf, dualPartnersOf,
     playSeason, resolveSeasonMoment, advanceYear, marketValue, salaryFor,
     buildOffer, offersFor, loanOffersFor, applyLoan, transferWindow,
+    sponsorDealDue, sponsorOffersFor, applySponsorDeal,
     applyTransfer, renewContract, totalAwards, careerRating, computeCareerScore, visibilityOf, creditClubTrophies,
     careerTitle, pickHighlights, buildNarrative, buildUntakenPath,
     newRival, rivalSeason, rivalNewsLine, compareVerdict,

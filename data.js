@@ -1041,6 +1041,21 @@ const ROLES = [
 ];
 const ROLE_ESPOIR_MAX_AGE = 20; // au-delà, plancher = Sporadique (index 1)
 
+// --- Contrats sponsors (choix actif, cf. engine.sponsorOffersFor/applySponsorDeal) ---
+// Remplacent l'ancien multiplicateur fixe (1.8) caché dans le calcul de
+// revenus de playSeason : proposés dès la 2e saison, puis à chaque
+// renouvellement (years écoulées). "cash" prolonge l'esprit de l'ancien
+// calcul (mult=2.6, rien d'autre) ; "image"/"perf" sacrifient une partie des
+// revenus contre un vrai bonus, appliqué UNE SEULE FOIS à la signature — pas
+// chaque saison du contrat, pour ne pas empiler les bonus sur sa durée.
+// Ordre de l'objet = ordre de présentation au joueur ET ordre lu par index
+// lors du rejeu (replayRun) : NE PAS réordonner sans y penser.
+const SPONSOR_PROFILES = {
+  cash: { id: "cash", label: "Contrat cash", desc: "Le maximum de revenus, sans contrepartie.", mult: 2.6, repDelta: 0, disciplineDelta: 0, years: 3 },
+  image: { id: "image", label: "Contrat image", desc: "Moins de revenus, mais une marque qui soigne votre réputation.", mult: 1.3, repDelta: 5, disciplineDelta: 0, years: 3 },
+  perf: { id: "perf", label: "Contrat performance", desc: "Moins de revenus, mais un encadrement qui muscle votre discipline.", mult: 1.3, repDelta: 0, disciplineDelta: 6, years: 3 },
+};
+
 // --- Compétitions fictives ---------------------------------------------------
 const COMPETITIONS = {
   league: { name: "Championnat National", icon: "🎖️" },
@@ -1511,6 +1526,11 @@ const ENGINE_TEXT = {
   loanBackGood: "Retour de prêt convaincant : {parentClub} compte enfin sur vous.",
   loanBackOk: "Retour de prêt à {parentClub}, avec une copie honnête.",
   loanBackBad: "Un prêt raté : {parentClub} doute ouvertement de vous.",
+
+  // --- Sponsors & confiance du club ---
+  sponsorSigned: "Nouveau partenaire : contrat {dealLabel}.",
+  frozenOutWarning: "Le vestiaire ne vous voit plus dans ses plans : mis à l'écart, votre temps de jeu va s'effondrer la saison prochaine.",
+  forcedLoanWarning: "La défiance persiste malgré la mise à l'écart : le club a tranché, direction un prêt la saison prochaine — sans vous laisser le choix du principe.",
 
   // Rival anonyme, quand aucun nom n'est fourni au rendu d'un texte.
   rivalFallback: "votre grand rival",

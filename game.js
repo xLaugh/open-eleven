@@ -1388,7 +1388,8 @@
       ${report.seasonInjury ? `<p class="recap-warn">🚑 ${esc((E.BALANCE_REF.injury.labels || {})[report.seasonInjury.tier] || "Blessure")}${T(" : {n} semaines sur la touche.", { n: report.seasonInjury.weeks })}</p>` : (report.injuryWeeks ? `<p class="recap-warn">🩹 ${report.injuryWeeks} semaines d'infirmerie cette saison.</p>` : "")}
       ${report.carryInjury ? `<p class="recap-warn">${T("🩼 Toujours en reconstruction : {n} semaines de retard traînées de la saison passée.", { n: report.carryInjury })}</p>` : ""}
       ${report.tournamentMissed ? `<p class="recap-warn">😔 Blessé, vous manquez le grand tournoi de votre sélection cette saison.</p>` : ""}
-      <p class="recap-money">💰 +${E.fmtMoney(report.income)} (salaire & sponsors)</p>
+      ${report.frozenOutWarning ? `<p class="recap-warn">⚠️ ${esc(report.frozenOutWarning)}</p>` : report.forcedLoanWarning ? `<p class="recap-warn">⚠️ ${esc(report.forcedLoanWarning)}</p>` : ""}
+      <p class="recap-money">💰 +${E.fmtMoney(report.income)} (salaire${report.sponsorLabel ? ` & sponsor ${esc(report.sponsorLabel)}` : " & sponsors"})</p>
       ${microHtml}
       ${newsLine ? `<p class="recap-news">${esc(newsLine)}</p>` : ""}
       <button class="btn btn-secondary" id="btn-next">Continuer</button>
@@ -1399,6 +1400,71 @@
   function offseason() {
     if (G.careerEnded) { renderCareerEndInjury(lastReport); return; }
     if (G.retiring || G.age >= E.BALANCE_REF.ageMax) { finalize(); return; }
+    // Confiance critique / sponsors : mode salle mis de côté pour l'instant
+    // (pas de synchronisation prévue entre membres pour ces écrans) — le
+    // reste du déroulé (mercato ci-dessous) reste inchangé pour ce mode.
+    if (!G.room && G.forcedLoanNext) {
+      G.forcedLoanNext = false;
+      const offers = E.loanOffersFor(G);
+      if (offers.length) { renderForcedLoanChoice(offers); return; }
+      // Aucun club preneur pour le prêt forcé : le mercato normal reprend son cours.
+    }
+    if (!G.room && E.sponsorDealDue(G)) {
+      renderSponsorChoice(E.sponsorOffersFor(), offseasonTransfer);
+      return;
+    }
+    offseasonTransfer();
+  }
+
+  // Choix du club de prêt forcé (défiance persistante malgré la mise à
+  // l'écart, cf. engine.js fin de playSeason) : même écran que le prêt
+  // volontaire de jeunesse (renderLoanChoice), mais SANS option de refus —
+  // seule la destination se choisit.
+  function renderForcedLoanChoice(offers) {
+    const buttons = offers.map((offer, i) => {
+      const cc = E.countryOf(offer.club.countryId);
+      return `<button class="opt-btn" data-offer="${i}"><span class="opt-hint">${esc(E.divShort(offer.club.level, offer.club.countryId))}</span>${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)} — ${T("prêt d'une saison")}</button>`;
+    }).join("");
+    showCard(`
+      <div class="card-tag"><span class="card-icon">📉</span> ${T("Mis à l'écart")} · ${G.age} ${T("ans")}</div>
+      <p class="event-text">${T("Le vestiaire ne vous voit plus dans ses plans. Le club vous pousse vers un prêt — vous n'avez pas voix au chapitre sur le principe, seulement sur la destination.")}</p>
+      <div class="event-options">${buttons}</div>
+    `, "bad");
+    $("game-card").querySelectorAll(".opt-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (lockOptions()) return;
+        if (G.duel || G.dailyDate) G.choiceLog.push(Number(btn.dataset.offer));
+        E.applyLoan(G, offers[Number(btn.dataset.offer)]);
+        updateHeader();
+        nextSeason();
+      });
+    });
+  }
+
+  // Négociation d'un contrat sponsor (dès la 2e saison, puis à chaque
+  // renouvellement) : remplace l'ancien calcul passif par un vrai choix entre
+  // 3 profils (cash / image / performance), cf. SPONSOR_PROFILES (data.js).
+  function renderSponsorChoice(offers, onDone) {
+    const buttons = offers.map((o, i) =>
+      `<button class="opt-btn" data-i="${i}"><span class="opt-hint">${esc(o.label)}</span>${esc(o.desc)}</button>`
+    ).join("");
+    showCard(`
+      <div class="card-tag"><span class="card-icon">🤝</span> ${T("Nouveau sponsor")} · ${G.age} ${T("ans")}</div>
+      <p class="event-text">${T("Plusieurs marques vous courtisent pour les prochaines saisons. À vous de choisir ce qui compte le plus.")}</p>
+      <div class="event-options">${buttons}</div>
+    `);
+    $("game-card").querySelectorAll(".opt-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (lockOptions()) return;
+        if (G.duel || G.dailyDate) G.choiceLog.push(Number(btn.dataset.i));
+        E.applySponsorDeal(G, offers[Number(btn.dataset.i)]);
+        updateHeader();
+        onDone();
+      });
+    });
+  }
+
+  function offseasonTransfer() {
     const window = E.transferWindow(G, lastReport);
     // Mode salle : la décision (rester/partir) devient collective — barrière
     // de fin de saison, cf. room.js renderSeasonBarrierStep. `window` masque
