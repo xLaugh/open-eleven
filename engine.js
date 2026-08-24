@@ -3188,7 +3188,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.72";
+  const ENGINE_VERSION = "10.73";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {
