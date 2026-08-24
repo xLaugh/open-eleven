@@ -1414,7 +1414,7 @@
       // Aucun club preneur pour le prêt forcé : le mercato normal reprend son cours.
     }
     if (!G.room && E.sponsorDealDue(G)) {
-      renderSponsorChoice(E.sponsorOffersFor(), offseasonTransfer);
+      renderSponsorChoice(E.sponsorOffersFor(G), offseasonTransfer);
       return;
     }
     offseasonTransfer();
@@ -1449,9 +1449,13 @@
   // renouvellement) : remplace l'ancien calcul passif par un vrai choix entre
   // 3 profils (cash / image / performance), cf. SPONSOR_PROFILES (data.js).
   function renderSponsorChoice(offers, onDone) {
-    const buttons = offers.map((o, i) =>
-      `<button class="opt-btn" data-i="${i}"><span class="opt-hint">${esc(o.label)}</span>${esc(o.desc)}</button>`
-    ).join("");
+    // Les chiffres réels (durée, bonus) s'affichent désormais — un simple
+    // texte de flaveur sans donnée concrète ne permettait pas de vraiment
+    // comparer les offres entre elles (retour joueur).
+    const buttons = offers.map((o, i) => {
+      const perk = o.repDelta ? `+${o.repDelta} ${T("réputation")}` : o.disciplineDelta ? `+${o.disciplineDelta} ${T("discipline")}` : T("revenus au maximum");
+      return `<button class="opt-btn" data-i="${i}"><span class="opt-hint">${esc(o.label)}</span>${esc(o.desc)}<br/><span class="opt-role">${T("Durée")} : ${o.years} ${T("ans")} · ${perk}</span></button>`;
+    }).join("");
     showCard(`
       <div class="card-tag"><span class="card-icon">🤝</span> ${T("Nouveau sponsor")} · ${G.age} ${T("ans")}</div>
       <p class="event-text">${T("Plusieurs marques vous courtisent pour les prochaines saisons. À vous de choisir ce qui compte le plus.")}</p>

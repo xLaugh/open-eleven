@@ -2701,10 +2701,23 @@
   function sponsorDealDue(s) {
     return !s.sponsorDeal || s.sponsorDeal.yearsLeft <= 0;
   }
-  // Catalogue fixe (aucun rng) : l'ORDRE doit rester stable, l'appelant (UI
-  // ou replayRun) référence un choix par INDEX dans cette liste.
-  function sponsorOffersFor() {
-    return Object.values(SPONSOR_PROFILES);
+  // Catalogue TIRÉ (mult/repDelta/disciplineDelta/years résolus dans une
+  // fourchette, marque piochée au hasard) — pas un catalogue fixe : deux
+  // renouvellements ne proposent jamais tout à fait les mêmes chiffres, et
+  // une bonne réputation élargit un peu la fourchette haute (négociation qui
+  // pèse plus à mesure que la carrière avance). L'ORDRE des catégories reste
+  // stable (cash/image/perf) : l'appelant (UI ou replayRun) référence un
+  // choix par INDEX dans cette liste.
+  function sponsorOffersFor(s) {
+    const repBoost = clamp((s.rep || 0) / 100, 0, 1) * 0.25; // jusqu'à +25% en haut de fourchette à forte réputation
+    return Object.values(SPONSOR_PROFILES).map((p) => {
+      const brand = pick(SPONSOR_BRANDS[p.id]);
+      const mult = Math.round(rand(p.mult[0], p.mult[1] * (1 + repBoost)) * 100) / 100;
+      const repDelta = Array.isArray(p.repDelta) ? randInt(p.repDelta[0], p.repDelta[1]) : p.repDelta;
+      const disciplineDelta = Array.isArray(p.disciplineDelta) ? randInt(p.disciplineDelta[0], p.disciplineDelta[1]) : p.disciplineDelta;
+      const years = randInt(p.years[0], p.years[1]);
+      return { id: p.id, label: `${p.labelBase} — ${brand}`, desc: p.desc, mult, repDelta, disciplineDelta, years };
+    });
   }
   function applySponsorDeal(s, profile) {
     s.sponsorDeal = { id: profile.id, label: profile.label, mult: profile.mult, yearsLeft: profile.years };
@@ -2994,7 +3007,7 @@
       const l = loanOffersFor(r);
       if (l.length) { applyLoan(r, pick(l)); advanceYear(r); return report; }
     }
-    if (sponsorDealDue(r)) applySponsorDeal(r, pick(sponsorOffersFor()));
+    if (sponsorDealDue(r)) applySponsorDeal(r, pick(sponsorOffersFor(r)));
     const window = transferWindow(r, report);
     if (window) {
       if (window.offers.length && rng() < 0.6) applyTransfer(r, pick(window.offers));
@@ -3120,7 +3133,7 @@
         }
       }
       if (sponsorDealDue(s)) {
-        const offers = sponsorOffersFor();
+        const offers = sponsorOffersFor(s);
         const ch = next();
         applySponsorDeal(s, offers[ch] || offers[0]);
       }
@@ -3188,7 +3201,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.73";
+  const ENGINE_VERSION = "10.75";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {

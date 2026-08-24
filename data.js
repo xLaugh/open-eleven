@@ -1044,16 +1044,27 @@ const ROLE_ESPOIR_MAX_AGE = 20; // au-delà, plancher = Sporadique (index 1)
 // --- Contrats sponsors (choix actif, cf. engine.sponsorOffersFor/applySponsorDeal) ---
 // Remplacent l'ancien multiplicateur fixe (1.8) caché dans le calcul de
 // revenus de playSeason : proposés dès la 2e saison, puis à chaque
-// renouvellement (years écoulées). "cash" prolonge l'esprit de l'ancien
-// calcul (mult=2.6, rien d'autre) ; "image"/"perf" sacrifient une partie des
-// revenus contre un vrai bonus, appliqué UNE SEULE FOIS à la signature — pas
-// chaque saison du contrat, pour ne pas empiler les bonus sur sa durée.
+// renouvellement. "cash" prolonge l'esprit de l'ancien calcul (rien que du
+// revenu) ; "image"/"perf" sacrifient une partie des revenus contre un vrai
+// bonus, appliqué UNE SEULE FOIS à la signature — pas chaque saison du
+// contrat, pour ne pas empiler les bonus sur sa durée.
+//
+// Chaque proposition est tirée dans une FOURCHETTE (pas un chiffre fixe) et
+// porte le nom d'une marque piochée au hasard : deux renouvellements ne se
+// ressemblent jamais tout à fait, et une bonne réputation fait grimper les
+// offres (cf. sponsorOffersFor) — retour joueur : l'écran figé, identique à
+// chaque fois, ne donnait aucune impression de vraie négociation.
 // Ordre de l'objet = ordre de présentation au joueur ET ordre lu par index
 // lors du rejeu (replayRun) : NE PAS réordonner sans y penser.
+const SPONSOR_BRANDS = {
+  cash: ["VoltEnergy", "Apex Finance", "Rapide Pay", "Cobra Sport", "Nova Bet", "Titan Capital"],
+  image: ["Lumière Media", "Studio Icône", "Aura Beauté", "Prestige Mode", "Halo Style"],
+  perf: ["PulseGear", "IronCore Nutrition", "MaxForm Training", "VitalEdge", "PeakLab"],
+};
 const SPONSOR_PROFILES = {
-  cash: { id: "cash", label: "Contrat cash", desc: "Le maximum de revenus, sans contrepartie.", mult: 2.6, repDelta: 0, disciplineDelta: 0, years: 3 },
-  image: { id: "image", label: "Contrat image", desc: "Moins de revenus, mais une marque qui soigne votre réputation.", mult: 1.3, repDelta: 5, disciplineDelta: 0, years: 3 },
-  perf: { id: "perf", label: "Contrat performance", desc: "Moins de revenus, mais un encadrement qui muscle votre discipline.", mult: 1.3, repDelta: 0, disciplineDelta: 6, years: 3 },
+  cash: { id: "cash", labelBase: "Contrat cash", desc: "Le maximum de revenus, sans contrepartie.", mult: [2.1, 3.1], repDelta: 0, disciplineDelta: 0, years: [2, 5] },
+  image: { id: "image", labelBase: "Contrat image", desc: "Moins de revenus, mais une marque qui soigne votre réputation.", mult: [1.05, 1.55], repDelta: [3, 8], disciplineDelta: 0, years: [2, 5] },
+  perf: { id: "perf", labelBase: "Contrat performance", desc: "Moins de revenus, mais un encadrement qui muscle votre discipline.", mult: [1.05, 1.55], repDelta: 0, disciplineDelta: [4, 9], years: [2, 5] },
 };
 
 // --- Compétitions fictives ---------------------------------------------------

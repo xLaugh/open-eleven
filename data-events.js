@@ -4573,6 +4573,135 @@ const EVENTS = [
       ] },
     ],
   },
+
+  // ══════════════ Ajouts (scènes de match / vestiaire) — ajoutés en fin de
+  // tableau, conformément à la règle d'ordre déterministe rappelée en tête
+  // de fichier.
+  {
+    id: "ev_away_crowd_insult", cat: "Supporters", icon: "📣", w: 10,
+    cond: { aMin: 19 },
+    text: "14ᵉ journée, déplacement dans un stade bouillant. Un virage entier entonne des chants sur votre mère, plus fort à chaque ballon que vous touchez.",
+    options: [
+      { label: "Tout donner pour répondre sur le terrain", hint: "Compétiteur", outcomes: [
+        { weight: 50, text: "La rage au ventre transformée en énergie pure : vous étouffez le stade sous votre performance.", fx: { m: 3, rep: 4, mor: 5 } },
+        { weight: 50, text: "Trop dans l'excès, vous vous sabordez vous-même — carton jaune évitable, jeu débordé.", fx: { m: -2, mor: -4 } },
+      ] },
+      { label: "Sourire et leur demander de chanter plus fort", hint: "Classe", outcomes: [
+        { weight: 55, text: "Le geste, filmé et partagé, fait le tour des réseaux. Même vos détracteurs saluent le sang-froid.", fx: { rep: 6, c: 3, mor: 4 } },
+        { weight: 45, text: "L'ironie ne passe pas partout : une partie du stade redouble d'agressivité.", fx: { mor: -3 } },
+      ] },
+      { label: "Ignorer totalement", hint: "Détachement", outcomes: [
+        { weight: 60, text: "Concentré sur le seul match, vous ne laissez rien transparaître.", fx: { m: 2 } },
+        { weight: 40, text: "L'indifférence affichée cache mal une blessure qui met du temps à cicatriser.", fx: { mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_rain_high_ball", cat: "Terrain", icon: "🌧️", w: 9,
+    cond: { aMin: 18 },
+    text: "Mi-saison, pluie battante, terrain de plus en plus lourd. Vous menez d'un but, l'adversaire pousse, et vous héritez d'une touche haute dans leur camp.",
+    options: [
+      { label: "Jouer vite pour surprendre la défense", hint: "Rapide", outcomes: [
+        { weight: 45, text: "La verticalité paie : la défense adverse, prise de vitesse, craque au pire moment.", fx: { rep: 4, mor: 5 } },
+        { weight: 55, text: "La précipitation sur un terrain glissant coûte cher : la balle part directement en touche adverse.", fx: { mor: -3 } },
+      ] },
+      { label: "Garder le ballon et demander un appui court", hint: "Sécurité", outcomes: [
+        { weight: 60, text: "Le jeu posé, malgré la pluie, permet de faire souffler l'équipe et de garder la main.", fx: { m: 2, team: 2 } },
+        { weight: 40, text: "L'appui espéré n'est pas au rendez-vous : le ballon se perd bêtement dans les jambes adverses.", fx: { mor: -2 } },
+      ] },
+      { label: "Ralentir le jeu pour faire monter le bloc", hint: "Gestion", outcomes: [
+        { weight: 55, text: "Le tempo maîtrisé étouffe la poussée adverse — la fin de match se gère sans trembler.", fx: { m: 3, coach: 3 } },
+        { weight: 45, text: "Le coach juge l'équipe trop reculée : les dernières minutes tournent au chaos.", fx: { mor: -3, coach: -2 } },
+      ] },
+      { label: "Tenter directement une action dans la surface", hint: "Audace", outcomes: [
+        { weight: 40, text: "Le pari, complètement fou sur ce terrain détrempé, se transforme en moment de folie collective.", fx: { rep: 6, mor: 6 } },
+        { weight: 60, text: "Le ballon glisse sous votre pied dans la boue : l'occasion part en corner adverse, sans conséquence.", fx: { mor: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_locker_room_gossip", cat: "Vestiaire", icon: "🚪", w: 9,
+    cond: { aMin: 20 },
+    text: "Après une séance intense, vous poussez la porte du vestiaire et surprenez la fin d'une phrase : un coéquipier vient de descendre votre attitude à l'entraînement.",
+    options: [
+      { label: "Répondre directement devant tout le monde", hint: "Confrontation", outcomes: [
+        { weight: 45, text: "Le clash, franc et net, clarifie les choses une bonne fois pour toutes. Le respect grandit.", fx: { m: 3, team: 3 } },
+        { weight: 55, text: "La scène, publique, tend durablement l'ambiance du groupe.", fx: { team: -6, mor: -4 } },
+      ] },
+      { label: "Laisser passer, puis lui parler en privé", hint: "Diplomatie", outcomes: [
+        { weight: 65, text: "La discussion en tête-à-tête désamorce le malentendu, sans faire de vagues.", fx: { m: 3, team: 4 } },
+        { weight: 35, text: "L'échange, trop poli, ne règle rien : le malaise couve encore sous la surface.", fx: { mor: -2 } },
+      ] },
+      { label: "Répondre sur le terrain", hint: "Actes", outcomes: [
+        { weight: 55, text: "Vos performances des semaines suivantes ferment définitivement la bouche des critiques.", fx: { rep: 4, m: 3, coach: 2 } },
+        { weight: 45, text: "La pression que vous vous mettez finit par se retourner contre vous.", fx: { form: -3, mor: -3 } },
+      ] },
+      { label: "Retourner la situation avec humour", hint: "Détente", outcomes: [
+        { weight: 55, text: "Une pique bien sentie, prise avec le sourire, désamorce toute la tension du groupe.", fx: { c: 3, team: 3, mor: 3 } },
+        { weight: 45, text: "L'humour tombe à plat : certains y voient un manque de sérieux face à la critique.", fx: { team: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_teammate_penalty_dispute", cat: "Terrain", icon: "⚽", w: 8,
+    cond: { aMin: 20, minTeam: 40 },
+    text: "Penalty sifflé en votre faveur, dernière minute, match nul. Un coéquipier, buteur attitré mais en méforme depuis des semaines, vous arrache le ballon des mains sans un mot.",
+    options: [
+      { label: "Le laisser tirer, sans un mot", hint: "Respect du rang", outcomes: [
+        { weight: 50, text: "Il transforme et vous salue en premier. Le geste, remarqué, soude un peu plus le groupe.", fx: { team: 5, mor: 3 } },
+        { weight: 50, text: "Il le manque. Le silence dans le vestiaire, après coup, est glacial — et personne ne vous en veut, à voix haute du moins.", fx: { mor: -3 } },
+      ] },
+      { label: "Réclamer le ballon devant tout le monde", hint: "Cran", outcomes: [
+        { weight: 45, text: "Le culot paie : vous transformez, et le capitaine salue votre aplomb dans ce money-time.", fx: { rep: 5, m: 3, mor: 5 } },
+        { weight: 55, text: "La scène, disputée en plein match, s'étale sur les réseaux dès le lendemain.", fx: { team: -5, rep: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_pitch_invader", cat: "Insolite", icon: "🏃", w: 7,
+    cond: { aMin: 18 },
+    text: "Un envahisseur de terrain, en pleine action, fonce droit sur vous pour une accolade avant que la sécurité ne l'intercepte.",
+    options: [
+      { label: "Le prendre dans les bras, jouer le jeu", hint: "Complice", outcomes: [
+        { weight: 60, text: "L'image, chaleureuse, devient virale pour de bonnes raisons.", fx: { rep: 5, mor: 3 } },
+        { weight: 40, text: "L'arbitre, agacé par l'interruption prolongée, vous avertit pour comportement antisportif.", fx: { rep: -1 } },
+      ] },
+      { label: "L'esquiver et continuer de jouer", hint: "Professionnel", outcomes: [
+        { weight: 55, text: "Le sérieux affiché, en pleine confusion, impressionne le staff technique.", fx: { coach: 3, m: 2 } },
+        { weight: 45, text: "Le supporter, vexé par le rejet, s'en prend verbalement à vous sur les réseaux le soir même.", fx: { mor: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_kids_clinic", cat: "Supporters", icon: "🧒", w: 8,
+    cond: { aMin: 19 },
+    text: "Le club vous propose d'animer un stage gratuit pour les jeunes du quartier pendant la trêve — sur votre temps de repos, sans contrepartie financière.",
+    options: [
+      { label: "Accepter et s'investir à fond", hint: "Générosité", outcomes: [
+        { weight: 60, text: "Les gamins repartent des étoiles plein les yeux, et l'écho médiatique dépasse toutes les attentes.", fx: { rep: 6, mor: 5, c: 2 } },
+        { weight: 40, text: "L'engagement, sincère, coûte un peu de fraîcheur sur la reprise de la trêve.", fx: { form: -3, rep: 3 } },
+      ] },
+      { label: "Décliner pour préserver son repos", hint: "Priorités", outcomes: [
+        { weight: 65, text: "La coupure, pleinement assumée, vous permet de revenir des congés à 100%.", fx: { form: 4 } },
+        { weight: 35, text: "Le refus, mal compris en interne, ternit un peu votre image dans le club.", fx: { rep: -2, team: -1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_captain_armband_offer", cat: "Vestiaire", icon: "🎽", w: 8,
+    cond: { aMin: 24, minCoach: 45, notFlag: "captain_offered" },
+    text: "Le capitaine historique du club, sur le départ, vous glisse discrètement qu'il va pousser votre nom pour lui succéder — mais d'autres cadres du vestiaire visent aussi le brassard.",
+    options: [
+      { label: "Faire campagne, ouvertement", hint: "Ambition", outcomes: [
+        { weight: 40, text: "Votre franchise convainc le groupe : le brassard, briqué, vous revient sans contestation.", fx: { rep: 5, coach: 4, flag: "captain_offered" } },
+        { weight: 60, text: "La démarche, jugée trop calculée, hérisse une partie du vestiaire.", fx: { team: -5, flag: "captain_offered" } },
+      ] },
+      { label: "Laisser le groupe décider seul", hint: "Humilité", outcomes: [
+        { weight: 55, text: "Cette réserve, remarquée, joue finalement en votre faveur au moment du vote informel du vestiaire.", fx: { team: 4, coach: 2, flag: "captain_offered" } },
+        { weight: 45, text: "Un cadre plus démonstratif rafle la mise pendant que vous restiez en retrait.", fx: { mor: -2, flag: "captain_offered" } },
+      ] },
+    ],
+  },
 ];
 
 /* ============================================================
