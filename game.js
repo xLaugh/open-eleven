@@ -1414,7 +1414,9 @@
       // Aucun club preneur pour le prêt forcé : le mercato normal reprend son cours.
     }
     if (!G.room && E.sponsorDealDue(G)) {
-      renderSponsorChoice(E.sponsorOffersFor(G), offseasonTransfer);
+      // sponsorTierFor AVANT sponsorOffersFor : même palier, et seul le
+      // second consomme du hasard (ordre sans incidence sur le rejeu).
+      renderSponsorChoice(E.sponsorTierFor(G), E.sponsorOffersFor(G), offseasonTransfer);
       return;
     }
     offseasonTransfer();
@@ -1445,22 +1447,23 @@
     });
   }
 
-  // Négociation d'un contrat sponsor (dès la 2e saison, puis à chaque
-  // renouvellement) : remplace l'ancien calcul passif par un vrai choix entre
-  // 3 profils (cash / image / performance), cf. SPONSOR_PROFILES (data.js).
-  function renderSponsorChoice(offers, onDone) {
-    // Les chiffres réels (durée, bonus) s'affichent désormais — un simple
-    // texte de flaveur sans donnée concrète ne permettait pas de vraiment
-    // comparer les offres entre elles (retour joueur).
+  // Contrat sponsor : un écran par PALIER de réputation franchi (trois au
+  // plus par carrière, cf. SPONSOR_TIERS dans data.js), chacun avec son
+  // propre texte et ses propres offres — plus de renouvellement périodique.
+  function renderSponsorChoice(tier, offers, onDone) {
     const buttons = offers.map((o, i) => {
-      const perk = o.repDelta ? `+${o.repDelta} ${T("réputation")}` : o.disciplineDelta ? `+${o.disciplineDelta} ${T("discipline")}` : T("revenus au maximum");
-      return `<button class="opt-btn" data-i="${i}"><span class="opt-hint">${esc(o.label)}</span>${esc(o.desc)}<br/><span class="opt-role">${T("Durée")} : ${o.years} ${T("ans")} · ${perk}</span></button>`;
+      const perks = [
+        o.money ? `+${E.fmtMoney(o.money)} ${T("à la signature")}` : "",
+        o.repDelta ? `+${o.repDelta} ${T("réputation")}` : "",
+        o.disciplineDelta ? `+${o.disciplineDelta} ${T("discipline")}` : "",
+      ].filter(Boolean).join(" · ");
+      return `<button class="opt-btn" data-i="${i}"><span class="opt-hint">${esc(o.label)}</span>${esc(T(o.desc))}${perks ? `<br/><span class="opt-role">${perks}</span>` : ""}</button>`;
     }).join("");
     showCard(`
-      <div class="card-tag"><span class="card-icon">🤝</span> ${T("Nouveau sponsor")} · ${G.age} ${T("ans")}</div>
-      <p class="event-text">${T("Plusieurs marques vous courtisent pour les prochaines saisons. À vous de choisir ce qui compte le plus.")}</p>
+      <div class="card-tag"><span class="card-icon">🤝</span> ${esc(T(tier.title))} · ${G.age} ${T("ans")}</div>
+      <p class="event-text">${esc(T(tier.text))}</p>
       <div class="event-options">${buttons}</div>
-    `);
+    `, "good");
     $("game-card").querySelectorAll(".opt-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         if (lockOptions()) return;

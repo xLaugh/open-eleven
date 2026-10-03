@@ -374,7 +374,8 @@
       retiring: false,
       careerEnded: false,
       careerEndReason: null,
-      sponsorDeal: null, // contrat sponsor actif { id, label, mult, yearsLeft } — cf. SPONSOR_PROFILES (data.js)
+      sponsorDeal: null, // contrat sponsor actif { id, label, mult } — cf. SPONSOR_TIERS (data.js)
+      sponsorTier: 0, // nombre de paliers de sponsoring déjà franchis
       disfavorStreak: 0, // saisons consécutives de confiance coach au plancher (cf. fin de playSeason)
       frozenOut: false, // mise à l'écart décidée : appliquée puis consommée dès la saison suivante
       forcedLoanNext: false, // défiance persistante malgré la mise à l'écart : prêt forcé programmé
@@ -2040,19 +2041,16 @@
       s.moral = clamp(s.moral - 3, 5, 100);
     }
 
-    // Revenus — un contrat sponsor ACTIF (choisi en fin de saison, cf.
-    // sponsorOffersFor/applySponsorDeal) remplace l'ancien multiplicateur fixe :
-    // même base (réputation × charisme × visibilité), mais le profil choisi
-    // pèse différemment sur argent/réputation/discipline. Tant qu'aucun choix
-    // n'a encore été fait (tout début de carrière), 1.8 reproduit exactement
-    // l'ancien calcul.
+    // Revenus — un contrat sponsor signé à un palier de réputation (cf.
+    // sponsorOffersFor/applySponsorDeal) remplace le multiplicateur par
+    // défaut, sur la même base (réputation × charisme × visibilité). Sans
+    // contrat (jeune joueur encore inconnu), 1.8 reproduit l'ancien calcul.
     const dealMult = s.sponsorDeal ? s.sponsorDeal.mult : 1.8;
     const sponsors = (s.rep / 100) * (s.stats.c / 100) * visibilityOf(s) * dealMult;
     const income = s.contract.salary * 0.55 + sponsors * rand(0.6, 1.2);
     s.money += income;
     report.income = income + (report.objectiveBonus || 0);
     report.sponsorLabel = s.sponsorDeal ? s.sponsorDeal.label : null;
-    if (s.sponsorDeal) s.sponsorDeal.yearsLeft -= 1;
     const prize = report.trophies.length * 0.3;
     if (prize) s.money += prize;
 
@@ -2695,35 +2693,49 @@
     s.history.push({ age: s.age, text: tx(s, "loanOut", { toClub: offer.club.name }), impact: 4 });
   }
 
-  // Sponsor dû : aucun contrat encore signé, ou contrat arrivé à échéance
-  // (yearsLeft décompté à chaque saison dans playSeason). Pas de rng : sûr à
-  // appeler pour un simple affichage/vérification.
-  function sponsorDealDue(s) {
-    return !s.sponsorDeal || s.sponsorDeal.yearsLeft <= 0;
+  // Sponsors par PALIERS de réputation (SPONSOR_TIERS, data.js) : au plus
+  // trois rendez-vous par carrière, jamais avant minAge, et plus aucun
+  // renouvellement périodique. s.sponsorTier = nombre de paliers déjà
+  // franchis. Si la réputation a sauté plusieurs caps d'un coup, on propose
+  // directement le plus haut atteint (pas deux écrans deux saisons de suite).
+  // Renvoie l'index du palier à proposer, ou -1. Aucun rng.
+  function sponsorTierIdx(s) {
+    for (let i = SPONSOR_TIERS.length - 1; i >= (s.sponsorTier || 0); i--) {
+      const t = SPONSOR_TIERS[i];
+      if (s.rep >= t.minRep && s.age >= t.minAge) return i;
+    }
+    return -1;
   }
-  // Catalogue TIRÉ (mult/repDelta/disciplineDelta/years résolus dans une
-  // fourchette, marque piochée au hasard) — pas un catalogue fixe : deux
-  // renouvellements ne proposent jamais tout à fait les mêmes chiffres, et
-  // une bonne réputation élargit un peu la fourchette haute (négociation qui
-  // pèse plus à mesure que la carrière avance). L'ORDRE des catégories reste
-  // stable (cash/image/perf) : l'appelant (UI ou replayRun) référence un
-  // choix par INDEX dans cette liste.
+  function sponsorDealDue(s) { return sponsorTierIdx(s) >= 0; }
+  // Titre et texte du palier à proposer (affichage) — null si rien n'est dû.
+  function sponsorTierFor(s) {
+    const i = sponsorTierIdx(s);
+    return i >= 0 ? { title: SPONSOR_TIERS[i].title, text: SPONSOR_TIERS[i].text } : null;
+  }
+  // Offres du palier, TIRÉES (marque au hasard, montants dans une
+  // fourchette). L'ordre des options est stable : l'appelant (UI ou
+  // replayRun) référence son choix par INDEX dans cette liste.
   function sponsorOffersFor(s) {
-    const repBoost = clamp((s.rep || 0) / 100, 0, 1) * 0.25; // jusqu'à +25% en haut de fourchette à forte réputation
-    return Object.values(SPONSOR_PROFILES).map((p) => {
-      const brand = pick(SPONSOR_BRANDS[p.id]);
-      const mult = Math.round(rand(p.mult[0], p.mult[1] * (1 + repBoost)) * 100) / 100;
-      const repDelta = Array.isArray(p.repDelta) ? randInt(p.repDelta[0], p.repDelta[1]) : p.repDelta;
-      const disciplineDelta = Array.isArray(p.disciplineDelta) ? randInt(p.disciplineDelta[0], p.disciplineDelta[1]) : p.disciplineDelta;
-      const years = randInt(p.years[0], p.years[1]);
-      return { id: p.id, label: `${p.labelBase} — ${brand}`, desc: p.desc, mult, repDelta, disciplineDelta, years };
-    });
+    const idx = sponsorTierIdx(s);
+    if (idx < 0) return [];
+    const roll = (v) => (Array.isArray(v) ? randInt(v[0], v[1]) : v || 0);
+    return SPONSOR_TIERS[idx].options.map((o) => ({
+      id: o.id, tier: idx,
+      label: `${o.labelBase} — ${pick(SPONSOR_BRANDS[o.brands])}`,
+      desc: o.desc,
+      mult: Math.round(rand(o.mult[0], o.mult[1]) * 100) / 100,
+      repDelta: roll(o.repDelta),
+      disciplineDelta: roll(o.disciplineDelta),
+      money: o.money ? Math.round(rand(o.money[0], o.money[1]) * 100) / 100 : 0,
+    }));
   }
-  function applySponsorDeal(s, profile) {
-    s.sponsorDeal = { id: profile.id, label: profile.label, mult: profile.mult, yearsLeft: profile.years };
-    if (profile.repDelta) s.rep = clamp(s.rep + profile.repDelta, 0, 100);
-    if (profile.disciplineDelta) s.discipline = clamp(s.discipline + profile.disciplineDelta, 0, 100);
-    s.history.push({ age: s.age, text: tx(s, "sponsorSigned", { dealLabel: profile.label }), impact: (profile.repDelta || profile.disciplineDelta) ? 3 : 0 });
+  function applySponsorDeal(s, offer) {
+    s.sponsorDeal = { id: offer.id, label: offer.label, mult: offer.mult };
+    s.sponsorTier = offer.tier + 1;
+    if (offer.repDelta) s.rep = clamp(s.rep + offer.repDelta, 0, 100);
+    if (offer.disciplineDelta) s.discipline = clamp(s.discipline + offer.disciplineDelta, 0, 100);
+    if (offer.money) s.money += offer.money;
+    s.history.push({ age: s.age, text: tx(s, "sponsorSigned", { dealLabel: offer.label }), impact: 3 + offer.tier * 2 });
   }
 
   function transferWindow(s, report) {
@@ -3201,7 +3213,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.75";
+  const ENGINE_VERSION = "10.76";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {
@@ -3218,7 +3230,7 @@
     roleForClub, roleOf, dualNatOf, dualPartnersOf,
     playSeason, resolveSeasonMoment, advanceYear, marketValue, salaryFor,
     buildOffer, offersFor, loanOffersFor, applyLoan, transferWindow,
-    sponsorDealDue, sponsorOffersFor, applySponsorDeal,
+    sponsorDealDue, sponsorTierFor, sponsorOffersFor, applySponsorDeal,
     applyTransfer, renewContract, totalAwards, careerRating, computeCareerScore, visibilityOf, creditClubTrophies,
     careerTitle, pickHighlights, buildNarrative, buildUntakenPath,
     newRival, rivalSeason, rivalNewsLine, compareVerdict,

@@ -1043,29 +1043,55 @@ const ROLE_ESPOIR_MAX_AGE = 20; // au-delà, plancher = Sporadique (index 1)
 
 // --- Contrats sponsors (choix actif, cf. engine.sponsorOffersFor/applySponsorDeal) ---
 // Remplacent l'ancien multiplicateur fixe (1.8) caché dans le calcul de
-// revenus de playSeason : proposés dès la 2e saison, puis à chaque
-// renouvellement. "cash" prolonge l'esprit de l'ancien calcul (rien que du
-// revenu) ; "image"/"perf" sacrifient une partie des revenus contre un vrai
-// bonus, appliqué UNE SEULE FOIS à la signature — pas chaque saison du
-// contrat, pour ne pas empiler les bonus sur sa durée.
+// revenus de playSeason (qui reste la valeur par défaut tant qu'aucun contrat
+// n'est signé). Les bonus (réputation, discipline, prime) sont appliqués UNE
+// SEULE FOIS à la signature, jamais chaque saison.
 //
-// Chaque proposition est tirée dans une FOURCHETTE (pas un chiffre fixe) et
-// porte le nom d'une marque piochée au hasard : deux renouvellements ne se
-// ressemblent jamais tout à fait, et une bonne réputation fait grimper les
-// offres (cf. sponsorOffersFor) — retour joueur : l'écran figé, identique à
-// chaque fois, ne donnait aucune impression de vraie négociation.
-// Ordre de l'objet = ordre de présentation au joueur ET ordre lu par index
-// lors du rejeu (replayRun) : NE PAS réordonner sans y penser.
+// TROIS PALIERS de carrière, pas un renouvellement périodique : un sponsor ne
+// se présente que lorsque la RÉPUTATION franchit un cap (et jamais avant
+// minAge — personne ne courtise un gamin de 16 ans au centre de formation).
+// Retour joueur : l'écran revenait tous les 2-5 ans, dès la première saison,
+// avec toujours les trois mêmes profils. Désormais trois rendez-vous au plus
+// par carrière, chacun avec SES propres offres, et le contrat signé court
+// jusqu'au palier suivant (aucune échéance).
+// Les montants sont tirés dans une fourchette et la marque piochée au hasard.
+// L'ORDRE des paliers et des options est lu par INDEX lors du rejeu
+// (replayRun) : n'ajouter qu'à la fin, ne pas réordonner.
 const SPONSOR_BRANDS = {
   cash: ["VoltEnergy", "Apex Finance", "Rapide Pay", "Cobra Sport", "Nova Bet", "Titan Capital"],
   image: ["Lumière Media", "Studio Icône", "Aura Beauté", "Prestige Mode", "Halo Style"],
   perf: ["PulseGear", "IronCore Nutrition", "MaxForm Training", "VitalEdge", "PeakLab"],
+  kit: ["Strato", "Falcon Sport", "Kaiser", "Lynx", "Novara", "Torque"],
 };
-const SPONSOR_PROFILES = {
-  cash: { id: "cash", labelBase: "Contrat cash", desc: "Le maximum de revenus, sans contrepartie.", mult: [2.1, 3.1], repDelta: 0, disciplineDelta: 0, years: [2, 5] },
-  image: { id: "image", labelBase: "Contrat image", desc: "Moins de revenus, mais une marque qui soigne votre réputation.", mult: [1.05, 1.55], repDelta: [3, 8], disciplineDelta: 0, years: [2, 5] },
-  perf: { id: "perf", labelBase: "Contrat performance", desc: "Moins de revenus, mais un encadrement qui muscle votre discipline.", mult: [1.05, 1.55], repDelta: 0, disciplineDelta: [4, 9], years: [2, 5] },
-};
+const SPONSOR_TIERS = [
+  {
+    id: "first", minRep: 30, minAge: 18, title: "Premier équipementier",
+    text: "Votre nom commence à circuler. Pour la première fois, des équipementiers font le déplacement pour vous faire signer.",
+    options: [
+      { id: "first_bonus", brands: "cash", labelBase: "Prime à la signature", desc: "Un chèque tout de suite, un contrat modeste ensuite.", mult: [1.7, 2.1], money: [0.15, 0.3] },
+      { id: "first_bet", brands: "kit", labelBase: "Marque montante", desc: "Rien à la signature, mais des revenus indexés sur votre ascension.", mult: [2.2, 2.8] },
+      { id: "first_perf", brands: "perf", labelBase: "Équipementier technique", desc: "Peu d'argent, mais un suivi matériel et physique de haut niveau.", mult: [1.5, 1.9], disciplineDelta: [3, 6] },
+    ],
+  },
+  {
+    id: "national", minRep: 55, minAge: 18, title: "Visage national",
+    text: "Vous êtes devenu une tête d'affiche du championnat. Les grandes enseignes du pays veulent votre visage sur leurs campagnes.",
+    options: [
+      { id: "nat_cash", brands: "cash", labelBase: "Contrat cash", desc: "Le maximum de revenus, sans contrepartie.", mult: [2.4, 3.2] },
+      { id: "nat_image", brands: "image", labelBase: "Égérie", desc: "Moins de revenus, mais une campagne qui installe votre image.", mult: [1.7, 2.2], repDelta: [4, 8] },
+      { id: "nat_perf", brands: "perf", labelBase: "Partenariat performance", desc: "Moins de revenus, mais un encadrement qui muscle votre discipline.", mult: [1.7, 2.2], disciplineDelta: [4, 8] },
+    ],
+  },
+  {
+    id: "global", minRep: 78, minAge: 18, title: "Icône mondiale",
+    text: "Votre nom dépasse le football. Les multinationales se disputent un contrat qui vous suivra jusqu'à la fin de votre carrière.",
+    options: [
+      { id: "glob_life", brands: "cash", labelBase: "Contrat à vie", desc: "Une rente colossale et garantie, quoi qu'il arrive.", mult: [3.0, 4.0] },
+      { id: "glob_own", brands: "image", labelBase: "Votre propre marque", desc: "Un pari : tout ou presque rien, selon ce que le public en fera.", mult: [1.4, 5.2] },
+      { id: "glob_fund", brands: "perf", labelBase: "Fondation à votre nom", desc: "Des revenus sages, mais une image qui force le respect partout.", mult: [1.8, 2.3], repDelta: [6, 10] },
+    ],
+  },
+];
 
 // --- Compétitions fictives ---------------------------------------------------
 const COMPETITIONS = {
