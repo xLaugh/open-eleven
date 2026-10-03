@@ -1409,6 +1409,7 @@ const BALANCE = {
   // Poids de base du niveau de centre de formation au départ
   academyWeights: { regional: 34, d4: 33, d3: 32, d2: 30, d1: 24, elite: 12 },
   academySurpriseChance: 0.05, // un grand centre mise sur un profil modeste
+  academyAbroadChance: 0.35, // un centre étranger (même continent) se manifeste
   microChance: 0.6, // proba d'au moins une brève de saison
   windowRandomChance: 0.12, // mercato spontané sans raison particulière
   noOfferChance: 0.15, // proba qu'une fenêtre annoncée n'apporte aucune offre
@@ -1581,6 +1582,8 @@ const ENGINE_TEXT = {
   academyD3: "Club modeste mais structuré — peu de moyens, beaucoup de terrain",
   academyD4: "Petit club discret — loin des projecteurs, mais un vrai tremplin",
   academyRegional: "Club local — l'école de la débrouille, près des vôtres",
+  academyAbroad: "Centre étranger — un cran au-dessus, mais loin des vôtres dès 16 ans : le mal du pays vous attend",
+  youngExile: "Parti à l'étranger à 16 ans : les premiers mois loin des siens sont rudes.",
 
   // --- Coupe du Monde & Jeux Olympiques (intitulés de phase) ---
   wcInFinal: "En finale !",

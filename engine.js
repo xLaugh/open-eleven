@@ -271,21 +271,49 @@
     const clubsAt = (lvl) => CLUBS_BY_LEVEL[lvl].filter((c) => c.countryId === homeId);
     for (const k in w) if (!clubsAt(k).length) w[k] = 0;
 
-    const count = randInt(2, 3);
+    // 3 à 4 offres. Un même niveau peut désormais revenir (deux clubs
+    // DIFFÉRENTS) : avant, c'était un club par division au plus, si bien
+    // qu'un pays à deux échelons ne proposait jamais plus de deux centres.
+    // Le poids d'un niveau déjà tiré est réduit, pas annulé, pour garder de
+    // la variété quand le pays en a.
+    const count = randInt(3, 4);
+    // Tirage TOUJOURS consommé (même si aucun club étranger n'est finalement
+    // disponible), pour que le déroulé du hasard ne dépende pas du pays.
+    const wantAbroad = rng() < BALANCE.academyAbroadChance && homeId !== "br"; // règle des mineurs brésiliens : pas d'exil avant 18 ans
+    const domesticCount = wantAbroad ? count - 1 : count;
     const offers = [];
     const remaining = { ...w };
-    for (let i = 0; i < count; i++) {
-      const entries = Object.entries(remaining).filter(([, weight]) => weight > 0);
+    const taken = new Set();
+    for (let i = 0; i < domesticCount; i++) {
+      const entries = Object.entries(remaining).filter(([lvl, weight]) => weight > 0 && clubsAt(lvl).some((c) => !taken.has(c.id)));
       if (!entries.length) break;
       const [lvl] = weightedRandom(entries, (e) => e[1]);
-      delete remaining[lvl];
-      offers.push({ club: pick(clubsAt(lvl)), level: lvl, blurb: academyBlurb(lvl) });
+      remaining[lvl] *= 0.4;
+      const club = pick(clubsAt(lvl).filter((c) => !taken.has(c.id)));
+      taken.add(club.id);
+      offers.push({ club, level: lvl, blurb: academyBlurb(lvl) });
     }
-    if (!offers.some((o) => o.level === "elite") && clubsAt("elite").length && rng() < BALANCE.academySurpriseChance) {
+    if (!offers.some((o) => o.level === "elite") && clubsAt("elite").some((c) => !taken.has(c.id)) && rng() < BALANCE.academySurpriseChance) {
       offers[offers.length - 1] = {
         club: pick(clubsAt("elite")), level: "elite",
         blurb: academyBlurb("elite"), surprise: true,
       };
+    }
+    // Offre venue de l'étranger : un centre du même continent, un cran
+    // au-dessus du meilleur centre domestique intéressé (ou du même niveau
+    // s'il n'existe rien plus haut). Le prix — le mal du pays — est appliqué
+    // par newCareer quand le club de départ n'est pas au pays.
+    if (wantAbroad && offers.length) {
+      const homeCont = (countryOf(homeId) || {}).continent;
+      const bestIdx = Math.max(...offers.map((o) => LEVEL_ORDER.indexOf(o.level)));
+      const abroadAt = (lvl) => CLUBS_BY_LEVEL[lvl].filter((c) => {
+        const co = countryOf(c.countryId) || {};
+        return c.countryId !== homeId && co.continent === homeCont && !co.gulf;
+      });
+      let lvl = LEVEL_ORDER[Math.min(LEVEL_ORDER.length - 1, bestIdx + 1)];
+      let pool = abroadAt(lvl);
+      if (!pool.length) { lvl = LEVEL_ORDER[bestIdx]; pool = abroadAt(lvl); }
+      if (pool.length) offers.push({ club: pick(pool), level: lvl, blurb: ENGINE_TEXT.academyAbroad, abroad: true });
     }
     offers.sort((a, b) => levelRank(a.level) - levelRank(b.level));
     return offers;
@@ -407,6 +435,15 @@
     s.contract.salary = salaryFor(s, opts.club) * 0.3;
     s.transferHistory.push({ age: s.age, toClubName: opts.club.name, countryName: countryOf(opts.club.countryId).name, fee: null, level: lvlOf(s, opts.club) });
     s.role = roleForClub(s, opts.club); // statut au centre de formation (souvent Espoir/Rotation)
+    // Exil à 16 ans (offre étrangère de academyOffers) : le mal du pays se
+    // paie d'entrée. Hors mode Histoire (startYear imposé), où le club de
+    // départ à l'étranger fait partie de la légende rejouée.
+    if (!opts.startYear && opts.club.countryId !== clubHomeOf(opts.nationality)) {
+      s.moral = clamp(s.moral - 12, 5, 100);
+      s.teamRel = clamp(s.teamRel - 8, 5, 100);
+      s.flags.young_exile = true;
+      s.history.push({ age: s.age, text: tx(s, "youngExile"), impact: -4 });
+    }
     // Double nationalité. Le tirage est TOUJOURS exécuté (même quand le joueur a
     // choisi lui-même) pour que la consommation de hasard reste identique — c'est ce
     // qui garde le Défi du jour et les duels rejouables à l'identique.
@@ -3213,7 +3250,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.76";
+  const ENGINE_VERSION = "10.77";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {
