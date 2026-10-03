@@ -1338,7 +1338,7 @@
     const rivalReport = G.duel ? null : offSeed(() => E.rivalSeason(R)); // en duel : rival figé, pas de sim
     const isGk = G.position.id === "gk";
     const trophyLine = report.trophies.length
-      ? report.trophies.map((tr) => { const c = trophyInfo(tr); return c ? `${c.icon} ${c.name}` : tr; }).join(" · ")
+      ? report.trophies.map((tr) => { const c = trophyInfo(tr, report.countryId); return c ? `${c.icon} ${c.name}` : tr; }).join(" · ")
       : "";
     const newsLine = rivalReport && Math.random() < 0.6
       ? E.rivalNewsLine(R, rivalReport, E.computeCareerScore(G) - E.computeCareerScore(R))
@@ -2874,7 +2874,14 @@
   // son nom — que ce soit une compétition "classique" (COMPETITIONS, indexée
   // par clé) ou un Ballon d'Or continental (CONTINENTAL_BALLON, indexé par
   // CONTINENT, pas par clé — d'où la recherche par .key ci-dessous).
-  function trophyInfo(tr) {
+  // countryId = pays du club la saison du trophée : les coupes continentales
+  // de club portent le nom du CONTINENT où elles ont été gagnées. Sans lui,
+  // COMPETITIONS ne connaît que le libellé européen — un Bouclier d'Asie
+  // s'affichait « Bouclier d'Europe » au bilan de saison (retour joueur).
+  function trophyInfo(tr, countryId) {
+    const byContinent = { continental: CONTINENTAL_CUPS, continental2: CONTINENTAL_CUPS2, continental3: CONTINENTAL_CUPS3, supercup: CONTINENTAL_SUPERCUP }[tr];
+    const cont = byContinent && countryId ? (E.countryOf(countryId) || {}).continent : null;
+    if (cont && byContinent[cont]) return byContinent[cont];
     return COMPETITIONS[tr] || Object.values(CONTINENTAL_BALLON).find((x) => x.key === tr) || null;
   }
 
@@ -3201,7 +3208,7 @@
         // se.trophies (pour ne pas peser sur le Ballon d'Or) : on ajoute quand
         // même l'icône de champion ici pour qu'il apparaisse dans le tableau.
         const champIcon = (se.divisionTitle && !(se.trophies || []).includes("league")) ? COMPETITIONS.league.icon : "";
-        const icons = champIcon + (se.trophies || []).map((tr) => { const c = trophyInfo(tr); return c ? c.icon : ""; }).join("");
+        const icons = champIcon + (se.trophies || []).map((tr) => { const c = trophyInfo(tr, se.countryId); return c ? c.icon : ""; }).join("");
         const perf = isGk ? `${se.cleanSheets || 0} cs` : `${se.goals} b`;
         const pd = ` · ${se.assists || 0} pd`;
         let moveArrow = "";
