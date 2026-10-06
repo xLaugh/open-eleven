@@ -404,6 +404,7 @@
       careerEndReason: null,
       sponsorDeal: null, // contrat sponsor actif { id, label, mult } — cf. SPONSOR_TIERS (data.js)
       sponsorTier: 0, // nombre de paliers de sponsoring déjà franchis
+      dualNatAlt: null, // autre nation encore accessible après le premier choix (seconde chance à 24/28 ans)
       squad: "first", // "youth" (U17 du club) | "reserve" | "first" — fixé plus bas selon le club de départ
       devTotals: {}, // matchs/buts en U17 et en réserve, comptés à part : { youth: {...}, reserve: {...} }
       youthTrophies: { clubU17: 0, contU17: 0, wcU17: 0 }, // titres de jeunes, hors palmarès senior
@@ -489,6 +490,11 @@
   function dualNatOf(s) {
     return s.dualNat ? NATIONALITIES.find((n) => n.id === s.dualNat) || null : null;
   }
+  // L'autre nation, une fois le premier choix passé : gardée en mémoire tant
+  // que le joueur n'a disputé aucun match officiel en sélection A.
+  function altNatOf(s) {
+    return s.dualNatAlt ? NATIONALITIES.find((n) => n.id === s.dualNatAlt) || null : null;
+  }
 
   // --- Sélection nationale : barre d'OVR selon la force de la nation -----------
   // Premier palier dont le seuil de poids est atteint. Les paliers sont ordonnés du
@@ -520,6 +526,9 @@
       // façon filtrés par cond.dual.
       .replace(/\bde \{dualNat\}/g, deOf((dualNatOf(s) || {}).name || ""))
       .replace(/\{dualNat\}/g, (dualNatOf(s) || {}).name || "")
+      // {altNat} : l'autre nation encore accessible après le premier choix.
+      .replace(/\bde \{altNat\}/g, deOf((altNatOf(s) || {}).name || ""))
+      .replace(/\{altNat\}/g, (altNatOf(s) || {}).name || "")
       .replace(/\bde \{country\}/g, deOf(country ? country.name : ""))
       .replace(/\bde \{name\}/g, deOf(s.name))
       .replace(/\{club\}/g, s.club.name)
@@ -612,9 +621,27 @@
       s.dualNat = null;
     }
     if (fx.natLock) { // on confirme la nation de naissance → l'autre porte se ferme
+      // … mais pas à double tour : tant qu'aucun match officiel A n'est joué,
+      // l'autre fédération peut revenir plus tard (cf. natSwitchAlt).
+      s.dualNatAlt = s.dualNat || s.dualNatAlt || null;
       s.dualNat = null;
       s.flags.natLocked = true;
     }
+    // Seconde chance : jamais appelé par sa sélection, le joueur rejoint l'autre
+    // nation à laquelle il était éligible (mémorisée dans s.dualNatAlt).
+    if (fx.natSwitchAlt) {
+      const target = altNatOf(s);
+      if (target) {
+        const from = s.nationality;
+        s.nationality = target;
+        s.flags.natSwitched = true;
+        s.natSwitchFrom = from.id;
+        chips.push({ label: tx(s, "chipNatCall", { target: target.name }), kind: "trait" });
+        s.history.push({ age: s.age, text: tx(s, "natSwitchLate", { target: target.name, from: from.name }), impact: 6 });
+      }
+      s.dualNatAlt = null;
+    }
+    if (fx.natAltDrop) s.dualNatAlt = null; // refus définitif de l'autre sélection
     if (fx.role) { // ajustement direct du statut au club (ex. « tu restes → tu perds ta place »)
       const before = typeof s.role === "number" ? s.role : 2;
       s.role = clamp(before + fx.role, 0, 4);
@@ -728,6 +755,9 @@
     // dual: true → réservé aux joueurs éligibles à une SECONDE sélection, et qui
     // n'ont pas encore tranché (le choix se verrouille dès la première sélection A).
     if (c.dual === true && !(s.dualNat && !s.natTeam.active && !s.natTeam.retired)) return false;
+    // dualAlt: true → seconde chance : une autre nation reste accessible et le
+    // joueur n'a JAMAIS porté le maillot A (aucune sélection, pas même passée).
+    if (c.dualAlt === true && !(s.dualNatAlt && !s.natTeam.active && !s.natTeam.retired && !(s.natTeam.caps > 0))) return false;
     if (c.lifestyle && s.lifestyle.id !== c.lifestyle) return false;
     if (c.entourage && s.entourage.id !== c.entourage) return false;
     const o = ovr(s);
@@ -810,7 +840,16 @@
         return spec;
       }
     }
-    const pool = EVENTS.filter((ev) => eventEligible(s, ev));
+    // Rendez-vous à âge fixe (ev.priority) : la fenêtre ne dure qu'une saison,
+    // un tirage pondéré parmi des centaines d'événements la ferait manquer
+    // neuf fois sur dix. S'il est éligible, il passe avant tout le reste —
+    // et il ne retourne jamais dans le tirage ordinaire.
+    const prio = EVENTS.find((ev) => ev.priority && eventEligible(s, ev));
+    if (prio) {
+      if (prio.once !== false) s.usedEvents.push(prio.id);
+      return prio;
+    }
+    const pool = EVENTS.filter((ev) => !ev.priority && eventEligible(s, ev));
     if (pool.length === 0) return null;
     const ev = weightedRandom(pool, (e) => e.w || 10);
     if (ev.once !== false) s.usedEvents.push(ev.id);
@@ -2740,7 +2779,9 @@
     // pas choisi (une première sélection verrouillerait son avenir international sans
     // qu'il ait décidé). Passé la fenêtre de l'événement, le silence vaut fidélité à
     // la nation de naissance et la porte se referme. Aucun rng consommé.
-    if (s.dualNat && s.age > 23) { s.dualNat = null; s.flags.natLocked = true; }
+    if (s.dualNat && s.age > 23) { s.dualNatAlt = s.dualNat; s.dualNat = null; s.flags.natLocked = true; }
+    // Une première sélection A ferme définitivement l'autre porte.
+    if (s.dualNatAlt && (s.natTeam.active || s.natTeam.caps > 0)) s.dualNatAlt = null;
     if (!s.natTeam.active && !s.natTeam.retired && !s.dualNat && s.age >= 17 && seasonInj < 20) {
       const curLvlId = lvlOf(s, s.club);
       let ovrNeed, repNeed;
@@ -3488,7 +3529,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.79";
+  const ENGINE_VERSION = "10.80";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {

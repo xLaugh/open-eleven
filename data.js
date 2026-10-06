@@ -1536,6 +1536,7 @@ const ENGINE_TEXT = {
   adieuFail: "Match d'adieu avec {club} en {year} : le rideau tombe en silence.",
   // --- Sélection nationale & jeunes ---
   natSwitch: "Choix international : {target} plutôt que {from}.",
+  natSwitchLate: "Jamais appelé par {from}, changement de sélection à {age} ans : cap sur {target}.",
   firstCap: "Première convocation avec {nat}.",
   firstCapYoung: "Première convocation avec {nat} — à seulement {age} ans !",
   natRetire: "Fin de l'aventure en sélection avec {nat} : place à la nouvelle génération.",

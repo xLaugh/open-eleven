@@ -362,8 +362,8 @@ const EVENTS = [
         { weight: 45, text: "Vous choisissez {nat} sans hésiter. La fédération vous voit déjà en cadre.", fx: { mor: 4, c: 2, natLock: true } },
       ] },
       { label: "Choisir {dualNat}", hint: "Change de sélection", outcomes: [
-        { weight: 50, text: "Vous optez pour {dualNat}. Nouveau maillot, nouvelles ambitions — et une partie du public d'origine qui ne vous le pardonnera pas.", fx: { rep: 4, mor: 2, natSwitch: true } },
-        { weight: 50, text: "Vous rejoignez {dualNat}. La presse d'origine parle de trahison, celle d'accueil d'un renfort de poids.", fx: { rep: 6, mor: -3, natSwitch: true } },
+        { weight: 50, text: "Vous optez pour {nat}. Nouveau maillot, nouvelles ambitions — et une partie du public d'origine qui ne vous le pardonnera pas.", fx: { rep: 4, mor: 2, natSwitch: true } },
+        { weight: 50, text: "Vous rejoignez {nat}. La presse d'origine parle de trahison, celle d'accueil d'un renfort de poids.", fx: { rep: 6, mor: -3, natSwitch: true } },
       ] },
     ],
   },
@@ -4699,6 +4699,43 @@ const EVENTS = [
       { label: "Laisser le groupe décider seul", hint: "Humilité", outcomes: [
         { weight: 55, text: "Cette réserve, remarquée, joue finalement en votre faveur au moment du vote informel du vestiaire.", fx: { team: 4, coach: 2, flag: "captain_offered" } },
         { weight: 45, text: "Un cadre plus démonstratif rafle la mise pendant que vous restiez en retrait.", fx: { mor: -2, flag: "captain_offered" } },
+      ] },
+    ],
+  },
+
+  // ══════════════ Seconde chance internationale — ajoutés en fin de tableau.
+  // Un binational jamais appelé en A par sa sélection peut encore changer de
+  // nation (cond.dualAlt : autre nation mémorisée + aucune sélection A).
+  // Deux rendez-vous : à 24 ans (une fois sur deux environ, cond.chance), puis
+  // à 28 ans. Refuser à 24 ans laisse la porte ouverte ; refuser à 28 la ferme.
+  // priority: true → passent avant le tirage ordinaire (cf. engine.pickEvent).
+  {
+    id: "ev_dual_second_chance_24", cat: "Sélection", icon: "🌍", w: 60, priority: true,
+    cond: { aMin: 24, aMax: 24, dualAlt: true, chance: 0.6 },
+    text: "À {age} ans, {nat} ne vous a toujours pas convoqué. {altNat}, en revanche, ne vous a jamais oublié : n'ayant disputé aucun match officiel en sélection A, vous pouvez encore changer de nation.",
+    options: [
+      { label: "Choisir {altNat}", hint: "Change de sélection", outcomes: [
+        { weight: 55, text: "Vous dites oui : ce sera {nat}. Un nouveau maillot, et enfin une vraie chance de jouer au niveau international.", fx: { rep: 3, mor: 6, natSwitchAlt: true } },
+        { weight: 45, text: "Vous rejoignez {nat}. Dans votre pays de naissance, on parle d'opportunisme ; là-bas, on vous attend déjà.", fx: { rep: 4, mor: 2, natSwitchAlt: true } },
+      ] },
+      { label: "Attendre encore {nat}", hint: "Patience", outcomes: [
+        { weight: 60, text: "Vous restez fidèle à {nat}, convaincu que votre heure viendra. {altNat} laisse la porte entrouverte.", fx: { m: 2, mor: 2 } },
+        { weight: 40, text: "Vous déclinez poliment. L'attente continue, et elle commence à peser.", fx: { mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_dual_second_chance_28", cat: "Sélection", icon: "🌍", w: 60, priority: true,
+    cond: { aMin: 28, aMax: 28, dualAlt: true },
+    text: "{age} ans, et {nat} ne vous a toujours pas appelé. {altNat} revient une dernière fois à la charge : c'est sans doute votre ultime occasion de connaître le football international.",
+    options: [
+      { label: "Choisir {altNat}", hint: "Change de sélection", outcomes: [
+        { weight: 60, text: "Vous acceptez. À 28 ans, vous allez enfin porter un maillot national : {nat}.", fx: { rep: 3, mor: 7, natSwitchAlt: true } },
+        { weight: 40, text: "Vous rejoignez {nat}. Un choix tardif, que certains jugent calculé, mais qui vous ouvre enfin les portes d'une sélection.", fx: { rep: 2, mor: 4, natSwitchAlt: true } },
+      ] },
+      { label: "Refuser définitivement", hint: "Fidélité", outcomes: [
+        { weight: 55, text: "Ce sera {nat} ou rien. Vous fermez la porte pour de bon, la tête haute.", fx: { m: 3, mor: 2, natAltDrop: true } },
+        { weight: 45, text: "Vous refusez. Peut-être ne jouerez-vous jamais en sélection — mais vous n'aurez pas changé de drapeau.", fx: { mor: -2, c: 2, natAltDrop: true } },
       ] },
     ],
   },
