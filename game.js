@@ -195,7 +195,12 @@
     const clubImg = G.club.img ? `<img class="club-logo" src="${encodeURI(G.club.img)}" alt="" />` : "";
     const lvl = E.lvlOf(G, G.club);
     const role = E.roleOf(G);
-    const roleChip = (!G.loan && role) ? ` <span class="role-chip role-${role.id}" title="${esc(role.desc)}">${role.icon} ${esc(role.label)}</span>` : "";
+    // En U17 ou en réserve, le statut chez les pros n'a pas de sens : on
+    // affiche l'effectif à la place.
+    const sq = E.squadOf(G);
+    const roleChip = G.loan ? ""
+      : sq !== "first" ? ` <span class="role-chip role-espoir" title="${T("Vos matchs ici sont comptés à part : montez en équipe première au mérite.")}">${sq === "youth" ? "🧒" : "🔁"} ${esc(squadLabel(sq))}</span>`
+      : role ? ` <span class="role-chip role-${role.id}" title="${esc(role.desc)}">${role.icon} ${esc(role.label)}</span>` : "";
     $("hh-club").innerHTML = `${clubImg}<span class="level-tag level-${lvl}">${esc(E.divShort(lvl, G.club.countryId))}</span>${esc(G.club.name)}${G.club.colors ? ` ${G.club.colors}` : ""}${G.loan ? " <span class='loan-tag'>Prêt</span>" : ""} ${flagHtml(country)}${roleChip}`;
 
     const o = E.ovr(G);
@@ -276,6 +281,7 @@
       statRowHtml("Matchs joués", G.totals.matches),
       statRowHtml(isGk ? "Clean sheets" : "Buts marqués", isGk ? G.totals.cleanSheets : G.totals.goals),
       statRowHtml("Passes décisives", G.totals.assists),
+      ...devRowsHtml(G),
       ...((G.captainMatches || 0) > 0 ? [statRowHtml("©️ Matchs comme capitaine", G.captainMatches)] : []),
       statRowHtml("OVR max", G.peakOvr),
       statRowHtml(T("{flag} Sélections", { flag: flagHtml(G.nationality) }), G.natTeam.caps),
@@ -1114,17 +1120,22 @@
         matches.push(mk("Poule · J" + (i + 1), ordre[i], POW.groupe, groupOpps[i]));
       }
       report._groupOpps = groupOpps;
+      // Match pour la 3e place (Mondial et JO) : rejoué après la demi-finale
+      // perdue, avec l'issue déjà décidée par le moteur (info.thirdPlace).
+      const petiteFinale = () => {
+        if (stage === "semi" && info.thirdPlace) matches.push(mk("Match pour la 3ᵉ place", info.thirdPlace === "won" ? "win" : "loss", POW.semi));
+      };
       if (qualified) {
         if (kind === "wc") {
           const ko = ["r32", "r16", "quarter", "semi"];
           if (stage === "final") { ko.forEach((rd) => matches.push(mk(KOL[rd], "win", POW[rd]))); interactiveFinal = true; }
-          else { const idx = ko.indexOf(stage); for (let i = 0; i < idx; i++) matches.push(mk(KOL[ko[i]], "win", POW[ko[i]])); matches.push(mk(KOL[stage], "loss", POW[stage])); }
+          else { const idx = ko.indexOf(stage); for (let i = 0; i < idx; i++) matches.push(mk(KOL[ko[i]], "win", POW[ko[i]])); matches.push(mk(KOL[stage], "loss", POW[stage])); petiteFinale(); }
         } else if (kind === "olympic") {
           const ko = ["quarter", "semi"];
           if (stage === "champion" || stage === "final") {
             ko.forEach((rd) => matches.push(mk(KOL[rd], "win", POW[rd])));
             matches.push(mk("Finale", stage === "champion" ? "win" : "loss", POW.final));
-          } else { const idx = ko.indexOf(stage); for (let i = 0; i < idx; i++) matches.push(mk(KOL[ko[i]], "win", POW[ko[i]])); matches.push(mk(KOL[stage], "loss", POW[stage])); }
+          } else { const idx = ko.indexOf(stage); for (let i = 0; i < idx; i++) matches.push(mk(KOL[ko[i]], "win", POW[ko[i]])); matches.push(mk(KOL[stage], "loss", POW[stage])); petiteFinale(); }
         } else { // continental
           const ko = ["r16", "quarter", "semi"];
           if (stage === "champion" || stage === "final") {
@@ -1259,7 +1270,7 @@
         });
         return;
       }
-      const tone = wc.stage === "semi" ? "good" : "bad";
+      const tone = wc.stage === "semi" && wc.thirdPlace !== "lost" ? "good" : "bad";
       showCard(`
         <div class="card-tag"><span class="card-icon">🏆</span> Coupe du Monde ${wc.year}</div>
         <p class="wc-stage">${esc(wc.label)}</p>
@@ -1334,6 +1345,25 @@
   }
 
 
+  // Effectif hors équipe première : libellé court + lignes de bilan, partagés
+  // par l'en-tête, le bilan de saison, le panneau de profil et la fiche finale.
+  function squadLabel(sq) { return sq === "youth" ? T("U17 du club") : T("Réserve"); }
+  function devRowsHtml(s) {
+    const d = s.devTotals || {}, gk = s.position.id === "gk";
+    const row = (label, t) => (t && t.matches ? [statRowHtml(label, T(gk ? "{m} matchs · {g} clean sheets" : "{m} matchs · {g} buts", { m: t.matches, g: gk ? t.cleanSheets : t.goals }))] : []);
+    return [...row(T("🧒 Avec les U17 du club"), d.youth), ...row(T("🔁 En équipe réserve"), d.reserve)];
+  }
+  // Titres de jeunes : rubrique à part, jamais mélangée au palmarès senior.
+  function youthTrophyRowsHtml(s) {
+    const y = s.youthTrophies || {};
+    const cont = (E.countryOf(s.nationality.homeCountryId) || {}).continent;
+    return [
+      ...(y.wcU17 ? [statRowHtml(`🌍 ${YOUTH_U17_WORLD}`, y.wcU17, true)] : []),
+      ...(y.contU17 ? [statRowHtml(`🏆 ${YOUTH_U17_CUPS[cont] || YOUTH_U17_CUPS.eu}`, y.contU17, true)] : []),
+      ...(y.clubU17 ? [statRowHtml(`🏆 ${T("Coupe des Champions U17")}`, y.clubU17, true)] : []),
+    ].join("");
+  }
+
   function renderRecap(report) {
     const rivalReport = G.duel ? null : offSeed(() => E.rivalSeason(R)); // en duel : rival figé, pas de sim
     const isGk = G.position.id === "gk";
@@ -1373,22 +1403,42 @@
       roleChangeHtml = `<p class="recap-role ${up ? "up" : "down"}">${txt}</p>`;
     }
 
+    // Saison en U17 du club ou en réserve (report.squad) : on affiche les
+    // chiffres de CETTE équipe, clairement étiquetés — ils ne comptent pas
+    // chez les pros. Pas de classement de championnat à montrer.
+    const sq = report.squad;
+    const st = sq ? report.dev : report;
+    const squadTag = sq ? ` · <strong>${esc(squadLabel(sq))}</strong>` : "";
+    let squadChangeHtml = "";
+    if (report.squadChange) {
+      const c = report.squadChange;
+      const txt = c.to === "first" ? T("⬆️ Le coach vous intègre à l'<strong>équipe première</strong> !")
+        : c.from === "youth" ? T("➡️ Fin du parcours en U17 : vous rejoignez l'<strong>équipe réserve</strong>.")
+        : T("⬇️ Trop juste chez les pros : retour en <strong>équipe réserve</strong> pour jouer.");
+      squadChangeHtml = `<p class="recap-role ${c.to === "first" ? "up" : c.from === "youth" ? "" : "down"}">${txt}</p>`;
+    }
+    const seasonLine = sq
+      ? `<p class="recap-line">${sq === "youth" ? T("Saison avec les <strong>U17</strong> du club.") : T("Saison en <strong>équipe réserve</strong>.")} ${T("Ces matchs sont comptés à part, pas dans vos statistiques pro.")}</p>`
+      : `<p class="recap-line">Championnat : <strong>${leagueLine}</strong>${report.caps ? T(report.caps > 1 ? " · {flag} {n} sélections" : " · {flag} {n} sélection", { flag: flagHtml(G.nationality), n: report.caps }) + (report.natGoals ? T(report.natGoals > 1 ? ", {g} buts" : ", {g} but", { g: report.natGoals }) : "") : ""}</p>`;
+
     showCard(`
-      <div class="card-tag"><span class="card-icon">📊</span> Saison ${report.year}-${String((report.year + 1) % 100).padStart(2, "0")} · ${esc(report.clubName)} <span class="level-tag level-${report.level}">${esc(E.divShort(report.level, report.countryId))}</span>${report.onLoan ? " (prêt)" : ""}${report.captain ? " 🅒" : ""}</div>
+      <div class="card-tag"><span class="card-icon">📊</span> Saison ${report.year}-${String((report.year + 1) % 100).padStart(2, "0")} · ${esc(report.clubName)} <span class="level-tag level-${report.level}">${esc(E.divShort(report.level, report.countryId))}</span>${squadTag}${report.onLoan ? " (prêt)" : ""}${report.captain ? " 🅒" : ""}</div>
       ${report.headline ? `<p class="recap-headline">📰 ${esc(report.headline)}</p>` : ""}
       <div class="recap-grid">
-        <div class="recap-cell"><span class="recap-num">${report.matches}</span><span class="recap-lbl">Matchs</span></div>
-        <div class="recap-cell"><span class="recap-num">${isGk ? report.cleanSheets : report.goals}</span><span class="recap-lbl">${isGk ? "Clean sheets" : "Buts"}</span></div>
-        <div class="recap-cell"><span class="recap-num">${report.assists}</span><span class="recap-lbl">Passes déc.</span></div>
+        <div class="recap-cell"><span class="recap-num">${st.matches}</span><span class="recap-lbl">Matchs</span></div>
+        <div class="recap-cell"><span class="recap-num">${isGk ? st.cleanSheets : st.goals}</span><span class="recap-lbl">${isGk ? "Clean sheets" : "Buts"}</span></div>
+        <div class="recap-cell"><span class="recap-num">${st.assists}</span><span class="recap-lbl">Passes déc.</span></div>
         <div class="recap-cell"><span class="recap-num">${report.rating.toFixed(1)}</span><span class="recap-lbl">Note</span></div>
       </div>
-      <p class="recap-line">Championnat : <strong>${leagueLine}</strong>${report.caps ? T(report.caps > 1 ? " · {flag} {n} sélections" : " · {flag} {n} sélection", { flag: flagHtml(G.nationality), n: report.caps }) + (report.natGoals ? T(report.natGoals > 1 ? ", {g} buts" : ", {g} but", { g: report.natGoals }) : "") : ""}</p>
+      ${seasonLine}
       ${trophyLine ? `<p class="recap-trophies">${trophyLine}</p>` : ""}
       ${report.ballonRank && report.ballonRank > 1 ? `<p class="recap-trophies">⭐ Classement Ballon d'Or : <strong>${report.ballonRank}ᵉ</strong></p>` : ""}
       ${awardsHtml}
       ${objHtml}
       ${roleChangeHtml}
-      ${report.benched ? `<p class="recap-warn">⚠️ Cruellement court en temps de jeu : votre moral en souffre.</p>` : ""}
+      ${squadChangeHtml}
+      ${report.benched && !sq ? `<p class="recap-warn">⚠️ Cruellement court en temps de jeu : votre moral en souffre.</p>` : ""}
+      ${report.benched && sq ? `<p class="recap-warn">${T("⏳ Toujours en réserve : des clubs d'un niveau inférieur pourraient vous offrir du temps de jeu.")}</p>` : ""}
       ${report.seasonInjury ? `<p class="recap-warn">🚑 ${esc((E.BALANCE_REF.injury.labels || {})[report.seasonInjury.tier] || "Blessure")}${T(" : {n} semaines sur la touche.", { n: report.seasonInjury.weeks })}</p>` : (report.injuryWeeks ? `<p class="recap-warn">🩹 ${report.injuryWeeks} semaines d'infirmerie cette saison.</p>` : "")}
       ${report.carryInjury ? `<p class="recap-warn">${T("🩼 Toujours en reconstruction : {n} semaines de retard traînées de la saison passée.", { n: report.carryInjury })}</p>` : ""}
       ${report.tournamentMissed ? `<p class="recap-warn">😔 Blessé, vous manquez le grand tournoi de votre sélection cette saison.</p>` : ""}
@@ -1477,6 +1527,18 @@
 
   function offseasonTransfer() {
     const window = E.transferWindow(G, lastReport);
+    // Vétéran au-dessus du plafond d'âge et sans aucun club preneur : la
+    // carrière s'arrête ici (le moteur a déjà posé G.retiring). Écran d'adieu
+    // sans choix — rien n'est écrit au journal de duel, comme dans replayRun.
+    if (window && window.retire) {
+      showCard(`
+        <div class="card-tag"><span class="card-icon">🕰️</span> ${T("Fin de carrière")} · ${G.age} ${T("ans")}</div>
+        <p class="event-text">${esc(window.reason)}</p>
+        <button class="btn btn-secondary" id="btn-next">Continuer</button>
+      `, "neutral");
+      $("btn-next").addEventListener("click", finalize);
+      return;
+    }
     // Mode salle : la décision (rester/partir) devient collective — barrière
     // de fin de saison, cf. room.js renderSeasonBarrierStep. `window` masque
     // ici le global du même nom (idiome déjà utilisé par renderTransferChoice
@@ -2977,7 +3039,7 @@
       ...leagueRows,
       statRowHtml(`${COMPETITIONS.cup.icon} ${COMPETITIONS.cup.name}`, t.cup, t.cup > 0),
       statRowHtml(`${COMPETITIONS.goldenBoot.icon} ${COMPETITIONS.goldenBoot.name}`, t.goldenBoot, t.goldenBoot > 0),
-    ].join("");
+    ].join("") + youthTrophyRowsHtml(s);
   }
 
   // Distinctions individuelles accumulées ("" si aucune).
@@ -3153,6 +3215,7 @@
       statRowHtml("Matchs joués", G.totals.matches),
       statRowHtml(isGk ? "Clean sheets" : "Buts marqués", isGk ? G.totals.cleanSheets : G.totals.goals),
       statRowHtml("Passes décisives", G.totals.assists),
+      ...devRowsHtml(G),
       ...((G.captainMatches || 0) > 0 ? [statRowHtml("©️ Matchs comme capitaine", G.captainMatches)] : []),
       statRowHtml(T("{flag} Sélections", { flag: flagHtml(G.nationality) }), G.natTeam.caps),
       // Numéro en sélection : absent tant qu'on n'a pas été convoqué.
@@ -3209,8 +3272,10 @@
         // même l'icône de champion ici pour qu'il apparaisse dans le tableau.
         const champIcon = (se.divisionTitle && !(se.trophies || []).includes("league")) ? COMPETITIONS.league.icon : "";
         const icons = champIcon + (se.trophies || []).map((tr) => { const c = trophyInfo(tr, se.countryId); return c ? c.icon : ""; }).join("");
-        const perf = isGk ? `${se.cleanSheets || 0} cs` : `${se.goals} b`;
-        const pd = ` · ${se.assists || 0} pd`;
+        // Saison en U17/réserve : chiffres de cette équipe, étiquetés.
+        const sst = se.squad && se.dev ? se.dev : se;
+        const perf = isGk ? `${sst.cleanSheets || 0} cs` : `${sst.goals} b`;
+        const pd = ` · ${sst.assists || 0} pd`;
         let moveArrow = "";
         if (prevSeason && prevSeason.clubName === se.clubName && se.level && prevSeason.level && se.level !== prevSeason.level) {
           moveArrow = LEVELS[se.level].rank > LEVELS[prevSeason.level].rank
@@ -3224,8 +3289,8 @@
         const seFlag = seCountry ? flagHtml(seCountry) : "";
         return `<div class="season-row">
           <span class="season-age">${se.age}</span>
-          <span class="season-club">${se.level ? `<span class="level-tag level-${se.level}">${esc(seCountryId ? E.divShort(se.level, seCountryId) : LEVELS[se.level].short)}</span>` : ""}${seFlag ? `${seFlag} ` : ""}${esc(se.clubName)}${moveArrow}${se.onLoan ? ` <span class="loan-tag">Prêt</span>` : ""}</span>
-          <span class="season-stats">${se.matches} m · ${perf}${pd} · ${se.rating.toFixed(1)}</span>
+          <span class="season-club">${se.level ? `<span class="level-tag level-${se.level}">${esc(seCountryId ? E.divShort(se.level, seCountryId) : LEVELS[se.level].short)}</span>` : ""}${seFlag ? `${seFlag} ` : ""}${esc(se.clubName)}${moveArrow}${se.onLoan ? ` <span class="loan-tag">Prêt</span>` : ""}${se.squad ? ` <span class="loan-tag">${se.squad === "youth" ? "U17" : T("Réserve")}</span>` : ""}</span>
+          <span class="season-stats">${sst.matches} m · ${perf}${pd} · ${se.rating.toFixed(1)}</span>
           <span class="season-icons">${icons}</span>
         </div>`;
       })

@@ -404,6 +404,9 @@
       careerEndReason: null,
       sponsorDeal: null, // contrat sponsor actif { id, label, mult } — cf. SPONSOR_TIERS (data.js)
       sponsorTier: 0, // nombre de paliers de sponsoring déjà franchis
+      squad: "first", // "youth" (U17 du club) | "reserve" | "first" — fixé plus bas selon le club de départ
+      devTotals: {}, // matchs/buts en U17 et en réserve, comptés à part : { youth: {...}, reserve: {...} }
+      youthTrophies: { clubU17: 0, contU17: 0, wcU17: 0 }, // titres de jeunes, hors palmarès senior
       disfavorStreak: 0, // saisons consécutives de confiance coach au plancher (cf. fin de playSeason)
       frozenOut: false, // mise à l'écart décidée : appliquée puis consommée dès la saison suivante
       forcedLoanNext: false, // défiance persistante malgré la mise à l'écart : prêt forcé programmé
@@ -435,6 +438,10 @@
     s.contract.salary = salaryFor(s, opts.club) * 0.3;
     s.transferHistory.push({ age: s.age, toClubName: opts.club.name, countryName: countryOf(opts.club.countryId).name, fee: null, level: lvlOf(s, opts.club) });
     s.role = roleForClub(s, opts.club); // statut au centre de formation (souvent Espoir/Rotation)
+    // Effectif de départ : U17 du club pour presque tout le monde, les pros
+    // d'emblée pour un prodige ou un joueur très au-dessus du niveau du club.
+    // Le mode Histoire rejoue une légende : elle démarre chez les pros.
+    s.squad = opts.startYear ? "first" : squadForClub(s, opts.club);
     // Exil à 16 ans (offre étrangère de academyOffers) : le mal du pays se
     // paie d'entrée. Hors mode Histoire (startYear imposé), où le club de
     // départ à l'étranger fait partie de la légende rejouée.
@@ -972,15 +979,22 @@
     };
     if (!finalReached) {
       if (stage.id === "semi") {
-        s.rep = clamp(s.rep + 4, 0, 100);
-        s.moral = clamp(s.moral - 4, 5, 100);
-        s.history.push({ age: s.age, text: tx(s, "wcStage", { stage: stage.label }), impact: 8 });
+        // Battu en demie : le tournoi ne s'arrête pas là, il reste le match
+        // pour la 3e place. Monter sur le podium adoucit la déception.
+        wc.thirdPlace = playThirdPlace(natW, playerBoost);
+        const won = wc.thirdPlace === "won";
+        wc.label = won ? ENGINE_TEXT.thirdPlaceLabel : ENGINE_TEXT.fourthPlaceLabel;
+        wc.text = won ? ENGINE_TEXT.wcThirdText : ENGINE_TEXT.wcFourthText;
+        s.rep = clamp(s.rep + (won ? 5 : 4), 0, 100);
+        s.moral = clamp(s.moral - (won ? 1 : 5), 5, 100);
+        s.history.push({ age: s.age, text: tx(s, "wcStage", { stage: wc.label }), impact: won ? 10 : 8 });
       } else {
         s.moral = clamp(s.moral - 3, 5, 100);
       }
     }
     // 8 matchs pour le finaliste : poules 3 → 16es 4 → 8es 5 → quart 6 → demie 7 → finale 8.
-    const games = stage.id === "groups" ? 3 : stage.id === "r32" ? 4 : stage.id === "r16" ? 5 : stage.id === "quarter" ? 6 : stage.id === "semi" ? 7 : 8;
+    // Le demi-finaliste battu en joue 8 lui aussi (match pour la 3e place).
+    const games = stage.id === "groups" ? 3 : stage.id === "r32" ? 4 : stage.id === "r16" ? 5 : stage.id === "quarter" ? 6 : 8;
     s.natTeam.caps += games;
     const wcGoals = Math.round(games * s.position.goalRate * (0.4 + s.stats.t / 150) * rand(0.5, 1.4));
     s.natTeam.goals += wcGoals;
@@ -988,7 +1002,7 @@
     wc.goals = wcGoals;
     if (finalReached) wc.moment = storyFinal || keyMomentFor(s, "wc_final");
     if (storyFinal) wc.storyFinal = true;
-    noteNatRun(s, "wc", wc.stage);
+    noteNatRun(s, "wc", wc.stage, wc.thirdPlace);
     return wc;
   }
 
@@ -1052,12 +1066,20 @@
   // Une seule entrée par compétition et par année : la finale de Coupe du Monde
   // se joue en carte interactive APRÈS coup et fait passer le stade à
   // « champion » — on met alors l'entrée à jour au lieu d'en créer une seconde.
-  function noteNatRun(s, comp, stage) {
+  // `third` (optionnel) : issue du match pour la 3e place d'un demi-finaliste
+  // ("won" | "lost"). Le stade reste « semi » ; ce champ affine le libellé et
+  // départage deux demi-finales entre elles.
+  function noteNatRun(s, comp, stage, third) {
     if (!stage) return;
     s.natRuns = s.natRuns || [];
     const dejaLa = s.natRuns.find((r) => r.comp === comp && r.year === s.year);
-    if (dejaLa) dejaLa.stage = stage;
-    else s.natRuns.push({ comp, year: s.year, stage });
+    if (dejaLa) { dejaLa.stage = stage; dejaLa.third = third || null; }
+    else s.natRuns.push({ comp, year: s.year, stage, third: third || null });
+  }
+  // Match pour la 3e place : le demi-finaliste battu rejoue. Tirage simple,
+  // légèrement influencé par la force de la nation et le niveau du joueur.
+  function playThirdPlace(natW, playerBoost) {
+    return rng() < clamp(0.5 + (natW - 0.5) * 0.2 + (playerBoost - 1.2) * 0.25, 0.3, 0.7) ? "won" : "lost";
   }
   // Meilleur parcours par compétition, du plus prestigieux au moins. Utilisé
   // par la fiche de fin de carrière.
@@ -1069,8 +1091,12 @@
       if (rang < 0) continue; // stade inconnu (table modifiée depuis) : on ignore
       // Le libellé vient de la table elle-même : pas de second jeu de textes à
       // tenir à jour côté présentation.
-      if (!par[r.comp] || rang > par[r.comp].rang)
-        par[r.comp] = { comp: r.comp, year: r.year, stage: r.stage, rang, total: table.length, label: table[rang].label };
+      // À stade égal, une 3e place gagnée l'emporte sur une demi-finale sèche
+      // ou une 4e place.
+      const fin = r.third === "won" ? 1 : 0;
+      const label = r.third === "won" ? ENGINE_TEXT.thirdPlaceLabel : r.third === "lost" ? ENGINE_TEXT.fourthPlaceLabel : table[rang].label;
+      if (!par[r.comp] || rang > par[r.comp].rang || (rang === par[r.comp].rang && fin > par[r.comp].fin))
+        par[r.comp] = { comp: r.comp, year: r.year, stage: r.stage, rang, fin, total: table.length, label };
     }
     const ordre = ["wc", "cont", "natl", "olympic"];
     return ordre.filter((c) => par[c]).map((c) => par[c]);
@@ -1188,7 +1214,10 @@
       if (st.id === "semi") return st.baseW * Math.pow(natW, 1.3) * (0.4 + playerBoost * 0.4) * 1.8;
       return st.baseW;
     });
-    const games = stage.games;
+    // Demi-finale perdue : le bronze ne tombe plus tout seul, il se joue dans
+    // le match pour la 3e place (un match de plus).
+    const thirdPlace = stage.id === "semi" ? playThirdPlace(natW, playerBoost) : null;
+    const games = stage.games + (thirdPlace ? 1 : 0);
     const goals = Math.round(games * s.position.goalRate * (0.4 + s.stats.t / 150) * rand(0.5, 1.4));
     s.youth = s.youth || { caps: 0, goals: 0, tiers: [] };
     s.youth.caps += games; // les JO (U23) comptent dans les sélections jeunes
@@ -1207,13 +1236,22 @@
       s.rep = clamp(s.rep + 3, 0, 100); s.moral = clamp(s.moral - 2, 5, 100);
       s.history.push({ age: s.age, text: tx(s, "olySilver"), impact: 9 });
     } else if (stage.id === "semi") {
-      s.olympicMedals.bronze += 1; ol.medal = "bronze"; ol.label = ENGINE_TEXT.olyBronzeLabel;
-      s.rep = clamp(s.rep + 2, 0, 100);
-      s.history.push({ age: s.age, text: tx(s, "olyBronze"), impact: 7 });
+      ol.thirdPlace = thirdPlace;
+      if (thirdPlace === "won") {
+        s.olympicMedals.bronze += 1; ol.medal = "bronze"; ol.label = ENGINE_TEXT.olyBronzeLabel;
+        ol.text = ENGINE_TEXT.olyBronzeText;
+        s.rep = clamp(s.rep + 2, 0, 100);
+        s.history.push({ age: s.age, text: tx(s, "olyBronze"), impact: 7 });
+      } else {
+        ol.label = ENGINE_TEXT.fourthPlaceLabel;
+        ol.text = ENGINE_TEXT.olyFourthText;
+        s.rep = clamp(s.rep + 1, 0, 100);
+        s.moral = clamp(s.moral - 4, 5, 100);
+      }
     } else {
       s.moral = clamp(s.moral - 2, 5, 100);
     }
-    noteNatRun(s, "olympic", ol.stage);
+    noteNatRun(s, "olympic", ol.stage, ol.thirdPlace);
     return ol;
   }
 
@@ -1643,13 +1681,115 @@
     return clamp(p, 0, B.endCap);
   }
 
-  // --- Simulation d'une saison ----------------------------------------------
-  function playSeason(s) {
-    const lvl = lvlOf(s, s.club);
-    const report = { age: s.age, year: s.year, clubName: s.club.name, countryId: s.club.countryId, level: lvl, trophies: [], awards: [], lines: [], pendingMoments: [], onLoan: !!s.loan };
-    s.objective = setSeasonObjective(s);
-    report.objectiveLabel = s.objective.label;
+  // --- Effectif : U17 du club → réserve → équipe première ---------------------
+  // s.squad vaut "youth" (U17 du club, l'année des 16 ans), "reserve" ou
+  // "first". Absent (sauvegardes antérieures, mode Histoire) = "first".
+  // Les matchs joués en U17/réserve sont comptés À PART (s.devTotals) : ils ne
+  // nourrissent ni les totaux de carrière ni le palmarès senior.
+  function squadOf(s) { return s.squad || "first"; }
+  // Effectif d'accueil dans un club. Un prodige est lancé d'emblée chez les
+  // pros (il peut redescendre ensuite, cf. reviewSquad). Aucun rng.
+  function squadForClub(s, club) {
+    const B = BALANCE.squad;
+    if (s.age > B.firstByAge || (s.flags && s.flags.prodigy)) return "first";
+    const margin = ovr(s) - BALANCE.expectedLevel[lvlOf(s, club)];
+    if (s.age <= 16) return margin >= B.youthSkip ? "first" : "youth";
+    return margin >= B.firstMargin ? "first" : "reserve";
+  }
+  // Bilan d'effectif de fin de saison : montée chez les pros au mérite,
+  // descente d'un jeune dépassé. Appelé pour TOUTES les saisons hors prêt.
+  function reviewSquad(s, report) {
+    if (s.loan) return;
+    const B = BALANCE.squad;
+    const from = squadOf(s);
+    const margin = ovr(s) - BALANCE.expectedLevel[lvlOf(s, s.club)];
+    const r = report.rating || 6;
+    let to = from;
+    if (from === "youth") {
+      // Une seule saison en U17 : ensuite la réserve, ou directement les pros.
+      to = (margin + B.anticipation >= B.firstMargin || (r >= 7.6 && margin >= B.firstMargin - 5)) ? "first" : "reserve";
+    } else if (from === "reserve") {
+      if (s.age >= B.firstByAge || margin + B.anticipation >= B.firstMargin) to = "first";
+      else if (r >= 7.3 && margin >= B.firstMargin - 6 && rng() < 0.6) to = "first";
+    } else if (s.age < B.firstByAge && (s.seasonsAtClub || 0) >= 1) {
+      // Chez les pros mais trop juste : un jeune peu utilisé redescend jouer.
+      // Un prodige n'y échappe pas s'il passe complètement à côté de sa saison.
+      const weak = s.flags.prodigy ? (r < 5.2 && margin < B.firstMargin - 2) : ((s.role || 0) <= 1 && margin < B.demoteMargin);
+      if (weak && rng() < 0.5) to = "reserve";
+    }
+    if (to === from) return;
+    s.squad = to;
+    report.squadChange = { from, to };
+    if (to === "first") {
+      s.role = roleForClub(s, s.club);
+      s.seasonsAtClub = 0; // la revue de rôle saute la 1re saison chez les pros
+      s.moral = clamp(s.moral + 6, 5, 100);
+      s.history.push({ age: s.age, text: tx(s, "squadToFirst"), impact: 6 });
+    } else if (from === "youth") {
+      s.history.push({ age: s.age, text: tx(s, "squadToReserve"), impact: 1 });
+    } else {
+      s.moral = clamp(s.moral - 6, 5, 100);
+      s.history.push({ age: s.age, text: tx(s, "squadDown"), impact: -5 });
+    }
+  }
 
+  // Sélections de jeunes (U16 → U23) : on gravit l'échelle selon l'âge, tant
+  // qu'on n'est pas passé chez les A, si le niveau suit. Chaque nouveau palier
+  // décroché : annonce + réputation, et — pour les grands tournois de jeunes —
+  // un résultat résumé en une ligne. Les caps jeunes sont comptés à part des A.
+  function youthSelections(s, report) {
+    if (s.natTeam.active || s.natTeam.retired || s.age > 23) return;
+    s.youth = s.youth || { caps: 0, goals: 0, tiers: [] };
+    const natW = s.nationality.weight;
+    const drawStage = () => weightedRandom(YOUTH_STAGES, (x) =>
+      x.id === "champion" ? x.baseW * (0.4 + natW * 1.6) :
+      (x.id === "final" || x.id === "semi") ? x.baseW * (0.5 + natW * 1.0) : x.baseW);
+    for (const tier of YOUTH_TIERS) {
+      if (s.age < tier.aMin || s.age > tier.aMax || s.youth.tiers.includes(tier.id)) continue;
+      const repNeed = tier.repNeed != null ? tier.repNeed : 18 + (tier.aMin - 15) * 4;
+      if (ovr(s) < tier.ovrNeed || s.rep < repNeed) continue;
+      s.youth.tiers.push(tier.id);
+      s.flags.youth_int = true;
+      s.youth.caps += randInt(3, 6);
+      s.rep = clamp(s.rep + 2, 0, 100);
+      report.lines.push({ text: tx(s, "lineYouthCall", { tier: tier.label }), impact: 5 });
+      s.history.push({ age: s.age, text: tx(s, "youthCall", { tier: tier.label }), impact: 5 });
+      if (tier.u17) {
+        // Coupe continentale U17 (au nom du continent de la sélection), puis
+        // Coupe du Monde U17 si la sélection atteint le dernier carré.
+        s.youthTrophies = s.youthTrophies || { clubU17: 0, contU17: 0, wcU17: 0 };
+        const cont = (countryOf(s.nationality.homeCountryId) || {}).continent || "eu";
+        const contName = YOUTH_U17_CUPS[cont] || YOUTH_U17_CUPS.eu;
+        const st = drawStage();
+        s.youth.caps += st.games;
+        report.lines.push({ text: `🏆 ${contName} : ${st.label}.`, impact: st.champion ? 8 : 4 });
+        if (st.champion) {
+          s.youthTrophies.contU17 += 1;
+          s.history.push({ age: s.age, text: tx(s, "youthWin", { tournament: contName }), impact: 9 });
+        }
+        if (st.champion || st.id === "final" || st.id === "semi") {
+          const w = drawStage();
+          s.youth.caps += w.games;
+          report.lines.push({ text: `🌍 ${YOUTH_U17_WORLD} : ${w.label}.`, impact: w.champion ? 10 : 5 });
+          if (w.champion) {
+            s.youthTrophies.wcU17 += 1;
+            s.rep = clamp(s.rep + 3, 0, 100);
+            s.history.push({ age: s.age, text: tx(s, "youthWin", { tournament: YOUTH_U17_WORLD }), impact: 12 });
+          }
+        }
+      } else if (tier.tournament) {
+        const st = drawStage();
+        s.youth.caps += st.games;
+        report.lines.push({ text: `🏆 ${tier.tournament} : ${st.label}.`, impact: st.champion ? 8 : 4 });
+        if (st.champion) s.history.push({ age: s.age, text: tx(s, "youthWin", { tournament: tier.tournament }), impact: 9 });
+      }
+      break; // un seul palier par saison
+    }
+  }
+
+  // Aléas d'avant-saison communs à toutes les saisons (brève, hygiène de vie,
+  // trajectoire instable).
+  function seasonPrelude(s, report) {
     // Brèves de saison
     if (rng() < BALANCE.microChance) {
       const eligible = MICRO_EVENTS.filter((m) => s.age >= m.aMin && s.age <= m.aMax && (!m.pos || m.pos.includes(s.position.id)) && (!m.foreignLang || foreignLangFor(s)));
@@ -1660,7 +1800,6 @@
         if (Math.abs(netImpact(micro.fx)) >= 8) s.history.push({ age: s.age, text: micro.text, impact: netImpact(micro.fx) });
       }
     }
-
     // Hygiène de vie
     if (s.discipline < 40 && rng() < 0.35) {
       s.form = clamp(s.form - 4, 5, 100);
@@ -1674,6 +1813,93 @@
       s.form = clamp(s.form - randInt(2, 8), 5, 100);
       s.moral = clamp(s.moral - randInt(0, 6), 5, 100);
     }
+  }
+
+  // Saison en U17 du club ou en réserve : on joue, on progresse, on est
+  // observé — mais rien de tout ça ne compte chez les pros. Pas d'objectif de
+  // club, pas de trophée senior, pas de moment décisif ; un bilan de fin de
+  // saison décide de la suite (reviewSquad).
+  function playDevSeason(s, lvl) {
+    const squad = squadOf(s);
+    const B = BALANCE.squad;
+    const report = { age: s.age, year: s.year, clubName: s.club.name, countryId: s.club.countryId, level: lvl, trophies: [], awards: [], lines: [], pendingMoments: [], onLoan: false, squad, matches: 0, goals: 0, assists: 0, cleanSheets: 0 };
+    seasonPrelude(s, report);
+
+    const injuryFactor = clamp(1 - s.injuryWeeks / 42, 0.05, 1);
+    report.injuryWeeks = s.injuryWeeks;
+    const [mMin, mMax] = B.matches[squad];
+    const dm = Math.round(rand(mMin, mMax) * injuryFactor);
+    const arch = s.archetype ? s.archetype.mods : {};
+    // Même formule de rendement que chez les pros, avec l'avantage de jouer
+    // contre des adversaires de son âge (edge).
+    const perf = (0.32 + s.stats.t / 160 + (s.form - 60) / 400 + (s.moral - 60) / 600) * B.edge[squad];
+    const dev = {
+      matches: dm,
+      goals: Math.max(0, Math.round(dm * s.position.goalRate * perf * (arch.goals || 1) * rand(0.75, 1.3))),
+      assists: Math.max(0, Math.round(dm * s.position.assistRate * perf * (arch.assists || 1) * rand(0.7, 1.3))),
+      cleanSheets: s.position.id === "gk" ? Math.max(0, Math.round(dm * (0.24 + ovr(s) / 280) * (arch.cs || 1) * rand(0.8, 1.2))) : 0,
+    };
+    // Note rapportée au niveau de CETTE équipe (gap sous l'équipe première).
+    let rating = 6.3 + (ovr(s) - (BALANCE.expectedLevel[lvl] - B.gap[squad])) / 12 + (s.form - 60) / 90 + (arch.rating || 0);
+    if (s.position.id !== "gk") {
+      const expGA = dm * (s.position.goalRate + s.position.assistRate) * B.edge[squad];
+      rating += clamp((dev.goals + dev.assists - expGA * 0.9) / 24, -0.6, 1.2);
+    }
+    rating = clamp(rating + rand(-0.35, 0.45), 4.5, 9.5);
+    report.rating = Math.round(rating * 10) / 10;
+
+    // Coupe des Champions U17 : réservée aux U17 des clubs de haut niveau.
+    s.youthTrophies = s.youthTrophies || { clubU17: 0, contU17: 0, wcU17: 0 };
+    const cont = (countryOf(s.club.countryId) || {}).continent || "eu";
+    if (squad === "youth" && (lvl === "elite" || lvl === "d1") && CONTINENTAL_CUPS[cont]) {
+      const cupName = `${ENGINE_TEXT.youthCupName} (${CONTINENTAL_CUPS[cont].short})`;
+      const boost = clamp(0.7 + (report.rating - 6.5) * 0.5, 0.4, 1.7) * (lvl === "elite" ? 1.3 : 1);
+      const st = weightedRandom(YOUTH_STAGES, (x) => (x.id === "champion" || x.id === "final" || x.id === "semi") ? x.baseW * boost : x.baseW);
+      dev.matches += st.games;
+      report.lines.push({ text: `🏆 ${cupName} : ${st.label}.`, impact: st.champion ? 8 : 4 });
+      if (st.champion) {
+        s.youthTrophies.clubU17 += 1;
+        s.rep = clamp(s.rep + 2, 0, 100);
+        s.history.push({ age: s.age, text: tx(s, "youthClubWin", { cupName }), impact: 9 });
+      }
+    }
+    report.dev = dev;
+    s.devTotals = s.devTotals || {};
+    const tot = (s.devTotals[squad] = s.devTotals[squad] || { matches: 0, goals: 0, assists: 0, cleanSheets: 0 });
+    tot.matches += dev.matches; tot.goals += dev.goals; tot.assists += dev.assists; tot.cleanSheets += dev.cleanSheets;
+
+    youthSelections(s, report);
+
+    // Revenus : même base que chez les pros (le contrat d'un jeune est minime).
+    const dealMult = s.sponsorDeal ? s.sponsorDeal.mult : 1.8;
+    const income = s.contract.salary * 0.55 + (s.rep / 100) * (s.stats.c / 100) * visibilityOf(s) * dealMult * rand(0.6, 1.2);
+    s.money += income;
+    report.income = income;
+    report.sponsorLabel = s.sponsorDeal ? s.sponsorDeal.label : null;
+
+    s.peakOvr = Math.max(s.peakOvr, ovr(s));
+    const mv = Math.round(marketValue(s) * 10) / 10;
+    s.seasons.push({ age: s.age, year: s.year, clubName: s.club.name, countryId: s.club.countryId, level: lvl, matches: 0, goals: 0, assists: 0, cleanSheets: 0, rating: report.rating, trophies: [], divisionTitle: false, onLoan: false, leaguePos: null, mv, squad, dev });
+
+    if (rating >= 7.4) s.coachRel = clamp(s.coachRel + 4, 5, 100);
+    else if (rating <= 5.5) s.coachRel = clamp(s.coachRel - 5, 5, 100);
+    // Pas de « destin du club » à rejouer pour une saison hors équipe première.
+    s.lastSeason = null;
+    reviewSquad(s, report);
+    // Un réserviste qui s'éternise attire les clubs d'en dessous (mercato).
+    if (squadOf(s) === "reserve" && s.age >= 19) report.benched = true;
+    return report;
+  }
+
+  // --- Simulation d'une saison ----------------------------------------------
+  function playSeason(s) {
+    const lvl = lvlOf(s, s.club);
+    if (squadOf(s) !== "first" && !s.loan) return playDevSeason(s, lvl);
+    const report = { age: s.age, year: s.year, clubName: s.club.name, countryId: s.club.countryId, level: lvl, trophies: [], awards: [], lines: [], pendingMoments: [], onLoan: !!s.loan };
+    s.objective = setSeasonObjective(s);
+    report.objectiveLabel = s.objective.label;
+
+    seasonPrelude(s, report);
 
     // Temps de jeu et matchs
     const pt = playingTimeFactor(s);
@@ -1919,7 +2145,8 @@
     // premier et le dernier match arrivent à tout le monde, et ils sont posés
     // AVANT le plafond de deux moments — comme la blessure ou la finale
     // continentale, qui ne se laissent pas évincer non plus.
-    if (!s.flags.debutDone && matches > 0 && s.seasons.length === 0) {
+    // Premier match PRO : les saisons en U17/réserve (0 match pro) ne comptent pas.
+    if (!s.flags.debutDone && matches > 0 && !s.seasons.some((se) => se.matches > 0)) {
       s.flags.debutDone = true;
       report.pendingMoments.push({
         type: "debut", label: tx(s, "momDebut"),
@@ -1974,33 +2201,7 @@
       s.history.push({ age: s.age, text: tx(s, "goldenBoot"), impact: 12 });
     }
 
-    // Sélections de jeunes (U17 → U23) : on gravit l'échelle selon l'âge, tant
-    // qu'on n'est pas passé chez les A, si le niveau suit. Chaque nouveau palier
-    // décroché : annonce + réputation, et — pour les grands tournois de jeunes —
-    // un résultat résumé en une ligne. Les caps jeunes sont comptés à part des A.
-    if (!s.natTeam.active && !s.natTeam.retired && s.age <= 23) {
-      s.youth = s.youth || { caps: 0, goals: 0, tiers: [] };
-      for (const tier of YOUTH_TIERS) {
-        if (s.age < tier.aMin || s.age > tier.aMax || s.youth.tiers.includes(tier.id)) continue;
-        if (ovr(s) < tier.ovrNeed || s.rep < 18 + (tier.aMin - 15) * 4) continue;
-        s.youth.tiers.push(tier.id);
-        s.flags.youth_int = true;
-        s.youth.caps += randInt(3, 6);
-        s.rep = clamp(s.rep + 2, 0, 100);
-        report.lines.push({ text: tx(s, "lineYouthCall", { tier: tier.label }), impact: 5 });
-        s.history.push({ age: s.age, text: tx(s, "youthCall", { tier: tier.label }), impact: 5 });
-        if (tier.tournament) {
-          const natW = s.nationality.weight;
-          const st = weightedRandom(YOUTH_STAGES, (x) =>
-            x.id === "champion" ? x.baseW * (0.4 + natW * 1.6) :
-            (x.id === "final" || x.id === "semi") ? x.baseW * (0.5 + natW * 1.0) : x.baseW);
-          s.youth.caps += st.games;
-          report.lines.push({ text: `🏆 ${tier.tournament} : ${st.label}.`, impact: st.champion ? 8 : 4 });
-          if (st.champion) s.history.push({ age: s.age, text: tx(s, "youthWin", { tournament: tier.tournament }), impact: 9 });
-        }
-        break; // un seul palier par saison
-      }
-    }
+    youthSelections(s, report);
 
     // Mode Histoire : la finale mondiale scénarisée impose la sélection cette
     // année-là (le maître ne rate pas SON dernier Mondial).
@@ -2131,6 +2332,7 @@
     if (s.loan) s.loan.rating = report.rating;
     s.lastSeason = { clubId: s.club.id, leaguePos: report.leaguePos, promoted: !!report.promoted, relegated: !!report.relegated, rating: report.rating, wonLeague: report.trophies.includes("league") };
     reviewRole(s, report); // statut dynamique : promotion / rétrogradation / recrue concurrente
+    reviewSquad(s, report); // un jeune dépassé peut redescendre en réserve
     report.headline = headlineFor(s, report);
 
     // Confiance critique : si la relation avec le coach termine la saison au
@@ -2501,6 +2703,8 @@
       s.club = parent.parentClub;
       s.coach = parent.parentCoach;
       s.loan = null;
+      // Un prêt réussi ouvre les portes des pros ; sinon retour à l'effectif d'origine.
+      s.squad = (loanRating >= 7.2 || s.age >= BALANCE.squad.firstByAge) ? "first" : (parent.parentSquad === "youth" ? "reserve" : parent.parentSquad || "first");
       if (loanRating >= 7.2) {
         s.coachRel = 72;
         s.form = clamp(s.form + 6, 5, 100);
@@ -2712,7 +2916,10 @@
   }
 
   function applyLoan(s, offer) {
-    s.loan = { parentClub: s.club, parentCoach: s.coach, loanClubId: offer.club.id };
+    // Un prêt, c'est du temps de jeu chez les pros : l'effectif d'origine est
+    // mémorisé pour le retour.
+    s.loan = { parentClub: s.club, parentCoach: s.coach, loanClubId: offer.club.id, parentSquad: squadOf(s) };
+    s.squad = "first";
     s.club = offer.club;
     s.coach = pick(COACH_NAMES);
     s.coachRel = 58;
@@ -2807,6 +3014,29 @@
         ? (r < 0.15 ? "d1" : r < 0.5 ? "d2" : r < 0.75 ? "d3" : r < 0.9 ? "d4" : "regional")
         : (r < 0.04 ? "d1" : r < 0.13 ? "d2" : r < 0.5 ? "d3" : r < 0.75 ? "d4" : "regional");
       const curIdx = LEVEL_ORDER.indexOf(lvlOf(s, s.club));
+      // Plafond d'âge : passé un certain âge, plus personne n'aligne un joueur
+      // au-dessus d'un niveau donné. Tant qu'il est AU-DESSUS du plafond, le
+      // club ne prolonge pas (aucun « Rester ») : il faut descendre, au pays
+      // si un club de ce niveau existe. Et si personne ne se manifeste, la
+      // carrière s'arrête là.
+      const V = BALANCE.veteranCap;
+      const capRule = V.caps.find((c) => s.age >= c.age + (gk ? V.gkBonus : 0));
+      if (capRule) {
+        const capIdx = LEVEL_ORDER.indexOf(capRule.level);
+        if (LEVEL_ORDER.indexOf(target) > capIdx) target = capRule.level;
+        if (curIdx > capIdx) {
+          const firstCapAge = V.caps[V.caps.length - 1].age + (gk ? V.gkBonus : 0);
+          const pNone = clamp(V.noClubBase + (s.age - firstCapAge) * V.noClubStep, 0, V.noClubMax);
+          const offers = rng() < pNone ? [] : offersFor(s, { toLevel: target, domestic: true });
+          if (!offers.length) {
+            s.retiring = true;
+            const reason = tx(s, "vetNoClub");
+            s.history.push({ age: s.age, text: reason, impact: -6 });
+            return { retire: true, reason, offers: [], contractUp: false };
+          }
+          return { reason: tx(s, "winAgeCap"), offers, contractUp: false, noStay: true, renewSalary: salaryFor(s, s.club) };
+        }
+      }
       if (LEVEL_ORDER.indexOf(target) > curIdx) target = LEVEL_ORDER[curIdx]; // ne remonte jamais
       return {
         reason: gk
@@ -2901,6 +3131,10 @@
     s.contract = { salary: offer.salary, years: offer.years };
     s.money += Math.min(3, offer.fee * 0.06);
     s.role = (offer.role != null) ? offer.role : roleForClub(s, offer.club); // statut signé
+    // Un jeune recruté par un club trop fort pour lui passe par la réserve ;
+    // un statut de Rotation ou mieux signé noir sur blanc l'envoie chez les pros.
+    s.squad = s.role >= 2 ? "first" : squadForClub(s, offer.club);
+    if (s.squad === "youth") s.squad = "reserve"; // on ne recrute pas pour les U17
     s.seasonsAtClub = 0; // nouveau club : la revue de rôle saute la 1re saison
     s.clubMomentum = 0;
     s.clubFade = 0;
@@ -3058,8 +3292,9 @@
     }
     if (sponsorDealDue(r)) applySponsorDeal(r, pick(sponsorOffersFor(r)));
     const window = transferWindow(r, report);
+    if (window && window.retire) return report; // vétéran sans club : r.retiring est posé
     if (window) {
-      if (window.offers.length && rng() < 0.6) applyTransfer(r, pick(window.offers));
+      if (window.offers.length && (window.noStay || rng() < 0.6)) applyTransfer(r, pick(window.offers));
       else renewContract(r, window);
     }
     advanceYear(r);
@@ -3187,6 +3422,9 @@
         applySponsorDeal(s, offers[ch] || offers[0]);
       }
       const window = transferWindow(s, report);
+      // Vétéran sans club : côté joueur, un simple écran d'adieu sans choix,
+      // puis la fiche finale — aucune entrée de journal consommée.
+      if (window && window.retire) break;
       if (window) {
         const ch = next();
         if (window.offers.length && ch >= 0) applyTransfer(s, window.offers[ch] || window.offers[0]);
@@ -3250,7 +3488,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.77";
+  const ENGINE_VERSION = "10.79";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {
@@ -3264,7 +3502,7 @@
     bestNatRuns, // meilleur parcours par compétition de sélection (fiche finale)
     playWorldCup, resolveWcFinal, isContinentalYear, playContinental, isNationsLeagueYear, playNationsLeague, isOlympicYear, playOlympics, playingTimeFactor, setSeasonObjective,
     objectiveMet, headlineFor, grantAward, rollSeasonAwards, rollBallon, rollContinentalBallon,
-    roleForClub, roleOf, dualNatOf, dualPartnersOf,
+    roleForClub, roleOf, squadOf, dualNatOf, dualPartnersOf,
     playSeason, resolveSeasonMoment, advanceYear, marketValue, salaryFor,
     buildOffer, offersFor, loanOffersFor, applyLoan, transferWindow,
     sponsorDealDue, sponsorTierFor, sponsorOffersFor, applySponsorDeal,

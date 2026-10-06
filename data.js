@@ -1219,14 +1219,27 @@ const WC_STAGES_48 = [
 // Échelle U17 → U23 gravie selon l'âge, si le niveau suit (ovrNeed = barre OVR
 // pour l'âge). Tant qu'on n'est pas en A, on décroche le palier de son âge.
 // Les paliers avec `tournament` déclenchent un résultat résumé (une ligne).
+// repNeed (optionnel) remplace la barre de réputation calculée. Le palier U17
+// (u17: true) joue sa coupe continentale puis, s'il se qualifie, la Coupe du
+// Monde U17 — cf. YOUTH_U17_CUPS et engine.youthSelections.
+// N'AJOUTER qu'en respectant l'ordre d'âge : la boucle retient le premier
+// palier accessible.
 const YOUTH_TIERS = [
-  { id: "u17", label: "U17", aMin: 15, aMax: 17, ovrNeed: 58, tournament: "Mondial U17" },
+  { id: "u16", label: "U16", aMin: 16, aMax: 16, ovrNeed: 56, repNeed: 12, tournament: null },
+  { id: "u17", label: "U17", aMin: 16, aMax: 17, ovrNeed: 60, repNeed: 16, u17: true, tournament: null },
   { id: "u18", label: "U18", aMin: 17, aMax: 18, ovrNeed: 62, tournament: null },
   { id: "u19", label: "U19", aMin: 18, aMax: 19, ovrNeed: 66, tournament: "Euro U19" },
   { id: "u20", label: "U20", aMin: 19, aMax: 20, ovrNeed: 69, tournament: "Mondial U20" },
   { id: "u21", label: "U21", aMin: 20, aMax: 21, ovrNeed: 72, tournament: "Euro U21" },
   { id: "u23", label: "U23", aMin: 22, aMax: 23, ovrNeed: 74, tournament: null }, // vivier olympique
 ];
+// Coupe continentale U17 des sélections, par continent du pays natal. Une
+// demi-finale qualifie pour la Coupe du Monde U17.
+const YOUTH_U17_CUPS = {
+  eu: "Euro U17", af: "Coupe d'Afrique U17", as: "Coupe d'Asie U17",
+  am: "Championnat d'Amérique U17", oc: "Championnat d'Océanie U17",
+};
+const YOUTH_U17_WORLD = "Coupe du Monde U17";
 // Résultat d'un tournoi de jeunes (léger, une ligne). games = matchs joués.
 const YOUTH_STAGES = [
   { id: "groups", label: "sorti dès les poules", baseW: 34, games: 3 },
@@ -1238,7 +1251,8 @@ const YOUTH_STAGES = [
 
 // ── Jeux Olympiques ───────────────────────────────────────────────────────────
 // Tournoi U23 (années %4==3), façon mini-Mondial : poule → quart → demie → finale.
-// Médailles or (champion) / argent (finaliste) / bronze (demi-finaliste).
+// Médailles or (champion) / argent (finaliste) / bronze (demi-finaliste qui
+// GAGNE le match pour la 3e place — cf. engine.playOlympics).
 const OLYMPIC_STAGES = [
   { id: "groups", label: "Élimination en poules", baseW: 30, games: 3, text: "Le rêve olympique s'arrête dès les poules." },
   { id: "quarter", label: "Quart de finale", baseW: 22, games: 4, text: "Quart de finale olympique : l'aventure s'arrête aux portes des médailles." },
@@ -1308,6 +1322,24 @@ const BALANCE = {
   // Statut au club (rôle) : seuils de marge (OVR − expectedLevel) → cran de rôle,
   // et probabilité qu'une recrue star débarque à ton poste (te rétrograde).
   role: { margins: [6, 2, -2, -6], starSignChance: 0.14 },
+  // Effectif : U17 du club (16 ans) → réserve → équipe première. Les marges
+  // sont des écarts OVR − expectedLevel du club.
+  //   youthSkip    : marge à partir de laquelle un joueur de 16 ans saute les U17
+  //   firstMargin  : marge minimale pour intégrer l'équipe première
+  //   demoteMargin : en dessous, un jeune peu utilisé peut redescendre en réserve
+  //   anticipation : progression attendue pendant l'intersaison (bilan de fin de saison)
+  //   matches/edge/gap : volume de matchs, avantage de niveau et écart de niveau
+  //                      de l'équipe de jeunes / réserve par rapport à l'équipe première
+  squad: {
+    youthSkip: 8, firstMargin: -4, demoteMargin: -9, anticipation: 3, firstByAge: 20,
+    matches: { youth: [20, 28], reserve: [22, 30] },
+    edge: { youth: 1.5, reserve: 1.25 },
+    gap: { youth: 16, reserve: 8 },
+  },
+  // Plafond de niveau des vétérans (âge → niveau maximum). Au-dessus, le club
+  // ne prolonge pas et il faut descendre ; les gardiens gagnent gkBonus ans.
+  // noClubBase/noClubStep : probabilité que personne ne se manifeste (retraite).
+  veteranCap: { caps: [{ age: 45, level: "d3" }, { age: 43, level: "d2" }], gkBonus: 2, noClubBase: 0.15, noClubStep: 0.1, noClubMax: 0.7 },
   // Barre de recrutement : OVR minimum pour qu'un club de ce niveau vous SIGNE
   // quand il s'agit de MONTER d'un cran. Grimper se mérite — mais à 82 la barre
   // d'élite était au-dessus du peakOvr p90 : 90 % des carrières ne voyaient JAMAIS
@@ -1509,6 +1541,13 @@ const ENGINE_TEXT = {
   natRetire: "Fin de l'aventure en sélection avec {nat} : place à la nouvelle génération.",
   youthCall: "Sélectionné en {tier} de {nat}.",
   youthWin: "Vainqueur du {tournament} {year} !",
+  youthCupName: "Coupe des Champions U17",
+  youthClubWin: "Vainqueur de la {cupName} {year} avec les U17 de {club} !",
+  squadToFirst: "Promu en équipe première de {club}.",
+  squadToReserve: "Fin du parcours en U17 : place à l'équipe réserve de {club}.",
+  squadDown: "Renvoyé en équipe réserve de {club} pour retrouver du temps de jeu.",
+  winAgeCap: "À {age} ans, {club} ne peut plus vous aligner à ce niveau : il faut descendre d'un étage pour continuer.",
+  vetNoClub: "À {age} ans, plus aucun club ne se manifeste. Le téléphone ne sonne plus : c'est la fin du voyage.",
 
   // --- Coupe du Monde, continental, Ligue des Sélections, JO ---
   wcStage: "{stage} de la Coupe du Monde {year}.",
@@ -1587,6 +1626,12 @@ const ENGINE_TEXT = {
 
   // --- Coupe du Monde & Jeux Olympiques (intitulés de phase) ---
   wcInFinal: "En finale !",
+  thirdPlaceLabel: "3ᵉ place",
+  fourthPlaceLabel: "4ᵉ place",
+  wcThirdText: "Battus en demi-finale, vous vous relevez pour arracher la 3ᵉ place. Un podium mondial, ça ne se refuse pas.",
+  wcFourthText: "La demi-finale perdue pèse encore dans les jambes : le match pour la 3ᵉ place vous échappe aussi. Au pied du podium.",
+  olyBronzeText: "Battus en demie, vous remportez le match pour la 3ᵉ place : le bronze olympique est à vous.",
+  olyFourthText: "Demi-finale perdue, puis le match pour le bronze qui vous échappe : la plus cruelle des places, au pied du podium.",
   wcFinalText: "Votre nation renverse tout sur son passage : LA FINALE ! À 90 minutes du toit du monde.",
   wcChampionLabel: "CHAMPION DU MONDE",
   olyCupName: "Jeux Olympiques",
@@ -2035,6 +2080,12 @@ if (typeof module !== "undefined" && module.exports) {
     AWARDS, KEY_MOMENTS,
     EVENTS, MICRO_EVENTS, RIVAL_NEWS_GOOD, RIVAL_NEWS_BAD, RIVAL_NEWS_AHEAD,
     RIVAL_NEWS_BEHIND, WORLD_NEWS, WC_STAGES, WC_STAGES_48, YOUTH_TIERS, YOUTH_STAGES, OLYMPIC_STAGES, BALANCE, HEADLINES,
+    // ⚠️ Toute table lue par engine.js DOIT figurer ici : le serveur (Edge
+    // Function, cf. supabase/functions/_shared/game-engine.ts) évalue ce
+    // fichier dans une fonction, où un `const` de premier niveau reste LOCAL.
+    // Seul ce bloc le rend visible du moteur. Un oubli ne casse rien dans le
+    // navigateur, mais fait échouer toute validation de score côté serveur.
+    SPONSOR_BRANDS, SPONSOR_TIERS, YOUTH_U17_CUPS, YOUTH_U17_WORLD,
     UNTAKEN_PATH_TEMPLATES, DAILY_QUESTS, WEEKLY_CHALLENGES, LEGEND_QUESTS, BADGE_CATS, BADGES,
     PERKS, PERK_SLOTS, STORIES, SCORE_PERCENTILES, STREAK_MILESTONES, COUNTRY_LANG,
     ENGINE_TEXT,
