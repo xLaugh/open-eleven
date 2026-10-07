@@ -351,7 +351,12 @@
           const cup = CONTINENTAL_CUPS[cont] || CONTINENTAL_CUPS.eu;
           return [`${cup.icon} ${cup.name}`, n];
         })
-      : [[`${CONTINENTAL_CUPS.eu.icon} ${CONTINENTAL_CUPS.eu.name}`, t.continental]];
+      : (() => {
+          // Sans détail : total hérité d'une vieille sauvegarde (Europe par défaut),
+          // ou zéro — la ligne suit alors le continent du club actuel.
+          const here = t.continental ? CONTINENTAL_CUPS.eu : (CONTINENTAL_CUPS[(COUNTRIES.find((c) => c.id === G.club.countryId) || {}).continent] || CONTINENTAL_CUPS.eu);
+          return [[`${here.icon} ${here.name}`, t.continental]];
+        })();
     // C2/C3 : portée non uniforme selon le continent (cf. CONTINENTAL_CUPS2/3,
     // data.js) — groupées comme canvasContRows plutôt qu'un libellé Europe fixe.
     function canvasSubCupRows(detail) {

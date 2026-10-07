@@ -999,7 +999,7 @@
   function renderFirstCap(report) {
     showCard(`
       <div class="card-tag"><span class="card-icon">📣</span> Première convocation</div>
-      <p class="event-text">${flagHtml(G.nationality)} Le sélectionneur de <strong>${esc(G.nationality.name)}</strong> vous appelle pour la première fois. À ${G.age} ans, vous voilà international !</p>
+      <p class="event-text">${flagHtml(G.nationality)} ${E.natForms(G.nationality).on ? `Le sélectionneur ${E.natForms(G.nationality).ofPrefix}` : "Le sélectionneur de "}<strong>${esc(G.nationality.name)}</strong> vous appelle pour la première fois. À ${G.age} ans, vous voilà international !</p>
       <p class="result-text">Vous porterez le maillot national dès cette saison. Vos matchs et vos buts en sélection sont désormais suivis dans le bilan de fin de saison.</p>
       <button class="btn btn-secondary" id="btn-next">Continuer</button>
     `, "great");
@@ -1247,7 +1247,7 @@
     const wc = report.wc;
     showCard(`
       <div class="card-tag"><span class="card-icon">🏆</span> Coupe du Monde ${wc.year}</div>
-      <p class="event-text">${flagHtml(G.nationality)} Le monde retient son souffle : ${esc(G.nationality.name)} entre dans la compétition, et vous êtes du voyage.</p>
+      <p class="event-text">${flagHtml(G.nationality)} Le monde retient son souffle : ${esc(E.natForms(G.nationality).the)} entre dans la compétition, et vous êtes du voyage.</p>
       <button class="btn btn-secondary" id="btn-wc">Vivre le tournoi</button>
     `);
     $("btn-wc").addEventListener("click", () => runTournament(report, "wc", () => {
@@ -1289,7 +1289,7 @@
     const tone = c.champion ? "great" : (c.stage === "final" || c.stage === "semi") ? "good" : "bad";
     showCard(`
       <div class="card-tag"><span class="card-icon">${c.icon}</span> ${esc(c.cupName)} ${c.year}</div>
-      <p class="event-text">${flagHtml(G.nationality)} ${esc(G.nationality.name)} entre dans SA grande compétition continentale, et vous êtes de l'aventure.</p>
+      <p class="event-text">${flagHtml(G.nationality)} ${esc(E.natForms(G.nationality).The)} entre dans SA grande compétition continentale, et vous êtes de l'aventure.</p>
       <button class="btn btn-secondary" id="btn-cont">Vivre le tournoi</button>
     `);
     $("btn-cont").addEventListener("click", () => runTournament(report, "cont", () => {
@@ -1309,7 +1309,7 @@
     const tone = c.champion ? "great" : (c.stage === "final" || c.stage === "final_four") ? "good" : "bad";
     showCard(`
       <div class="card-tag"><span class="card-icon">${c.icon}</span> ${esc(c.cupName)} ${c.year}</div>
-      <p class="event-text">${flagHtml(G.nationality)} ${esc(G.nationality.name)} dispute la Ligue des Sélections européenne, et vous en êtes.</p>
+      <p class="event-text">${flagHtml(G.nationality)} ${esc(E.natForms(G.nationality).The)} dispute la Ligue des Sélections européenne, et vous en êtes.</p>
       <button class="btn btn-secondary" id="btn-natl">Vivre la campagne</button>
     `);
     $("btn-natl").addEventListener("click", () => runTournament(report, "natl", () => {
@@ -1329,7 +1329,7 @@
     const tone = c.medal === "gold" ? "great" : (c.medal === "silver" || c.medal === "bronze") ? "good" : "bad";
     showCard(`
       <div class="card-tag"><span class="card-icon">${c.icon}</span> Jeux Olympiques ${c.year}</div>
-      <p class="event-text">${flagHtml(G.nationality)} ${esc(G.nationality.name)} dispute le tournoi olympique (U23), et vous en êtes.${c.overage ? " " + T("Vous avez plus de 23 ans : vous occupez l'une des trois places de surclassé que le règlement olympique autorise.") : ""}</p>
+      <p class="event-text">${flagHtml(G.nationality)} ${esc(E.natForms(G.nationality).The)} dispute le tournoi olympique (U23), et vous en êtes.${c.overage ? " " + T("Vous avez plus de 23 ans : vous occupez l'une des trois places de surclassé que le règlement olympique autorise.") : ""}</p>
       <button class="btn btn-secondary" id="btn-olympic">Vivre les Jeux</button>
     `);
     $("btn-olympic").addEventListener("click", () => runTournament(report, "olympic", () => {
@@ -2981,7 +2981,10 @@
       // Rétrocompatibilité : total connu sans détail → Europe par défaut
       contRows = [statRowHtml(`${CONTINENTAL_CUPS.eu.icon} ${CONTINENTAL_CUPS.eu.name}`, t.continental, true)];
     } else {
-      contRows = [statRowHtml(`${CONTINENTAL_CUPS.eu.icon} ${CONTINENTAL_CUPS.eu.name}`, 0, false)];
+      // Aucune Coupe des Champions gagnée : la ligne vide porte le nom de celle
+      // que le joueur dispute, celle du continent de son club — pas toujours l'Europe.
+      const here = CONTINENTAL_CUPS[(E.countryOf(s.club.countryId) || {}).continent] || CONTINENTAL_CUPS.eu;
+      contRows = [statRowHtml(`${here.icon} ${here.name}`, 0, false)];
     }
 
     // C2 (Trophée) / C3 (Bouclier) continentaux : portée non uniforme selon le

@@ -148,6 +148,46 @@
   }
   function leOf(w) { return (frElide(w) ? "L'" : "Le ") + w; } // « Le Balayeur » / « L'Aigle »
 
+  // --- Noms de pays avec leur article --------------------------------------
+  // « France ne vous a pas convoqué » → « la France… », « de Brésil » → « du
+  // Brésil ». L'article se déduit du champ `of` du pays (« de France », « du
+  // Brésil », « des Pays-Bas », « d'Allemagne »), sauf pour les noms qui n'en
+  // prennent pas (Cuba, Malte, Haïti…). Vaut pour une nationalité comme pour
+  // un pays : les deux portent le même nom.
+  // Désactivé hors du français (ENGINE_TEXT.grammar est traduit par le pack
+  // anglais) : on renvoie alors le nom nu, comme avant.
+  const NO_ARTICLE = new Set(["Sainte-Lucie", "Saint-Vincent-et-les-Grenadines", "Saint-Kitts-et-Nevis", "Montserrat", "Porto Rico", "Taïwan", "Guam", "Macao", "Hong Kong", "São Tomé-et-Príncipe", "Tuvalu", "Kiribati", "Tahiti", "Singapour", "Bahreïn", "Maurice", "Djibouti", "Trinité-et-Tobago", "Cuba", "Curaçao", "Malte", "Saint-Marin", "Gibraltar", "Chypre", "Madagascar", "Saint-Martin", "Sint Maarten", "Bonaire", "Zanzibar", "La Réunion", "Niue", "Aruba", "Anguilla", "Oman", "Antigua-et-Barbuda", "Haïti", "Andorre"]);
+  function natForms(ent) {
+    const name = ent ? ent.name : "";
+    const plain = { on: false, name, the: name, The: name, of: deOf(name), ofPrefix: frElide(name) ? "d'" : "de ", to: "à " + name };
+    if (!name || ENGINE_TEXT.grammar !== "articles-fr") return plain;
+    const c = COUNTRIES.find((x) => x.id === (ent.homeCountryId || ent.id));
+    const of = c && c.of;
+    const m = of && of.match(/^(du |des |d'|de )/);
+    if (!m) return plain;
+    let the, to;
+    if (m[1] === "du ") { the = "le " + name; to = "au " + name; }
+    else if (m[1] === "des ") { the = "les " + name; to = "aux " + name; }
+    else {
+      the = NO_ARTICLE.has(name) ? name : (m[1] === "d'" ? "l'" + name : "la " + name);
+      to = "à " + the;
+    }
+    return { on: true, name, the, The: the.charAt(0).toUpperCase() + the.slice(1), of, ofPrefix: m[1], to };
+  }
+  // Remplace {key} dans un texte par le nom du pays, article compris :
+  // « de {key} » → « du Brésil », « à {key} » → « au Brésil », et une
+  // majuscule en début de phrase (« La France vous suit… »).
+  function subNat(text, key, ent) {
+    const f = natForms(ent);
+    const k = "\\{" + key + "\\}";
+    if (!f.on) return text.replace(new RegExp("\\bde " + k, "g"), f.of).replace(new RegExp(k, "g"), f.name);
+    return text
+      .replace(new RegExp("\\bde " + k, "g"), f.of)
+      .replace(new RegExp("(^|\\s)à " + k, "g"), (all, p) => p + f.to)
+      .replace(new RegExp("(^|[.!?…]\\s+|«\\s*)" + k, "g"), (all, p) => p + f.The)
+      .replace(new RegExp(k, "g"), f.the);
+  }
+
   // Visibilité médiatique effective : les championnats du Golfe paient
   // très cher mais exposent deux fois moins (gains de réputation réduits,
   // Ballon d'Or hors de portée — cf. rollBallon).
@@ -517,26 +557,18 @@
     if (!text) return "";
     const country = countryOf(s.club.countryId);
     const contCup = (CONTINENTAL_CUPS[(country || {}).continent] || CONTINENTAL_CUPS.eu).name;
-    let out = text
-      // Élision : « de {club/nat/country/name} » → « d'Osaka », « d'Angleterre »…
+    // Noms de pays, article compris (cf. subNat) : {nat} la sélection du
+    // joueur, {dualNat} la seconde sélection possible (vide si aucune — les
+    // événements qui l'emploient sont filtrés par cond.dual), {altNat} l'autre
+    // nation encore accessible après le premier choix, {country} le pays du club.
+    let out = subNat(subNat(subNat(subNat(text, "nat", s.nationality), "dualNat", dualNatOf(s)), "altNat", altNatOf(s)), "country", country)
+      // Élision : « de {club/name} » → « d'Osaka », « d'Amiens »…
       .replace(/\bde \{club\}/g, deOf(s.club.name))
-      .replace(/\bde \{nat\}/g, deOf(s.nationality.name))
-      // {dualNat} : seconde sélection à laquelle le joueur est éligible (double
-      // nationalité). Vide si aucune — les événements qui l'emploient sont de toute
-      // façon filtrés par cond.dual.
-      .replace(/\bde \{dualNat\}/g, deOf((dualNatOf(s) || {}).name || ""))
-      .replace(/\{dualNat\}/g, (dualNatOf(s) || {}).name || "")
-      // {altNat} : l'autre nation encore accessible après le premier choix.
-      .replace(/\bde \{altNat\}/g, deOf((altNatOf(s) || {}).name || ""))
-      .replace(/\{altNat\}/g, (altNatOf(s) || {}).name || "")
-      .replace(/\bde \{country\}/g, deOf(country ? country.name : ""))
       .replace(/\bde \{name\}/g, deOf(s.name))
       .replace(/\{club\}/g, s.club.name)
       .replace(/\{coach\}/g, s.coach)
-      .replace(/\{country\}/g, country ? country.name : "")
       .replace(/\{contCup\}/g, contCup) // coupe continentale du club (Europe/Amériques/Afrique…)
       .replace(/\{name\}/g, s.name)
-      .replace(/\{nat\}/g, s.nationality.name)
       .replace(/\{year\}/g, s.year)
       .replace(/\{age\}/g, s.age);
     if (extra && extra.rival) out = out.replace(/\{rival\}/g, extra.rival);
@@ -615,8 +647,8 @@
         s.nationality = target;
         s.flags.natSwitched = true;
         s.natSwitchFrom = from.id;
-        chips.push({ label: tx(s, "chipNatCall", { target: target.name }), kind: "trait" });
-        s.history.push({ age: s.age, text: tx(s, "natSwitch", { target: target.name, from: from.name }), impact: 6 });
+        chips.push({ label: tx(s, "chipNatCall", { target: natForms(target).the }), kind: "trait" });
+        s.history.push({ age: s.age, text: tx(s, "natSwitch", { target: natForms(target).the, from: natForms(from).the }), impact: 6 });
       }
       s.dualNat = null;
     }
@@ -636,8 +668,8 @@
         s.nationality = target;
         s.flags.natSwitched = true;
         s.natSwitchFrom = from.id;
-        chips.push({ label: tx(s, "chipNatCall", { target: target.name }), kind: "trait" });
-        s.history.push({ age: s.age, text: tx(s, "natSwitchLate", { target: target.name, from: from.name }), impact: 6 });
+        chips.push({ label: tx(s, "chipNatCall", { target: natForms(target).the }), kind: "trait" });
+        s.history.push({ age: s.age, text: tx(s, "natSwitchLate", { target: natForms(target).the, from: natForms(from).the }), impact: 6 });
       }
       s.dualNatAlt = null;
     }
@@ -2987,7 +3019,7 @@
   function sponsorTierIdx(s) {
     for (let i = SPONSOR_TIERS.length - 1; i >= (s.sponsorTier || 0); i--) {
       const t = SPONSOR_TIERS[i];
-      if (s.rep >= t.minRep && s.age >= t.minAge) return i;
+      if (s.rep >= t.minRep && s.age >= t.minAge && (s.peakOvr || 0) >= (t.minPeakOvr || 0)) return i;
     }
     return -1;
   }
@@ -3529,7 +3561,7 @@
   // avec l'ancien moteur et d'autres avec le nouveau.
   // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
   // équilibrage, données) — et à garder aligné sur le ?v= d'index.html.
-  const ENGINE_VERSION = "10.80";
+  const ENGINE_VERSION = "10.81";
 
   // --- Export ------------------------------------------------------------------
   const Engine = {
@@ -3543,7 +3575,7 @@
     bestNatRuns, // meilleur parcours par compétition de sélection (fiche finale)
     playWorldCup, resolveWcFinal, isContinentalYear, playContinental, isNationsLeagueYear, playNationsLeague, isOlympicYear, playOlympics, playingTimeFactor, setSeasonObjective,
     objectiveMet, headlineFor, grantAward, rollSeasonAwards, rollBallon, rollContinentalBallon,
-    roleForClub, roleOf, squadOf, dualNatOf, dualPartnersOf,
+    roleForClub, roleOf, squadOf, dualNatOf, dualPartnersOf, natForms,
     playSeason, resolveSeasonMoment, advanceYear, marketValue, salaryFor,
     buildOffer, offersFor, loanOffersFor, applyLoan, transferWindow,
     sponsorDealDue, sponsorTierFor, sponsorOffersFor, applySponsorDeal,

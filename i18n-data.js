@@ -10,7 +10,7 @@
    {rival}… avant l'affichage, une traduction au niveau du DOM ne retrouverait
    jamais la phrase d'origine.
 
-   3942 entrées · ⚠️ FICHIER GÉNÉRÉ — ne pas éditer à la main.
+   3943 entrées · ⚠️ FICHIER GÉNÉRÉ — ne pas éditer à la main.
    ============================================================ */
 window.I18N_DATA = { en: {
  "PREMIER MATCH PROFESSIONNEL": "PROFESSIONAL DEBUT",
@@ -3955,5 +3955,6 @@ window.I18N_DATA = { en: {
  "Coupe d'Afrique U17": "U17 Africa Cup",
  "Coupe d'Asie U17": "U17 Asian Cup",
  "Championnat d'Amérique U17": "U17 Americas Championship",
- "Championnat d'Océanie U17": "U17 Oceania Championship"
+ "Championnat d'Océanie U17": "U17 Oceania Championship",
+ "articles-fr": "articles-none"
 } };

@@ -1083,7 +1083,10 @@ const SPONSOR_TIERS = [
     ],
   },
   {
-    id: "global", minRep: 78, minAge: 18, title: "Icône mondiale",
+    // minPeakOvr : la réputation seule ne suffit pas à rendre ce palier rare
+    // (plus de la moitié des carrières finissent au-dessus de 85) — il faut
+    // aussi avoir été un joueur de tout premier plan (≈ 1 carrière sur 10).
+    id: "global", minRep: 85, minPeakOvr: 86, minAge: 18, title: "Icône mondiale",
     text: "Votre nom dépasse le football. Les multinationales se disputent un contrat qui vous suivra jusqu'à la fin de votre carrière.",
     options: [
       { id: "glob_life", brands: "cash", labelBase: "Contrat à vie", desc: "Une rente colossale et garantie, quoi qu'il arrive.", mult: [3.0, 4.0] },
@@ -1543,6 +1546,10 @@ const ENGINE_TEXT = {
   natRetire: "Fin de l'aventure en sélection avec {nat} : place à la nouvelle génération.",
   youthCall: "Sélectionné en {tier} de {nat}.",
   youthWin: "Vainqueur du {tournament} {year} !",
+  // Grammaire des noms de pays : "articles-fr" active les articles français
+  // (« la France », « du Brésil »…) dans engine.natForms. Le pack anglais
+  // traduit cette valeur, ce qui les désactive : l'anglais n'en veut pas.
+  grammar: "articles-fr",
   youthCupName: "Coupe des Champions U17",
   youthU17World: "Coupe du Monde U17",
   youthClubWin: "Vainqueur de la {cupName} {year} avec les U17 de {club} !",
