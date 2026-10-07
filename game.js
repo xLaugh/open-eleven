@@ -1123,7 +1123,7 @@
       // Match pour la 3e place (Mondial et JO) : rejoué après la demi-finale
       // perdue, avec l'issue déjà décidée par le moteur (info.thirdPlace).
       const petiteFinale = () => {
-        if (stage === "semi" && info.thirdPlace) matches.push(mk("Match pour la 3ᵉ place", info.thirdPlace === "won" ? "win" : "loss", POW.semi));
+        if (stage === "semi" && info.thirdPlace) matches.push(mk(T("Match pour la 3ᵉ place"), info.thirdPlace === "won" ? "win" : "loss", POW.semi));
       };
       if (qualified) {
         if (kind === "wc") {
@@ -1358,9 +1358,9 @@
     const y = s.youthTrophies || {};
     const cont = (E.countryOf(s.nationality.homeCountryId) || {}).continent;
     return [
-      ...(y.wcU17 ? [statRowHtml(`🌍 ${YOUTH_U17_WORLD}`, y.wcU17, true)] : []),
+      ...(y.wcU17 ? [statRowHtml(`🌍 ${ENGINE_TEXT.youthU17World}`, y.wcU17, true)] : []),
       ...(y.contU17 ? [statRowHtml(`🏆 ${YOUTH_U17_CUPS[cont] || YOUTH_U17_CUPS.eu}`, y.contU17, true)] : []),
-      ...(y.clubU17 ? [statRowHtml(`🏆 ${T("Coupe des Champions U17")}`, y.clubU17, true)] : []),
+      ...(y.clubU17 ? [statRowHtml(`🏆 ${ENGINE_TEXT.youthCupName}`, y.clubU17, true)] : []),
     ].join("");
   }
 
@@ -1443,7 +1443,7 @@
       ${report.carryInjury ? `<p class="recap-warn">${T("🩼 Toujours en reconstruction : {n} semaines de retard traînées de la saison passée.", { n: report.carryInjury })}</p>` : ""}
       ${report.tournamentMissed ? `<p class="recap-warn">😔 Blessé, vous manquez le grand tournoi de votre sélection cette saison.</p>` : ""}
       ${report.frozenOutWarning ? `<p class="recap-warn">⚠️ ${esc(report.frozenOutWarning)}</p>` : report.forcedLoanWarning ? `<p class="recap-warn">⚠️ ${esc(report.forcedLoanWarning)}</p>` : ""}
-      <p class="recap-money">💰 +${E.fmtMoney(report.income)} (salaire${report.sponsorLabel ? ` & sponsor ${esc(report.sponsorLabel)}` : " & sponsors"})</p>
+      <p class="recap-money">💰 +${E.fmtMoney(report.income)} ${report.sponsorLabel ? T("(salaire & sponsor {s})", { s: esc(report.sponsorLabel) }) : T("(salaire & sponsors)")}</p>
       ${microHtml}
       ${newsLine ? `<p class="recap-news">${esc(newsLine)}</p>` : ""}
       <button class="btn btn-secondary" id="btn-next">Continuer</button>

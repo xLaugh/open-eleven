@@ -535,6 +535,70 @@
     "Une sauvegarde plus récente existe sur un autre appareil ({date}).\n\nOK = l'écraser avec cette partie · Annuler = ne rien changer (vous pourrez la récupérer avec « Restaurer depuis le cloud »).": "A more recent save exists on another device ({date}).\n\nOK = overwrite it with this game · Cancel = change nothing (you can retrieve it with “Restore from the cloud”).",
     "Sauvegarde annulée : le cloud n'a pas été modifié.": "Save cancelled: the cloud was left untouched.",
     "Une sauvegarde plus récente existe sur un autre appareil ({date}). Votre progression locale n'a pas été envoyée.": "A more recent save exists on another device ({date}). Your local progress was not uploaded.",
+    "Vos matchs ici sont comptés à part : montez en équipe première au mérite.": "Your matches here are counted separately: earn your way into the first team.",
+    "(dernière année)": "(final year)",
+    "· ⚽ vous : {n}": "· ⚽ you: {n}",
+    "U17 du club": "Club U17s",
+    "🧒 Avec les U17 du club": "🧒 With the club U17s",
+    "🔁 En équipe réserve": "🔁 In the reserves",
+    "⬆️ Le coach vous intègre à l'<strong>équipe première</strong> !": "⬆️ The manager brings you into the <strong>first team</strong>!",
+    "➡️ Fin du parcours en U17 : vous rejoignez l'<strong>équipe réserve</strong>.": "➡️ End of the road with the U17s: you join the <strong>reserves</strong>.",
+    "⬇️ Trop juste chez les pros : retour en <strong>équipe réserve</strong> pour jouer.": "⬇️ Not quite ready for the first team: back to the <strong>reserves</strong> to get games.",
+    "Saison avec les <strong>U17</strong> du club.": "A season with the club <strong>U17s</strong>.",
+    "Saison en <strong>équipe réserve</strong>.": "A season in the <strong>reserves</strong>.",
+    "Ces matchs sont comptés à part, pas dans vos statistiques pro.": "These matches are counted separately, not in your professional stats.",
+    "⏳ Toujours en réserve : des clubs d'un niveau inférieur pourraient vous offrir du temps de jeu.": "⏳ Still in the reserves: clubs at a lower level could offer you playing time.",
+    ": {n} semaines sur la touche.": ": {n} weeks out.",
+    "Mis à l'écart": "Frozen out",
+    "ans": "yrs",
+    "Le vestiaire ne vous voit plus dans ses plans. Le club vous pousse vers un prêt — vous n'avez pas voix au chapitre sur le principe, seulement sur la destination.": "The dressing room no longer sees you in its plans. The club is pushing you out on loan — you have no say on the principle, only on the destination.",
+    "à la signature": "on signing",
+    "réputation": "reputation",
+    "discipline": "discipline",
+    "Fin de carrière": "End of career",
+    "· 🔥 série de {n} jours": "· 🔥 {n}-day streak",
+    "l'histoire": "the story",
+    "Tu es déjà dans une salle active — quitte-la ou termine ta carrière avant d'en créer/rejoindre une autre.": "You are already in an active room — leave it or finish your career before creating or joining another.",
+    "Salle créée ✔": "Room created ✔",
+    "Tu as rejoint la salle ✔": "You joined the room ✔",
+    "Invitation refusée.": "Invitation declined.",
+    "Tu as quitté la salle.": "You left the room.",
+    "Échec de l'invitation.": "Invitation failed.",
+    "Invitation envoyée ✔": "Invitation sent ✔",
+    "Échec — un vote est peut-être déjà en cours.": "Failed — a vote may already be in progress.",
+    "Un vote est en cours pour t'exclure de la salle.": "A vote is in progress to remove you from the room.",
+    "Exclure {p} — {n}/{t} ont voté.": "Remove {p} — {n}/{t} have voted.",
+    "Exclure": "Remove",
+    "Garder": "Keep",
+    "{n}/{t} ont voté.": "{n}/{t} have voted.",
+    "Rester au club actuel": "Stay at the current club",
+    "Voter": "Vote",
+    "Aucun membre actif.": "No active member.",
+    "carrière terminée": "career over",
+    "Pas encore de données pour cette carrière.": "No data yet for this career.",
+    "matchs": "matches",
+    "Saison": "Season",
+    "Carrière": "Career",
+    "Actualiser": "Refresh",
+    "Le créateur a lancé la salle — la carrière commune commence !": "The creator has launched the room — the shared career begins!",
+    "Choisissez le club de départ — la salle se lance pour tout le monde dès votre choix.": "Choose the starting club — the room launches for everyone as soon as you pick.",
+    "Le créateur a quitté la salle avant de la lancer — choisissez un club pour la relancer.": "The creator left the room before launching it — choose a club to relaunch it.",
+    "Erreur : {msg}": "Error: {msg}",
+    "En attente que le créateur de la salle choisisse le club de départ…": "Waiting for the room's creator to choose the starting club…",
+    "Salle — mercato": "Room — transfer window",
+    "En attente des autres membres de la salle…": "Waiting for the other members of the room…",
+    "Vote en préparation…": "Vote being prepared…",
+    "Un vote d'exclusion est en cours dans la salle — ouvre 🏟️ Salle pour y participer.": "A removal vote is in progress in the room — open 🏟️ Room to take part.",
+    "Rester à votre club actuel": "Stay at your current club",
+    "Vote collectif de la salle — {n}/{t} ont voté.": "Room vote — {n}/{t} have voted.",
+    "Palmarès : {list}.": "Honours: {list}.",
+    "Écris ta légende sur {game} !": "Write your legend on {game}!",
+    "Réserve": "Reserves",
+    "{m} matchs · {g} clean sheets": "{m} matches · {g} clean sheets",
+    "{m} matchs · {g} buts": "{m} matches · {g} goals",
+    "(salaire & sponsor {s})": "(salary & sponsor {s})",
+    "(salaire & sponsors)": "(salary & sponsors)",
+    "Match pour la 3ᵉ place": "Third-place play-off",
   };
 
   const DICT = { en: EN };
@@ -597,7 +661,7 @@
      CLUBS, COACH_NAMES et NAME_POOLS sont volontairement absents : ce sont des
      noms propres, ils ne se traduisent pas. */
   const DATA_TEXT_KEYS = new Set(["text", "title", "desc", "label", "hint", "winText", "failText",
-    "winLabel", "failLabel", "championText", "effect", "blurb", "reveal", "sub", "name", "short", "of"]);
+    "winLabel", "failLabel", "championText", "effect", "blurb", "reveal", "sub", "name", "short", "of", "labelBase"]);
   // data.js déclare des `const` de haut niveau : ce sont des liaisons lexicales
   // globales, PAS des propriétés de window. On les référence donc par leur
   // identifiant (le `typeof` protège d'une structure qui n'existerait pas).
@@ -643,6 +707,9 @@
       typeof COUNTRIES !== "undefined" ? COUNTRIES : null,
       typeof NATIONALITIES !== "undefined" ? NATIONALITIES : null,
       typeof STREAK_MILESTONES !== "undefined" ? STREAK_MILESTONES : null,
+      // Paliers de sponsoring : title/text du palier, labelBase/desc des offres.
+      // SPONSOR_BRANDS n'y figure pas (noms de marque, non traduits).
+      typeof SPONSOR_TIERS !== "undefined" ? SPONSOR_TIERS : null,
       // BALANCE est surtout numérique, mais porte les libellés de blessure
       // (BALANCE.injury.labels), affichés dans l'historique de carrière.
       typeof BALANCE !== "undefined" ? BALANCE : null,
@@ -690,12 +757,19 @@
     // ENGINE_TEXT est une table plate dont les PROPRIÉTÉS sont des
     // identifiants (natSwitch, captain…), pas des clés de texte : le parcours
     // générique ci-dessus l'ignorerait. On traduit donc toutes ses valeurs.
-    if (typeof ENGINE_TEXT !== "undefined" && ENGINE_TEXT) {
-      for (const k of Object.keys(ENGINE_TEXT)) {
-        const v = ENGINE_TEXT[k];
+    // Même traitement pour les autres tables plates « identifiant → texte »
+    // (chaque table porte un marqueur FLAT en fin de ligne : l'audit de traduction s'en sert).
+    const flats = [
+      typeof ENGINE_TEXT !== "undefined" ? ENGINE_TEXT : null,
+      typeof YOUTH_U17_CUPS !== "undefined" ? YOUTH_U17_CUPS : null, // FLAT: YOUTH_U17_CUPS
+    ];
+    for (const flat of flats) {
+      if (!flat) continue;
+      for (const k of Object.keys(flat)) {
+        const v = flat[k];
         if (typeof v !== "string") continue;
         const hit = table[v.trim()];
-        if (hit !== undefined) { ENGINE_TEXT[k] = hit; dataStats.done++; }
+        if (hit !== undefined) { flat[k] = hit; dataStats.done++; }
         else dataStats.missing++;
       }
     }

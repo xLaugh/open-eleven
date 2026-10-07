@@ -1809,11 +1809,11 @@
         if (st.champion || st.id === "final" || st.id === "semi") {
           const w = drawStage();
           s.youth.caps += w.games;
-          report.lines.push({ text: `🌍 ${YOUTH_U17_WORLD} : ${w.label}.`, impact: w.champion ? 10 : 5 });
+          report.lines.push({ text: `🌍 ${ENGINE_TEXT.youthU17World} : ${w.label}.`, impact: w.champion ? 10 : 5 });
           if (w.champion) {
             s.youthTrophies.wcU17 += 1;
             s.rep = clamp(s.rep + 3, 0, 100);
-            s.history.push({ age: s.age, text: tx(s, "youthWin", { tournament: YOUTH_U17_WORLD }), impact: 12 });
+            s.history.push({ age: s.age, text: tx(s, "youthWin", { tournament: ENGINE_TEXT.youthU17World }), impact: 12 });
           }
         }
       } else if (tier.tournament) {

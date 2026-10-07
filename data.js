@@ -1239,7 +1239,8 @@ const YOUTH_U17_CUPS = {
   eu: "Euro U17", af: "Coupe d'Afrique U17", as: "Coupe d'Asie U17",
   am: "Championnat d'Amérique U17", oc: "Championnat d'Océanie U17",
 };
-const YOUTH_U17_WORLD = "Coupe du Monde U17";
+// Le nom de la Coupe du Monde U17 vit dans ENGINE_TEXT.youthU17World : une
+// simple constante de texte ne pourrait pas être traduite (cf. i18n.js).
 // Résultat d'un tournoi de jeunes (léger, une ligne). games = matchs joués.
 const YOUTH_STAGES = [
   { id: "groups", label: "sorti dès les poules", baseW: 34, games: 3 },
@@ -1543,6 +1544,7 @@ const ENGINE_TEXT = {
   youthCall: "Sélectionné en {tier} de {nat}.",
   youthWin: "Vainqueur du {tournament} {year} !",
   youthCupName: "Coupe des Champions U17",
+  youthU17World: "Coupe du Monde U17",
   youthClubWin: "Vainqueur de la {cupName} {year} avec les U17 de {club} !",
   squadToFirst: "Promu en équipe première de {club}.",
   squadToReserve: "Fin du parcours en U17 : place à l'équipe réserve de {club}.",
@@ -2086,7 +2088,7 @@ if (typeof module !== "undefined" && module.exports) {
     // fichier dans une fonction, où un `const` de premier niveau reste LOCAL.
     // Seul ce bloc le rend visible du moteur. Un oubli ne casse rien dans le
     // navigateur, mais fait échouer toute validation de score côté serveur.
-    SPONSOR_BRANDS, SPONSOR_TIERS, YOUTH_U17_CUPS, YOUTH_U17_WORLD,
+    SPONSOR_BRANDS, SPONSOR_TIERS, YOUTH_U17_CUPS,
     UNTAKEN_PATH_TEMPLATES, DAILY_QUESTS, WEEKLY_CHALLENGES, LEGEND_QUESTS, BADGE_CATS, BADGES,
     PERKS, PERK_SLOTS, STORIES, SCORE_PERCENTILES, STREAK_MILESTONES, COUNTRY_LANG,
     ENGINE_TEXT,
