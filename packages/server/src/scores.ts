@@ -70,7 +70,7 @@ export function registerScores(app: FastifyInstance): void {
     if (blocked) return reply.code(429).send({ error: blocked });
 
     let score: number;
-    try { score = Engine.scoreDaily(date, p.choices); } catch (err) { return reply.code(500).send({ error: "Vérification impossible", detail: String(err) }); }
+    try { score = Engine.scoreDaily(date, p.choices); } catch (err) { req.log.error(err); return reply.code(500).send({ error: "Vérification impossible" }); }
     if (!validScore(score)) return reply.code(422).send({ error: "Score hors bornes" });
     score = Math.round(score);
 
@@ -101,7 +101,7 @@ export function registerScores(app: FastifyInstance): void {
       if (blocked) return reply.code(429).send({ error: blocked });
 
       let fromScore: number;
-      try { fromScore = Math.round(Engine.scoreDuel(seed, choices)); } catch (err) { return reply.code(500).send({ error: "Vérification impossible", detail: String(err) }); }
+      try { fromScore = Math.round(Engine.scoreDuel(seed, choices)); } catch (err) { req.log.error(err); return reply.code(500).send({ error: "Vérification impossible" }); }
       if (!validScore(fromScore)) return reply.code(422).send({ error: "Score hors bornes" });
       const { rows } = await pool.query(
         "insert into duels (seed, from_user, from_pseudo, from_label, from_choices, from_score, to_pseudo, status) " +
@@ -133,7 +133,7 @@ export function registerScores(app: FastifyInstance): void {
       try {
         fromScore = Math.round(Engine.scoreDuel(duel.seed, duel.from_choices ?? []));
         toScore = Math.round(Engine.scoreDuel(duel.seed, choices));
-      } catch (err) { return reply.code(500).send({ error: "Vérification impossible", detail: String(err) }); }
+      } catch (err) { req.log.error(err); return reply.code(500).send({ error: "Vérification impossible" }); }
       if (!validScore(fromScore) || !validScore(toScore)) return reply.code(422).send({ error: "Score hors bornes" });
 
       const winner = toScore > fromScore ? "to" : fromScore > toScore ? "from" : "tie";

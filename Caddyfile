@@ -32,6 +32,13 @@
 		header X-Content-Type-Options "nosniff"
 		header Referrer-Policy "strict-origin-when-cross-origin"
 
+		# Politique de sécurité du contenu, posée en en-tête (elle vaut alors pour TOUTES
+		# les pages servies, pas seulement celle qui porte la balise <meta>, et autorise
+		# « frame-ancestors », que la balise ignore). Doit rester alignée sur la <meta> de
+		# index.html : tout est servi depuis l'origine, seuls les styles en ligne et les
+		# images data:/blob: sont tolérés.
+		header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+
 		file_server
 	}
 }

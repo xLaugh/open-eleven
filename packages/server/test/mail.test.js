@@ -84,6 +84,24 @@ test("inscription : le compte n'ouvre qu'après le lien de confirmation", { skip
   assert.equal((await inbox(email)).length, 2);
 });
 
+test("inscription en double : réponse identique, le titulaire est prévenu sans rien révéler", { skip }, async () => {
+  const email = "double-" + tag + "@exemple.test";
+  const first = await client().post("/api/auth/signup", { email, password: "mot-de-passe-seize" });
+  assert.equal(first.status, 200, JSON.stringify(first.json));
+  await waitForMail(email); // le lien de confirmation
+
+  // Même adresse (casse différente) : la réponse est EXACTEMENT celle d'une adresse neuve
+  // (200, pas de session, « confirmez votre boîte ») — rien ne trahit qu'un compte existe.
+  const dup = await client().post("/api/auth/signup", { email: email.toUpperCase(), password: "un-autre-mot-de-passe" });
+  assert.equal(dup.status, 200, JSON.stringify(dup.json));
+  assert.deepEqual(dup.json, first.json, "réponse indiscernable d'une inscription neuve");
+
+  // Le titulaire reçoit un e-mail « vous avez déjà un compte » (et aucun second compte n'est créé).
+  const mails = await waitForMail(email, 2);
+  assert.match(mails[0].Subject, /déjà un compte/);
+  assert.equal((await client().post("/api/auth/login", { email, password: "un-autre-mot-de-passe" })).status, 400, "le mot de passe de la tentative ne marche pas");
+});
+
 test("mot de passe oublié : le lien permet d'en choisir un nouveau, une seule fois", { skip }, async () => {
   const email = "oubli-" + tag + "@exemple.test";
   const owner = client();

@@ -9,7 +9,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { config, mailEnabled } from "./config";
 import { pool } from "./db";
 import { limits } from "./limits";
-import { sendConfirmation, sendRecovery } from "./mail";
+import { sendAlreadyRegistered, sendConfirmation, sendRecovery } from "./mail";
 
 const COOKIE = "oe_session";
 const HASH_COST = 12;
@@ -120,7 +120,15 @@ export function registerAuth(app: FastifyInstance): void {
       );
       userId = rows[0].id;
     } catch (err) {
-      if ((err as { code?: string }).code === "23505") throw new AuthError("User already registered", 409);
+      if ((err as { code?: string }).code === "23505") {
+        // Adresse déjà prise. Sans e-mails (mode local), on ne peut pas faire autrement
+        // que de le dire. Avec e-mails, on répond EXACTEMENT comme pour une adresse neuve
+        // (« vérifiez votre boîte ») et on prévient le titulaire par e-mail : impossible,
+        // depuis la réponse, de savoir si un compte existe.
+        if (!mailEnabled()) throw new AuthError("User already registered", 409);
+        sendAlreadyRegistered(email).catch(() => {});
+        return { session: null, confirmation: true };
+      }
       throw err;
     }
     if (!mailEnabled()) {

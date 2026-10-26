@@ -17,6 +17,17 @@ export function sendConfirmation(to: string, token: string): Promise<void> {
     "\n\nLe lien est valable 48 heures. Si vous n'êtes pas à l'origine de cette inscription, ignorez ce message.\n");
 }
 
+export function sendAlreadyRegistered(to: string): Promise<void> {
+  // Inscription avec une adresse déjà prise : la réponse HTTP reste la même que pour
+  // une adresse neuve (on ne révèle pas quels comptes existent). Le titulaire est
+  // prévenu ici, et orienté vers la connexion ou la réinitialisation du mot de passe.
+  const link = config.publicUrl + "/";
+  return send(to, "Open Eleven — vous avez déjà un compte",
+    "Quelqu'un vient de tenter de créer un compte Open Eleven avec cette adresse, mais elle en a déjà un.\n\n" +
+    "Si c'était vous : connectez-vous simplement sur " + link + " — et utilisez « Mot de passe oublié » si besoin.\n\n" +
+    "Si ce n'était pas vous, aucune action n'est nécessaire : aucun compte n'a été créé.\n");
+}
+
 export function sendRecovery(to: string, token: string): Promise<void> {
   // Le jeton voyage dans le fragment (#) : il n'est jamais envoyé à un serveur
   // par le navigateur, ni écrit dans un journal d'accès.
