@@ -2236,6 +2236,49 @@ body { color: var(--text-0); }
 .pantheon-clickable:active { transform: scale(0.99); }
 .pantheon-see { margin: 8px 0 0; font-size: 0.74rem; font-weight: 600; color: var(--green-ink); opacity: 0.75; }
 .pantheon-empty { text-align: center; color: var(--on-green-soft); font-style: italic; margin-top: 40px; }
+/* Connecté : bascule entre le Panthéon de l'appareil et l'historique du compte. */
+.pantheon-source { display: flex; gap: 6px; justify-content: center; margin: 0 auto 14px; padding: 4px; max-width: 340px; border-radius: 999px; background: rgba(0, 0, 0, 0.18); }
+.pantheon-source-btn {
+  flex: 1;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--on-green-soft);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pantheon-source-btn.on { background: var(--card-bg); color: var(--green-ink); box-shadow: 0 2px 8px var(--shadow); }
+.pantheon-count { text-align: center; font-size: 0.8rem; color: var(--on-green-soft); margin: 0 0 2px; }
+.pantheon-note { text-align: center; font-size: 0.82rem; font-weight: 600; color: var(--gold-soft); margin: 0; }
+.pantheon-hint { text-align: center; font-size: 0.82rem; color: var(--on-green-soft); margin: 6px 0 0; }
+/* Carte de l'historique : mode, date et score au-dessus ; favori et suppression en bas. */
+.pantheon-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.72rem; font-weight: 600; color: var(--text-1); margin: 0 0 6px; }
+.pantheon-mode { color: var(--green-ink); }
+/* Favori et suppression dans le coin bas droit : la ligne des trophées leur laisse la place. */
+.pantheon-card:has(.pantheon-acts) { position: relative; }
+.pantheon-card:has(.pantheon-acts) .pantheon-trophies { padding-right: 92px; }
+.pantheon-acts { position: absolute; right: 12px; bottom: 10px; display: flex; gap: 6px; }
+.pantheon-fav, .pantheon-del {
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-1);
+  cursor: pointer;
+}
+.pantheon-fav.on { color: var(--gold); border-color: var(--gold); }
+.pantheon-del:hover { border-color: #c0392b; }
+.pantheon-card.loading { opacity: 0.6; pointer-events: none; }
+.pantheon-more { display: block; margin: 4px auto 0; }
 /* (l'alignement du Retour est géré par .screen-back — en haut à gauche) */
 
 /* ---------- Nouveautés (notes de mise à jour) ---------- */

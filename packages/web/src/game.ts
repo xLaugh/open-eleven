@@ -1741,9 +1741,17 @@ import { Engine } from "@open-eleven/engine";
     }
     return p.length ? p[Math.floor(Math.random() * p.length)] : null;
   }
+  function newCareerId() {
+    try { if (crypto.randomUUID) return crypto.randomUUID(); } catch (e) { /* hors HTTPS */ }
+    return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 12);
+  }
   function saveToPantheon() {
     const narrative = E.buildNarrative(G);
     const entry = {
+      // Identifiant et mode : l'historique du compte s'en sert (pas de doublon, filtre par mode).
+      id: newCareerId(),
+      mode: G.room ? "room" : G.dailyDate ? "daily" : G.duel ? "duel" : G.storyId ? "story" : "career",
+      playedAt: new Date().toISOString(),
       name: G.name,
       nationalityId: G.nationality.id,
       nationalityFlag: G.nationality.flag,
@@ -1762,6 +1770,8 @@ import { Engine } from "@open-eleven/engine";
     p.push(entry);
     while (p.length > PANTHEON_MAX) p.shift();
     savePantheon(p);
+    // Compte connecté : la carrière rejoint aussi l'historique en ligne.
+    if (window.OpenElevenAccount && window.OpenElevenAccount.saveCareer) window.OpenElevenAccount.saveCareer();
   }
 
   // Tri du Panthéon (affichage uniquement — n'altère ni le stockage ni le tirage
@@ -1807,38 +1817,228 @@ import { Engine } from "@open-eleven/engine";
     });
   }
 
+  // Nom, titre et trophées d'une carrière : communs au Panthéon de l'appareil et à
+  // l'historique du compte (dont le résumé vient du serveur : tout est échappé).
+  function pantheonCardBody(l) {
+    const t = l.trophies || {};
+    const n = (v) => Number(v) || 0;
+    const bits = [];
+    if (t.worldCup) bits.push(`🏆×${n(t.worldCup)}`);
+    if (t.ballon) bits.push(`⭐×${n(t.ballon)}`);
+    if (t.continental) bits.push(`🥇×${n(t.continental)}`);
+    if (t.continental2) bits.push(`🥈×${n(t.continental2)}`);
+    if (t.continental3) bits.push(`🥉×${n(t.continental3)}`);
+    if (t.natLeague) bits.push(`🛡️×${n(t.natLeague)}`);
+    if (t.arabCup) bits.push(`${ARAB_CUP.icon}×${n(t.arabCup)}`);
+    if (t.games) bits.push(`🏅×${n(t.games)}`);
+    if (t.league) bits.push(`🎖️×${n(t.league)}`);
+    if (t.goldenBoot) bits.push(`👟×${n(t.goldenBoot)}`);
+    const legendNat = l.nationalityId ? NATIONALITIES.find((x) => x.id === l.nationalityId) : null;
+    return `
+      <p class="pantheon-name">${legendNat ? flagHtml(legendNat) : esc(l.nationalityFlag || "")} ${esc(l.name || "Anonyme")} ${esc(l.positionIcon || "")}</p>
+      <p class="pantheon-title">${esc(l.title || "")}${l.peakOvr ? ` · OVR ${n(l.peakOvr)}` : ""}</p>
+      <p class="pantheon-trophies">${bits.length ? bits.join(" ") : "Aucun trophée majeur"}${l.money ? ` · 💰 ${n(l.money)} M€` : ""}</p>`;
+  }
+
+  // --- Panthéon : historique du compte ------------------------------------------
+  // Connecté, le Panthéon montre au choix les 20 dernières carrières de l'appareil
+  // ou TOUT l'historique du compte (jusqu'à 1000), filtrable par mode, par pages.
+  let pantheonSource = "device";
+  let careerFilter = "all";
+  let careerPage = null; // { items, hasMore, total, favorites, max, maxFavorites }
+  let careerReq = 0; // dernière demande en cours : une réponse périmée est ignorée
+  const CAREER_FILTERS = [
+    { id: "all", label: "Toutes" },
+    { id: "fav", label: "⭐ Favorites" },
+    { id: "career", label: "⚽ Carrière" },
+    { id: "daily", label: "📅 Défi du jour" },
+    { id: "duel", label: "🆚 Duel" },
+    { id: "story", label: "📖 Histoire" },
+    { id: "room", label: "🏟️ Salle" },
+  ];
+  const accountCareers = () => {
+    const A = window.OpenElevenAccount;
+    return A && A.listCareers && A.getSession && A.getSession() ? A : null;
+  };
+  function careerDate(iso) {
+    const lang = window.I18N ? window.I18N.lang : "fr";
+    try { return new Date(iso).toLocaleDateString(lang === "en" ? "en-GB" : "fr-FR", { day: "numeric", month: "short", year: "numeric" }); } catch (e) { return ""; }
+  }
+
+  function renderPantheonSource() {
+    const box = $("pantheon-source");
+    if (!box) return;
+    if (!accountCareers()) { pantheonSource = "device"; box.hidden = true; box.innerHTML = ""; return; }
+    box.hidden = false;
+    box.innerHTML = [["device", "📱 Cet appareil"], ["account", "☁️ Mon compte"]].map(([id, label]) =>
+      `<button class="pantheon-source-btn${pantheonSource === id ? " on" : ""}" data-src="${id}" aria-pressed="${pantheonSource === id}">${label}</button>`
+    ).join("");
+    box.querySelectorAll(".pantheon-source-btn").forEach((b) => b.addEventListener("click", () => {
+      const src = b.getAttribute("data-src");
+      if (src === pantheonSource) return;
+      pantheonSource = src;
+      careerPage = null;
+      renderPantheonScreen();
+    }));
+  }
+
+  async function loadAccountCareers(more = false) {
+    const A = accountCareers();
+    if (!A) { pantheonSource = "device"; renderPantheonScreen(); return; }
+    const req = ++careerReq;
+    const last = more && careerPage && careerPage.items.length ? careerPage.items[careerPage.items.length - 1] : null;
+    const opts: Record<string, unknown> = { limit: 20 };
+    if (careerFilter === "fav") opts.favorites = true;
+    else if (careerFilter !== "all") opts.mode = careerFilter;
+    if (last) opts.before = { at: last.playedAt, id: last.id };
+    if (!more) $("pantheon-list").innerHTML = `<p class="pantheon-empty">Chargement…</p>`;
+    const { data, error } = await A.listCareers(opts);
+    if (req !== careerReq || pantheonSource !== "account") return; // vue changée entre-temps
+    if (error || !data) {
+      $("pantheon-list").innerHTML = `<p class="pantheon-empty">Historique indisponible pour le moment.</p>`;
+      return;
+    }
+    careerPage = { ...data, items: (last ? careerPage.items : []).concat(data.items) };
+    paintAccountCareers();
+  }
+
+  function renderCareerFilters() {
+    const bar = $("pantheon-sort");
+    if (!bar) return;
+    bar.innerHTML = CAREER_FILTERS.map((f) =>
+      `<button class="pantheon-sort-chip${f.id === careerFilter ? " on" : ""}" data-filter="${f.id}">${f.label}</button>`
+    ).join("");
+    bar.querySelectorAll(".pantheon-sort-chip").forEach((b) => b.addEventListener("click", () => {
+      careerFilter = b.getAttribute("data-filter");
+      careerPage = null;
+      renderCareerFilters();
+      loadAccountCareers();
+    }));
+  }
+
+  function paintAccountCareers(note?) {
+    const list = $("pantheon-list");
+    const pg = careerPage;
+    if (!list || !pg) return;
+    list.innerHTML = "";
+    if (pg.total) {
+      const head = document.createElement("p");
+      head.className = "pantheon-count";
+      const v = { n: pg.total, max: pg.max, fav: pg.favorites };
+      head.textContent = T(pg.total > 1 ? "{n} / {max} carrières sur le compte" : "{n} / {max} carrière sur le compte", v) +
+        (pg.favorites ? " · " + T(pg.favorites > 1 ? "⭐ {fav} favorites" : "⭐ {fav} favorite", v) : "");
+      list.appendChild(head);
+    }
+    if (note) {
+      const p = document.createElement("p");
+      p.className = "pantheon-note";
+      p.textContent = note;
+      list.appendChild(p);
+    }
+    if (!pg.items.length) {
+      const empty = document.createElement("p");
+      empty.className = "pantheon-empty";
+      empty.textContent = careerFilter === "all" ? "Aucune carrière enregistrée sur ce compte pour l'instant." : "Aucune carrière dans cette catégorie.";
+      list.appendChild(empty);
+    }
+    pg.items.forEach((it) => {
+      const s = it.summary || {};
+      const mode = CAREER_FILTERS.find((f) => f.id === it.mode);
+      const card = document.createElement("div");
+      card.className = "pantheon-card pantheon-clickable";
+      card.setAttribute("role", "button");
+      card.innerHTML =
+        `<div class="pantheon-meta"><span class="pantheon-mode">${mode ? mode.label : ""}</span><span>${esc(careerDate(it.playedAt))}</span><span>${esc(T("🏅 {n} pts", { n: Number(it.score) || 0 }))}</span></div>` +
+        pantheonCardBody({ name: s.name, title: s.title, nationalityId: s.natId, nationalityFlag: s.natFlag, positionIcon: s.posIcon, peakOvr: s.peakOvr, money: s.money, trophies: s.trophies }) +
+        `<div class="pantheon-acts">` +
+        `<button class="pantheon-fav${it.favorite ? " on" : ""}" title="${esc(T(it.favorite ? "Retirer des favorites" : "Garder en favorite"))}" aria-pressed="${!!it.favorite}">${it.favorite ? "★" : "☆"}</button>` +
+        `<button class="pantheon-del" title="${esc(T("Supprimer"))}" aria-label="${esc(T("Supprimer"))}">🗑️</button></div>`;
+      card.addEventListener("click", () => openAccountCareer(it, card));
+      card.querySelector(".pantheon-fav").addEventListener("click", (e) => { e.stopPropagation(); toggleCareerFavorite(it); });
+      card.querySelector(".pantheon-del").addEventListener("click", (e) => { e.stopPropagation(); deleteAccountCareer(it); });
+      list.appendChild(card);
+    });
+    if (pg.hasMore) {
+      const more = document.createElement("button");
+      more.className = "btn btn-secondary pantheon-more";
+      more.textContent = "Voir plus";
+      more.addEventListener("click", () => { more.disabled = true; loadAccountCareers(true); });
+      list.appendChild(more);
+    }
+  }
+
+  async function openAccountCareer(it, card) {
+    const A = accountCareers();
+    if (!A || card.classList.contains("loading")) return;
+    card.classList.add("loading");
+    const { data, error } = await A.getCareer(it.id);
+    card.classList.remove("loading");
+    if (error || !data) { paintAccountCareers(T("Impossible d'ouvrir cette carrière pour le moment.")); return; }
+    reviewPantheonCard({ career: data });
+  }
+
+  async function toggleCareerFavorite(it) {
+    const A = accountCareers();
+    if (!A) return;
+    const { data, error } = await A.setCareerFavorite(it.id, !it.favorite);
+    if (error) {
+      paintAccountCareers(error.code === "favorites_cap"
+        ? T("{max} favorites au plus : retirez-en une pour en garder une autre.", { max: careerPage.maxFavorites })
+        : T("Échec, réessayez."));
+      return;
+    }
+    it.favorite = !!data.favorite;
+    careerPage.favorites += it.favorite ? 1 : -1;
+    if (careerFilter === "fav" && !it.favorite) careerPage.items = careerPage.items.filter((x) => x !== it);
+    paintAccountCareers();
+  }
+
+  async function deleteAccountCareer(it) {
+    const A = accountCareers();
+    if (!A) return;
+    const ok = await confirmModal({
+      icon: "🗑️",
+      title: "Supprimer cette carrière ?",
+      message: "Elle disparaît de l'historique du compte, sur tous vos appareils. Le Panthéon de cet appareil n'est pas modifié.",
+      confirmLabel: "Supprimer",
+      cancelLabel: "Annuler",
+      danger: true,
+    });
+    if (!ok) return;
+    const { error } = await A.deleteCareer(it.id);
+    if (error) { paintAccountCareers(T("Échec, réessayez.")); return; }
+    careerPage.items = careerPage.items.filter((x) => x !== it);
+    careerPage.total -= 1;
+    if (it.favorite) careerPage.favorites -= 1;
+    paintAccountCareers();
+  }
+
   function renderPantheonScreen() {
+    renderPantheonSource();
+    if (pantheonSource === "account") {
+      renderCareerFilters();
+      if (careerPage) paintAccountCareers(); else loadAccountCareers();
+      return;
+    }
     const p = loadPantheon();
     const list = $("pantheon-list");
     const bar = $("pantheon-sort");
     list.innerHTML = "";
+    // Comptes disponibles mais personne de connecté : le Panthéon de l'appareil ne
+    // garde que 20 carrières, le compte toutes.
+    const hint = window.OpenElevenAccount && window.OpenElevenAccount.getSession && !window.OpenElevenAccount.getSession()
+      ? `<p class="pantheon-hint">☁️ Connectez-vous pour garder toutes vos carrières, pas seulement les 20 dernières.</p>`
+      : "";
     if (!p.length) {
       if (bar) bar.innerHTML = "";
-      list.innerHTML = `<p class="pantheon-empty">Votre légende est encore à écrire.</p>`;
+      list.innerHTML = `<p class="pantheon-empty">Votre légende est encore à écrire.</p>` + hint;
       return;
     }
     renderPantheonSortBar();
     sortedPantheon(p).forEach((l) => {
-      const t = l.trophies || {};
-      const bits = [];
-      if (t.worldCup) bits.push(`🏆×${t.worldCup}`);
-      if (t.ballon) bits.push(`⭐×${t.ballon}`);
-      if (t.continental) bits.push(`🥇×${t.continental}`);
-      if (t.continental2) bits.push(`🥈×${t.continental2}`);
-      if (t.continental3) bits.push(`🥉×${t.continental3}`);
-      if (t.natLeague) bits.push(`🛡️×${t.natLeague}`);
-      if (t.arabCup) bits.push(`${ARAB_CUP.icon}×${t.arabCup}`);
-      if (t.games) bits.push(`🏅×${t.games}`);
-      if (t.league) bits.push(`🎖️×${t.league}`);
-      if (t.goldenBoot) bits.push(`👟×${t.goldenBoot}`);
       const card = document.createElement("div");
       card.className = "pantheon-card";
-      const legendNat = l.nationalityId ? NATIONALITIES.find((n) => n.id === l.nationalityId) : null;
-      card.innerHTML = `
-        <p class="pantheon-name">${legendNat ? flagHtml(legendNat) : (l.nationalityFlag || "")} ${esc(l.name || "Anonyme")} ${l.positionIcon || ""}</p>
-        <p class="pantheon-title">${esc(l.title || "")}${l.peakOvr ? ` · OVR ${l.peakOvr}` : ""}</p>
-        <p class="pantheon-trophies">${bits.length ? bits.join(" ") : "Aucun trophée majeur"}${l.money ? ` · 💰 ${l.money} M€` : ""}</p>
-        ${l.career ? `<p class="pantheon-see">👁️ Voir la fiche complète</p>` : ""}`;
+      card.innerHTML = pantheonCardBody(l) + (l.career ? `<p class="pantheon-see">👁️ Voir la fiche complète</p>` : "");
       if (l.career) {
         card.classList.add("pantheon-clickable");
         card.setAttribute("role", "button");
@@ -1846,6 +2046,7 @@ import { Engine } from "@open-eleven/engine";
       }
       list.appendChild(card);
     });
+    if (hint) list.insertAdjacentHTML("beforeend", hint);
   }
 
   // Rouvre la fiche finale COMPLÈTE d'une légende du Panthéon, en mode
@@ -3767,7 +3968,7 @@ import { Engine } from "@open-eleven/engine";
     closeGameMenu();
     if (id === "screen-badges") renderBadgeScreen();
     else if (id === "screen-quests") renderQuestScreen();
-    else if (id === "screen-pantheon") renderPantheonScreen();
+    else if (id === "screen-pantheon") { careerPage = null; renderPantheonScreen(); }
     else if (id === "screen-shop") renderShopScreen();
     showScreen(id);
   }
@@ -3963,7 +4164,7 @@ import { Engine } from "@open-eleven/engine";
     });
     $("btn-badges").addEventListener("click", () => { track("open_badges"); renderBadgeScreen(); showScreen("screen-badges"); });
     $("btn-badges-back").addEventListener("click", goBackFromSecondary);
-    $("btn-pantheon").addEventListener("click", () => { track("open_pantheon"); renderPantheonScreen(); showScreen("screen-pantheon"); });
+    $("btn-pantheon").addEventListener("click", () => { track("open_pantheon"); careerPage = null; renderPantheonScreen(); showScreen("screen-pantheon"); });
     $("btn-pantheon-back").addEventListener("click", goBackFromSecondary);
     $("btn-news").addEventListener("click", () => { track("open_news"); renderNewsScreen(); showScreen("screen-news"); });
     $("btn-news-back").addEventListener("click", goBackFromSecondary);

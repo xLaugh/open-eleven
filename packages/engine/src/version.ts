@@ -3,4 +3,4 @@
 // vérifier certains runs avec l'ancien moteur et d'autres avec le nouveau.
 // ⚠️ À AVANCER à chaque changement qui touche le déroulé d'une carrière (règles,
 // équilibrage, données).
-export const ENGINE_VERSION = "10.87";
+export const ENGINE_VERSION = "10.88";

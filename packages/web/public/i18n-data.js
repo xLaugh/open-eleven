@@ -4194,5 +4194,9 @@ window.I18N_DATA = { en: {
  "Ligue des Sélections en quatre divisions (A à D), avec montées et descentes ; seule la Ligue A joue le trophée.": "Nations League in four divisions (A to D), with promotion and relegation; only League A plays for the trophy.",
  "Les tournois opposent désormais les vrais qualifiés : fini les petites nations en quart de Mondial par hasard. Pays hôtes réels jusqu'en 2034.": "Tournaments now feature the actual qualified teams: no more minnows in a World Cup quarter-final by chance. Real host nations up to 2034.",
  "✅ Qualifications : premiers du groupe, {nat} décroche son billet pour {comp} {when} !": "✅ Qualifiers: group winners, {nat} book their ticket for {comp} {when}!",
- "Ligue {league} · 1re place": "League {league} · 1st place"
+ "Ligue {league} · 1re place": "League {league} · 1st place",
+ "Toutes vos carrières sur votre compte": "All your careers on your account",
+ "Connecté, chaque carrière terminée est enregistrée sur votre compte, quel que soit le mode (carrière, défi du jour, duel, histoire, salle) : jusqu'à 1000, et plus seulement les 20 dernières.": "When signed in, every finished career is saved to your account, whatever the mode (career, daily challenge, duel, story, room): up to 1,000, not just the last 20.",
+ "Panthéon : un onglet « Mon compte » montre tout l'historique, filtrable par mode, avec la fiche complète de chaque carrière. Les favorites sont gardées pour toujours.": "Pantheon: a “My account” tab shows your whole history, filterable by mode, with the full card of every career. Favourites are kept forever.",
+ "Les carrières déjà présentes au Panthéon de l'appareil rejoignent le compte à la connexion.": "Careers already in the device's Pantheon join your account when you sign in."
 } };

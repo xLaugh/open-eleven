@@ -18,6 +18,41 @@ export interface Procedure {
 
 const MAX_SAVE_BYTES = 6 * 1024 * 1024;
 const MAX_STATS_BYTES = 200 * 1024;
+
+// Historique des carrières (cf. migrations/008_careers.sql). Une carrière pèse
+// 20 à 35 Ko : 128 Ko laisse de la marge sans ouvrir la porte au remplissage.
+const CAREERS_MAX = 1000;
+const CAREER_FAVORITES_MAX = 100;
+const CAREER_MAX_BYTES = 128 * 1024;
+const CAREER_BATCH_MAX = 20;
+const CAREER_MODES = ["career", "daily", "duel", "story", "room"];
+/** Envois par jour et par compte : l'import du Panthéon en fait un, chaque fin de partie un. */
+const CAREER_CALLS_PER_DAY = 300;
+
+/** Résumé affiché dans la liste : recopié champ par champ, borné, jamais tel quel. */
+function careerSummary(raw: unknown): Record<string, unknown> {
+  const s = (raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {}) as Record<string, unknown>;
+  const str = (v: unknown, n: number) => (typeof v === "string" ? v.slice(0, n) : "");
+  const num = (v: unknown) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : 0);
+  const trophies: Record<string, number> = {};
+  if (s.trophies && typeof s.trophies === "object" && !Array.isArray(s.trophies)) {
+    for (const [k, v] of Object.entries(s.trophies as Record<string, unknown>).slice(0, 40)) {
+      if (/^[A-Za-z0-9_]{1,24}$/.test(k) && Number.isInteger(v) && (v as number) > 0 && (v as number) < 1000) trophies[k] = v as number;
+    }
+  }
+  return {
+    name: str(s.name, 40), title: str(s.title, 80), natId: str(s.natId, 12), natFlag: str(s.natFlag, 16),
+    natName: str(s.natName, 40), posIcon: str(s.posIcon, 8), peakOvr: num(s.peakOvr), money: num(s.money),
+    seasons: num(s.seasons), trophies,
+  };
+}
+/** Date de fin annoncée par l'appareil, si elle est plausible ; sinon le serveur prend « maintenant ». */
+function playedAt(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const t = Date.parse(v);
+  if (!Number.isFinite(t) || t < Date.parse("2020-01-01") || t > Date.now() + 5 * 60 * 1000) return null;
+  return new Date(t).toISOString();
+}
 const isUuid = (v: unknown): v is string => typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 const uuidArg = (args: Args, name: string): string => {
   if (!isUuid(args[name])) throw new ProcedureError("Identifiant invalide : " + name);
@@ -61,6 +96,122 @@ export const procedures: Record<string, Procedure> = {
         [me, json],
       );
       return { ok: true, updated_at: iso(saved.rows[0].updated_at) };
+    },
+  },
+
+  // --- Historique des carrières -------------------------------------------------
+  // Toutes les carrières terminées du compte, jusqu'à CAREERS_MAX (les favorites
+  // ne partent jamais). Chaque procédure ne voit que les carrières du joueur.
+  careers_add: {
+    auth: true,
+    async run(db, me, args) {
+      const items = args.items;
+      if (!Array.isArray(items) || !items.length || items.length > CAREER_BATCH_MAX) throw new ProcedureError("Envoi invalide : 1 à " + CAREER_BATCH_MAX + " carrières");
+      const day = new Date().toISOString().slice(0, 10);
+      const { rows: verdict } = await db.query("select rate_take($1, 'careers', $2, $3, 0) as v", [me, day, CAREER_CALLS_PER_DAY]);
+      if (verdict[0].v !== "ok") throw new ProcedureError("Trop de carrières envoyées aujourd'hui", 429);
+      let added = 0;
+      for (const raw of items) {
+        const it = (raw && typeof raw === "object" ? raw : {}) as Args;
+        const clientId = typeof it.clientId === "string" && /^[\w-]{1,64}$/.test(it.clientId) ? it.clientId : null;
+        if (!clientId) throw new ProcedureError("Identifiant de carrière invalide");
+        if (typeof it.mode !== "string" || !CAREER_MODES.includes(it.mode)) throw new ProcedureError("Mode de carrière invalide");
+        if (!it.data || typeof it.data !== "object" || Array.isArray(it.data)) throw new ProcedureError("Carrière invalide");
+        const data = JSON.stringify(it.data);
+        if (Buffer.byteLength(data) > CAREER_MAX_BYTES) throw new ProcedureError("Carrière trop volumineuse", 413);
+        const score = Number.isFinite(Number(it.score)) ? Math.max(0, Math.min(1_000_000, Math.round(Number(it.score)))) : 0;
+        // Une carrière supprimée par le joueur ne revient pas, même renvoyée par un autre appareil.
+        const r = await db.query(
+          "insert into careers (user_id, client_id, mode, summary, data, score, played_at) " +
+          // À la milliseconde : c'est la précision du curseur de careers_list.
+          "select $1, $2, $3, $4::jsonb, $5::jsonb, $6, date_trunc('milliseconds', coalesce($7::timestamptz, now())) " +
+          "where not exists (select 1 from careers_deleted where user_id = $1 and client_id = $2) on conflict (user_id, client_id) do nothing",
+          [me, clientId, it.mode, JSON.stringify(careerSummary(it.summary)), data, score, playedAt(it.playedAt)],
+        );
+        added += r.rowCount ?? 0;
+      }
+      // Au-delà du plafond, les plus anciennes non favorites s'en vont.
+      await db.query(
+        "delete from careers where id in (select id from careers where user_id = $1 and not favorite order by played_at desc, id desc " +
+        "offset greatest(0, $2 - (select count(*) from careers where user_id = $1 and favorite)))",
+        [me, CAREERS_MAX],
+      );
+      const { rows } = await db.query("select count(*)::int as n from careers where user_id = $1", [me]);
+      return { added, total: rows[0].n };
+    },
+  },
+  // Page de la liste, la plus récente d'abord. `before` = { at, id } de la dernière
+  // carrière déjà affichée (pagination stable même si une carrière arrive entre-temps).
+  careers_list: {
+    auth: true,
+    async run(db, me, args) {
+      const limit = Math.min(50, Math.max(1, Number.isInteger(args.limit) ? (args.limit as number) : 20));
+      const where = ["user_id = $1"];
+      const values: unknown[] = [me];
+      if (args.mode !== undefined && args.mode !== null) {
+        if (typeof args.mode !== "string" || !CAREER_MODES.includes(args.mode)) throw new ProcedureError("Mode de carrière invalide");
+        values.push(args.mode);
+        where.push("mode = $" + values.length);
+      }
+      if (args.favorites === true) where.push("favorite");
+      const before = args.before as { at?: unknown; id?: unknown } | undefined;
+      if (before) {
+        const at = typeof before.at === "string" && Number.isFinite(Date.parse(before.at)) ? new Date(before.at).toISOString() : null;
+        if (!at || !isUuid(before.id)) throw new ProcedureError("Curseur invalide");
+        values.push(at, before.id);
+        where.push("(played_at, id) < ($" + (values.length - 1) + "::timestamptz, $" + values.length + "::uuid)");
+      }
+      values.push(limit + 1);
+      const { rows } = await db.query(
+        "select id, mode, summary, score, favorite, played_at from careers where " + where.join(" and ") +
+        " order by played_at desc, id desc limit $" + values.length,
+        values,
+      );
+      const counts = (await db.query("select count(*)::int as total, count(*) filter (where favorite)::int as favorites from careers where user_id = $1", [me])).rows[0];
+      return {
+        items: rows.slice(0, limit).map((r) => ({ id: r.id, mode: r.mode, summary: r.summary, score: r.score, favorite: r.favorite, playedAt: iso(r.played_at) })),
+        hasMore: rows.length > limit,
+        total: counts.total, favorites: counts.favorites, max: CAREERS_MAX, maxFavorites: CAREER_FAVORITES_MAX,
+      };
+    },
+  },
+  careers_get: {
+    auth: true,
+    async run(db, me, args) {
+      const id = uuidArg(args, "id");
+      const { rows } = await db.query("select data from careers where id = $1 and user_id = $2", [id, me]);
+      if (!rows[0]) throw new ProcedureError("Carrière introuvable", 404);
+      return rows[0].data;
+    },
+  },
+  careers_favorite: {
+    auth: true,
+    async run(db, me, args) {
+      const id = uuidArg(args, "id");
+      const favorite = args.favorite === true;
+      if (favorite) {
+        const { rows } = await db.query("select count(*)::int as n from careers where user_id = $1 and favorite and id <> $2", [me, id]);
+        if (rows[0].n >= CAREER_FAVORITES_MAX) throw new ProcedureError("Favorites : " + CAREER_FAVORITES_MAX + " au plus", 409, "favorites_cap");
+      }
+      const r = await db.query("update careers set favorite = $3 where id = $1 and user_id = $2", [id, me, favorite]);
+      if (!r.rowCount) throw new ProcedureError("Carrière introuvable", 404);
+      return { favorite };
+    },
+  },
+  careers_delete: {
+    auth: true,
+    async run(db, me, args) {
+      const id = uuidArg(args, "id");
+      const r = await db.query("delete from careers where id = $1 and user_id = $2 returning client_id", [id, me]);
+      if (!r.rowCount) throw new ProcedureError("Carrière introuvable", 404);
+      await db.query("insert into careers_deleted (user_id, client_id) values ($1, $2) on conflict do nothing", [me, r.rows[0].client_id]);
+      // Seules les plus récentes peuvent encore traîner dans un Panthéon (20 par appareil) : 500 suffisent.
+      await db.query(
+        "delete from careers_deleted where user_id = $1 and client_id in " +
+        "(select client_id from careers_deleted where user_id = $1 order by deleted_at desc offset 500)",
+        [me],
+      );
+      return { ok: true };
     },
   },
 

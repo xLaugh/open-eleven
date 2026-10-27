@@ -6,7 +6,7 @@
 //
 // Deux serveurs partagent la base :
 //   • l'un SANS e-mails (un compte est actif dès l'inscription) — comptes, sauvegardes,
-//     amis, scores vérifiés, duels, salles, limites de débit ;
+//     amis, scores vérifiés, duels, salles, historique des carrières, limites de débit ;
 //   • l'autre AVEC e-mails, vers un Mailpit — confirmation d'inscription, mot de passe
 //     oublié, plafonds d'envoi. Ignoré si MAILPIT_URL est absent.
 // Les tests créent leurs propres comptes (noms uniques) : la base n'a pas à être vide.
@@ -58,7 +58,7 @@ try {
   await waitHealthy("http://127.0.0.1:3101");
   if (mailpit) await waitHealthy("http://127.0.0.1:3102");
 
-  status ||= await run(["api.test.js", "rooms.test.js", "limits.test.js", "notifications.test.js"], { TEST_SERVER_URL: "http://127.0.0.1:3101" });
+  status ||= await run(["api.test.js", "rooms.test.js", "limits.test.js", "notifications.test.js", "careers.test.js"], { TEST_SERVER_URL: "http://127.0.0.1:3101" });
   if (mailpit) status ||= await run(["mail.test.js"], { TEST_SERVER_URL: "http://127.0.0.1:3102", TEST_MAILPIT_URL: mailpit });
   else console.log("\nTests d'e-mails ignorés : MAILPIT_URL n'est pas renseigné.");
 } finally {

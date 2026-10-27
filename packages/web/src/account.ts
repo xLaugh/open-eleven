@@ -120,6 +120,75 @@ import { api } from "./api";
     try { return new Date(iso).toLocaleString(); } catch (e) { return String(iso || ""); }
   }
 
+  // ---- historique des carrières ----------------------------------------------
+  // Chaque carrière terminée sur un compte connecté y est gardée (jusqu'à 1000).
+  // Le Panthéon de l'appareil sert de file d'attente : ce qui n'est pas encore
+  // parti (hors ligne, compte connecté après coup) part au prochain envoi. Le
+  // serveur ignore une carrière déjà reçue (même identifiant) : rien ne double,
+  // même depuis un second appareil qui a restauré la même sauvegarde.
+  const PANTHEON_KEY = "destinDeChampion_pantheon";
+  const CAREER_BATCH = 20;
+  const careerModeOf = (c) => (!c ? "career" : c.room ? "room" : c.dailyDate ? "daily" : c.duel ? "duel" : c.storyId ? "story" : "career");
+  function newCareerId() {
+    try { if (crypto.randomUUID) return crypto.randomUUID(); } catch (e) { /* hors HTTPS */ }
+    return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 12);
+  }
+  const careerItem = (e) => ({
+    clientId: e.id, mode: e.mode || careerModeOf(e.career), score: e.score || 0, playedAt: e.playedAt,
+    summary: {
+      name: e.name, title: e.title, natId: e.nationalityId, natFlag: e.nationalityFlag, natName: e.nationalityName,
+      posIcon: e.positionIcon, peakOvr: e.peakOvr, money: e.money, seasons: (e.career.seasons || []).length, trophies: e.trophies,
+    },
+    data: e.career,
+  });
+  // Refus définitif (carrière invalide ou trop lourde) : inutile de la renvoyer.
+  // Réseau coupé, limite du jour ou panne : elle repartira au prochain envoi.
+  const careerRejected = (error) => !!error && error.status >= 400 && error.status < 500 && error.status !== 429 && error.status !== 401;
+
+  async function sendPendingCareers() {
+    let pan;
+    try { pan = JSON.parse(localStorage.getItem(PANTHEON_KEY) || "[]"); } catch (e) { return; }
+    if (!Array.isArray(pan) || !session) return;
+    // Carrières d'avant l'historique : elles reçoivent un identifiant, gardé au Panthéon
+    // (donc aussi dans la sauvegarde en ligne), et une date qui respecte leur ordre.
+    let changed = false;
+    pan.forEach((e, i) => {
+      if (e && !e.id) { e.id = newCareerId(); e.playedAt = e.playedAt || new Date(Date.now() - (pan.length - i) * 1000).toISOString(); changed = true; }
+    });
+    if (changed) { try { localStorage.setItem(PANTHEON_KEY, JSON.stringify(pan)); } catch (e) { /* stockage plein */ } }
+    const key = "openEleven_careersSynced:" + session.user.id;
+    let synced = [];
+    try { synced = JSON.parse(localStorage.getItem(key) || "[]"); } catch (e) { /* illisible : tout repart, sans doublon */ }
+    const done = new Set(Array.isArray(synced) ? synced : []);
+    const todo = pan.filter((e) => e && e.id && e.career && !done.has(e.id));
+    for (let i = 0; i < todo.length; i += CAREER_BATCH) {
+      const batch = todo.slice(i, i + CAREER_BATCH);
+      const { error } = await api.rpc("careers_add", { items: batch.map(careerItem) });
+      if (!error) { batch.forEach((e) => done.add(e.id)); continue; }
+      if (!careerRejected(error)) break;
+      // Une carrière du lot est refusée : envoi une à une, pour ne perdre que celle-là.
+      for (const e of batch) {
+        const one = await api.rpc("careers_add", { items: [careerItem(e)] });
+        if (!one.error || careerRejected(one.error)) done.add(e.id);
+        else break;
+      }
+    }
+    // Seuls les identifiants encore au Panthéon sont gardés : la liste reste courte.
+    const ids = new Set(pan.map((e) => e && e.id));
+    try { localStorage.setItem(key, JSON.stringify([...done].filter((id) => ids.has(id)))); } catch (e) { /* stockage plein */ }
+  }
+  let careerFlush = null;
+  let careerAgain = false;
+  function flushCareers() {
+    if (!session) return Promise.resolve();
+    // Une carrière finie pendant un envoi en cours repart juste après lui.
+    if (careerFlush) { careerAgain = true; return careerFlush; }
+    careerFlush = (async () => {
+      do { careerAgain = false; await sendPendingCareers(); } while (careerAgain && session);
+    })().catch(() => {}).finally(() => { careerFlush = null; });
+    return careerFlush;
+  }
+
   // ---- UI (modale injectée) ---------------------------------------------------
   const style = document.createElement("style");
   style.textContent =
@@ -387,6 +456,9 @@ import { api } from "./api";
 
   // ---- au login frais : réconcilier local <-> cloud --------------------------
   async function onFreshLogin() {
+    // D'abord l'historique : si l'on restaure ensuite la sauvegarde en ligne, le
+    // Panthéon de l'appareil est remplacé — ses carrières sont alors déjà au compte.
+    await flushCareers();
     const r = await pullSave();
     if (r.ok && r.row && r.row.data && Object.keys(r.row.data).length) {
       if (!hasLocalData()) { applyLocal(r.row.data); location.reload(); return; }
@@ -444,7 +516,7 @@ import { api } from "./api";
       if (confirmed && s) { api.auth.announce("SIGNED_IN"); return; }
       renderModal();
       if (expired && !s) { open(); msg("Ce lien a expiré ou a déjà servi. Connecte-toi, ou crée de nouveau ton compte pour recevoir un nouveau lien.", "err"); }
-      if (session) loadPseudo().then(() => { renderModal(); pushProfileStats(); });
+      if (session) { loadPseudo().then(() => { renderModal(); pushProfileStats(); }); flushCareers(); }
       refreshNotifs();
     });
   });
@@ -1191,6 +1263,12 @@ import { api } from "./api";
     // autonome (aucune notion de salle ici), il ne fait qu'exposer ce qu'il
     // sait déjà (client du serveur, session, liste d'amis acceptés).
     getClient: () => api, getSession: () => session, listFriends, listOutgoing, addFriend, avatarHtml,
+    // Historique des carrières du compte (écran Panthéon).
+    saveCareer: flushCareers,
+    listCareers: (opts) => api.rpc("careers_list", opts || {}),
+    getCareer: (id) => api.rpc("careers_get", { id }),
+    setCareerFavorite: (id, favorite) => api.rpc("careers_favorite", { id, favorite }),
+    deleteCareer: (id) => api.rpc("careers_delete", { id }),
   };
 
   // ---- bouton d'accueil -------------------------------------------------------

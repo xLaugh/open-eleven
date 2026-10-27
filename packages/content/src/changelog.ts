@@ -19,6 +19,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "10.88",
+    date: "2026-10-27",
+    title: "Toutes vos carrières sur votre compte",
+    items: [
+      { kind: "new", text: "Connecté, chaque carrière terminée est enregistrée sur votre compte, quel que soit le mode (carrière, défi du jour, duel, histoire, salle) : jusqu'à 1000, et plus seulement les 20 dernières." },
+      { kind: "new", text: "Panthéon : un onglet « Mon compte » montre tout l'historique, filtrable par mode, avec la fiche complète de chaque carrière. Les favorites sont gardées pour toujours." },
+      { kind: "new", text: "Les carrières déjà présentes au Panthéon de l'appareil rejoignent le compte à la connexion." },
+    ],
+  },
+  {
     version: "10.87",
     date: "2026-10-24",
     title: "Qualifications des sélections",
