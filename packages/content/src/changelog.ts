@@ -19,6 +19,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "10.89",
+    date: "2026-10-28",
+    title: "Coupes d'Europe au classement et vingt nouveaux événements",
+    items: [
+      { kind: "new", text: "Les coupes continentales se gagnent au classement de la saison passée, comme en vrai : top 4 en Coupe des Champions en Angleterre, Espagne, Italie et Allemagne, top 3 en France, top 2 au Portugal, aux Pays-Bas, en Belgique et en Turquie, le champion ailleurs. Les places suivantes mènent au Trophée et au Bouclier, plus nombreuses dans les championnats moyens et petits." },
+      { kind: "new", text: "Hors d'Europe aussi : top 4 au Brésil et en Argentine, top 2 dans les autres pays, le champion en Océanie. Le vainqueur de la coupe nationale garde sa place en Trophée." },
+      { kind: "balance", text: "Les grands clubs ne sont plus qualifiés d'office : ils finissent plus souvent en haut du classement, mais une saison ratée peut leur coûter l'Europe. À l'inverse, un club modeste porté par une grande saison peut décrocher sa place." },
+      { kind: "new", text: "Le bilan de saison annonce la coupe jouée par votre club et celle qu'il a gagnée pour la saison suivante. En rejoignant un club, vous savez tout de suite s'il joue l'Europe." },
+      { kind: "new", text: "Dix nouveaux événements pour les débuts (16-19 ans) : bourse d'une université américaine, éducateur renvoyé, douleur cachée avant la vitrine des pros, semaine avec l'équipe première, duel avec votre rival au tournoi des centres… Les premières saisons se ressemblent beaucoup moins." },
+      { kind: "new", text: "Cinq pour la fin de carrière (baisse de salaire ou offres de l'étranger, mémoires, enfant au centre de formation, ovation chez l'ennemi…) et cinq pour le cœur de carrière (coéquipier en détresse, tentative de corruption, coups francs, podcast sans filtre…)." },
+      { kind: "new", text: "24 nouvelles brèves de saison, surtout pour les jeunes années et après 33 ans, qui n'en avaient presque pas." },
+    ],
+  },
+  {
     version: "10.88",
     date: "2026-10-27",
     title: "Toutes vos carrières sur votre compte",
