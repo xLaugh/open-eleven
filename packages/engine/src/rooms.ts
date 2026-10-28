@@ -2,6 +2,7 @@
 
 import { BALANCE, CONTINENTAL_CUPS2, CONTINENTAL_CUPS3 } from "@open-eleven/content";
 import { continentOf, countryOf, divShort, lvlOf, shiftClubLevel } from "./clubs";
+import { leagueRange, seasonCupTier, titleChanceFor } from "./clubcups";
 import { tx } from "./text";
 import { clamp } from "./utils";
 import type { CareerState, LevelId } from "./types";
@@ -74,7 +75,7 @@ export function roomClubSeason(s: CareerState, lvl: LevelId, isTopFlight: boolea
   // Une finale ou un barrage : l'équipe la plus forte a l'avantage, sans certitude.
   const pWin = clamp(0.5 + (rating - 6.6) * 0.15, 0.25, 0.8);
 
-  const title = d[0] < BALANCE.titleChance[lvl] * boost;
+  const title = d[0] < titleChanceFor(lvl, s.club.countryId) * boost;
   const playoff = !title && !isTopFlight && rating >= 6.4 && d[1] < (BALANCE.playoffChance[lvl] || 0) * boost;
   let relegBase = BALANCE.relegationChance[lvl] || 0;
   if (relegBase && lvl === "d1" && s.club.level === "elite") relegBase *= BALANCE.eliteRelegShield;
@@ -84,21 +85,22 @@ export function roomClubSeason(s: CareerState, lvl: LevelId, isTopFlight: boolea
   const relegPlayoff = relegation && !relegDirect;
   const cupFinal = d[3] < BALANCE.cupChance[lvl] * BALANCE.cupFinalReachMult * boost;
 
-  // Coupe continentale : même palier que playSeason. Le ticket C2 vient de la coupe
-  // nationale gagnée par la SALLE la saison passée (roomCupWonYear), jamais d'un
-  // événement personnel — sinon le palier différerait d'un membre à l'autre.
+  // Coupe continentale : même palier que playSeason, au classement de la saison passée
+  // (identique chez tous les membres : même club, même classement partagé, ou le même
+  // classement simulé pour un club qu'ils viennent de rejoindre). Le ticket C2 vient de
+  // la coupe nationale gagnée par la SALLE la saison passée (roomCupWonYear), jamais
+  // d'un événement personnel — sinon le palier différerait d'un membre à l'autre.
   const continent = continentOf(s.club.countryId) || "eu";
-  const topLvl = continent === "eu" ? "elite" : "d1";
-  const c3Lvl = continent === "eu" ? "d1" : "d2";
+  const qual = seasonCupTier(s, lvl, isTopFlight);
   const ticket = s.roomCupWonYear === s.year - 1;
   let contTier: 0 | 1 | 2 | 3 = 0, reachP = 0;
-  if (lvl === topLvl) {
+  if (qual.tier === 1) {
     contTier = 1;
-    reachP = (continent === "eu" ? BALANCE.continentalReach.eu.elite : BALANCE.continentalReach.other[topLvl]) || 0;
-  } else if (ticket && CONTINENTAL_CUPS2[continent]) {
+    reachP = (continent === "eu" ? BALANCE.continentalReach.eu[lvl] : BALANCE.continentalReach.other[lvl]) || 0;
+  } else if ((ticket || qual.tier === 2) && CONTINENTAL_CUPS2[continent]) {
     contTier = 2; reachP = BALANCE.subCupReach.c2[lvl] || 0;
-  } else if (lvl === c3Lvl && CONTINENTAL_CUPS3[continent]) {
-    contTier = 3; reachP = BALANCE.subCupReach.c3[c3Lvl] || 0;
+  } else if (qual.tier === 3 && CONTINENTAL_CUPS3[continent]) {
+    contTier = 3; reachP = BALANCE.subCupReach.c3[lvl] || 0;
   }
   const contM = (countryOf(s.club.countryId) || {}).contMult;
   const contFinal = contTier > 0 && d[4] < reachP * boost * (contM != null ? contM : 1);
@@ -113,7 +115,7 @@ export function roomClubSeason(s: CareerState, lvl: LevelId, isTopFlight: boolea
   else if (relegPlayoff) leaguePos = lvl === "d1" ? at(15, 17) : at(16, 18);
   else if (relegDirect) leaguePos = lvl === "d1" ? at(16, 18) : at(17, 19);
   else {
-    const [lo, hi] = lvl === "elite" ? [2, 7] : lvl === "d1" ? [2, 12] : [4, 14];
+    const [lo, hi] = leagueRange(lvl, s.club.countryId);
     leaguePos = clamp(at(lo, hi) - Math.round((rating - 6.6) * 2.4), 2, hi + 2); // 1er = champion seulement
   }
   return { title, playoff, playoffWin, relegDirect, relegPlayoff, relegWin, cupFinal, cupWin, contTier, contFinal, contWin, leaguePos };

@@ -37,6 +37,36 @@ export const CONTINENTAL_CUPS3: Dict<Named> = {
   as: { name: "Bouclier d'Asie", icon: "🥉" },
 };
 
+// --- Places continentales de clubs ------------------------------------------------
+// Combien de clubs de PREMIÈRE DIVISION d'un pays jouent chaque coupe la saison
+// suivante, d'après leur classement : c1 premiers en C1, puis c2 en C2, puis c3 en C3.
+// Le vainqueur de la Coupe Nationale garde en plus son billet pour la C2. Un palier
+// absent du continent (pas de C2 en Océanie, pas de C3 hors Europe/Asie) n'en ouvre pas.
+// Inspiré des vraies attributions : les grands championnats envoient plus de clubs en
+// C1 ; les championnats moyens et petits se rattrapent en C2 et surtout en C3 (comme
+// la Ligue Conférence, pensée pour eux).
+export interface CupSlots { c1: number; c2?: number; c3?: number; }
+const EU_MID: CupSlots = { c1: 1, c2: 2, c3: 2 }; // championnats moyens (première division de niveau D1)
+export const CLUB_CUP_SLOTS: { byCountry: Dict<CupSlots>; byContinent: Dict<CupSlots> } = {
+  byCountry: {
+    en: { c1: 4, c2: 1, c3: 1 }, es: { c1: 4, c2: 1, c3: 1 }, it: { c1: 4, c2: 1, c3: 1 }, de: { c1: 4, c2: 1, c3: 1 },
+    fr: { c1: 3, c2: 1, c3: 1 },
+    pt: { c1: 2, c2: 1, c3: 1 }, nl: { c1: 2, c2: 1, c3: 1 },
+    be: { c1: 2, c2: 1, c3: 2 }, tr: { c1: 2, c2: 1, c3: 2 },
+    ch: EU_MID, at: EU_MID, sco: EU_MID, gr: EU_MID, dk: EU_MID, cz: EU_MID, hr: EU_MID, rs: EU_MID, ua: EU_MID,
+    no: EU_MID, se: EU_MID, pl: EU_MID, ro: EU_MID, sk: EU_MID, ru: EU_MID, hu: EU_MID, ba: EU_MID,
+    br: { c1: 4, c2: 2 }, ar: { c1: 4, c2: 2 },
+  },
+  byContinent: {
+    // Petits championnats européens : le champion en C1, le 2e en C2, les 3e et 4e en C3.
+    eu: { c1: 1, c2: 1, c3: 2 },
+    am: { c1: 2, c2: 1 },
+    af: { c1: 2, c2: 1 },
+    as: { c1: 2, c2: 1, c3: 1 },
+    oc: { c1: 1 },
+  },
+};
+
 // --- Supercoupes continentales de clubs -----------------------------------------
 // Match d'ouverture de saison entre le vainqueur du C1 et celui du C2 (comme la
 // Supercoupe de l'UEFA) : n'existe que là où les DEUX paliers coexistent, donc

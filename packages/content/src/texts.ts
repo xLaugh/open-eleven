@@ -278,6 +278,12 @@ export const ENGINE_TEXT: Record<string, string> = {
   nlTextStay: "{rank}ᵉ du groupe : {nat} reste en Ligue {league}.",
   nlTextDown: "Derniers du groupe : {nat} redescend en Ligue {league}.",
   lineEuroTicket: "🏆 Sacre en Coupe Nationale : vous voilà qualifié pour une coupe continentale la saison prochaine !",
+  // Coupes continentales de clubs : qualification au classement (cf. engine/clubcups.ts).
+  lineContSeason: "🌍 Cette saison, {club} est engagé en {cupName}.",
+  lineContNone: "📉 Pas de coupe continentale cette saison pour {club} : la place s'est perdue au classement.",
+  lineContQual: "🎟️ {rank}ᵉ place : {club} décroche sa place en {cupName} pour la saison prochaine.",
+  lineContQualChamp: "🎟️ Champion : {club} jouera la {cupName} la saison prochaine.",
+  lineContQualMissed: "📉 {rank}ᵉ place : {club} manque les places continentales. Pas de coupe la saison prochaine.",
   continentalBallon: "{name} {year} — le continent à vos pieds.",
 
   // --- Verdicts de rivalité (fiche finale) ---

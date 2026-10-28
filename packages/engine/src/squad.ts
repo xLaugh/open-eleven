@@ -9,6 +9,7 @@ import { seasonPrelude } from "./season";
 import { marketValue } from "./transfers";
 import { continentOf, countryOf, isTopFlightOf, lvlOf, visibilityOf } from "./clubs";
 import { roomClubSeason } from "./rooms";
+import { noteClubQualification } from "./clubcups";
 import { ovr } from "./player";
 import type { CareerState, Club, LevelId, SeasonReport } from "./types";
 import { BALANCE, CONTINENTAL_CUPS, ENGINE_TEXT, YOUTH_STAGES } from "@open-eleven/content";
@@ -135,6 +136,8 @@ export function playDevSeason(s: CareerState, lvl: LevelId) {
   const club = s.roomClub ? roomClubSeason(s, lvl, isTopFlightOf(lvl, s.club.countryId)) : null;
   if (club && club.cupFinal && club.cupWin) s.roomCupWonYear = s.year;
   const leaguePos = club ? (club.relegPlayoff && !club.relegWin ? Math.max(club.leaguePos, lvl === "d1" ? 17 : 18) : club.leaguePos) : null;
+  // Le classement partagé ouvre la même coupe continentale que chez les coéquipiers.
+  if (club) noteClubQualification(s, leaguePos, isTopFlightOf(lvl, s.club.countryId));
   s.seasons.push({ age: s.age, year: s.year, clubName: s.club.name, countryId: s.club.countryId, level: lvl, matches: 0, goals: 0, assists: 0, cleanSheets: 0, rating: report.rating, trophies: [], divisionTitle: false, onLoan: false, leaguePos, mv, squad, dev });
 
   if (rating >= 7.4) s.coachRel = clamp(s.coachRel + 4, 5, 100);

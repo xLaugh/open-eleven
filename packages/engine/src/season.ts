@@ -18,6 +18,7 @@ import { continentOf, countryOf, divShort, isTopFlightOf, lvlOf, visibilityOf } 
 import { ovr, hasTrait } from "./player";
 import { roomClubSeason, type RoomClubOutcome } from "./rooms";
 import { isQualified, qualifiersFor, settleNatPlayoff } from "./qualifiers";
+import { cupOf, leagueRange, noteClubQualification, seasonCupTier, titleChanceFor } from "./clubcups";
 import type { CareerState, LevelId, SeasonMomentEntry, SeasonReport } from "./types";
 import { BALANCE, COMPETITIONS, CONTINENTAL_CUPS, CONTINENTAL_CUPS2, CONTINENTAL_CUPS3, ENGINE_TEXT, EVENTS, LEVEL_ORDER, MICRO_EVENTS } from "@open-eleven/content";
 
@@ -157,7 +158,7 @@ export function playSeason(s: CareerState) {
   if (s.roomClub) {
     applyRoomClubSeason(s, report, roomClubSeason(s, lvl, isTopFlight), evTrophies, lvl, isTopFlight);
   } else {
-    const wonDivision = !evTrophies.includes("league") && rng() < BALANCE.titleChance[lvl] * teamBoost;
+    const wonDivision = !evTrophies.includes("league") && rng() < titleChanceFor(lvl, s.club.countryId) * teamBoost;
     if (wonDivision && isTopFlight) {
       s.trophies.league += 1;
       report.trophies.push("league");
@@ -218,30 +219,31 @@ export function playSeason(s: CareerState) {
       });
     }
     // Coupe continentale de club : ATTEINDRE la finale se joue ici, la GAGNER se
-    // joue dans un moment décisif interactif (continental_final). Hors d'Europe,
-    // la D1 est le sommet (pas de clubs "élite") → elle conteste sa Coupe des
-    // Champions comme l'élite européenne conteste la sienne.
-    // 3 paliers, PAS uniformes sur les 5 continents (cf. CONTINENTAL_CUPS2/3
-    // dans content) : sommet (élite en Europe, D1 ailleurs) → C1 ; vainqueur de
-    // Coupe Nationale (ticket), TOUTES divisions → C2 (Europe/Asie/Afrique/
-    // Amérique SEULEMENT) ; division juste sous le sommet par défaut → C3
-    // (Europe/Asie SEULEMENT). Océanie : C1 uniquement, inchangé. UN SEUL
-    // engagement/saison. Tier décidé SANS hasard ; le rng() de portée reste
-    // l'unique tirage, à sa place (même pour tier 0 : rng consommé).
+    // joue dans un moment décisif interactif (continental_final).
+    // La coupe jouée vient du classement de la saison passée (cf. clubcups.ts) :
+    // places de C1, puis de C2, puis de C3 selon le pays. Le billet de la Coupe
+    // Nationale ouvre la C2 à un club qui n'a pas mieux. Paliers PAS uniformes
+    // sur les 5 continents (pas de C2 en Océanie, pas de C3 hors Europe/Asie).
+    // UN SEUL engagement/saison. Palier décidé SANS hasard ; le rng() de portée
+    // reste l'unique tirage, à sa place (même pour tier 0 : rng consommé).
     if (!evTrophies.includes("continental") && !evTrophies.includes("continental2") && !evTrophies.includes("continental3")) {
       const continent = continentOf(s.club.countryId) || "eu";
-      const topLvl = continent === "eu" ? "elite" : "d1";
-      const c3Lvl = continent === "eu" ? "d1" : "d2";
+      const qual = seasonCupTier(s, lvl, isTopFlight);
       let tier = 0, reachP = 0, cup = null;
-      if (lvl === topLvl) {
+      if (qual.tier === 1) {
         tier = 1;
-        reachP = (continent === "eu" ? BALANCE.continentalReach.eu.elite : BALANCE.continentalReach.other[topLvl]) || 0;
+        reachP = (continent === "eu" ? BALANCE.continentalReach.eu[lvl] : BALANCE.continentalReach.other[lvl]) || 0;
         cup = CONTINENTAL_CUPS[continent] || CONTINENTAL_CUPS.eu;
-      } else if (subTicket && CONTINENTAL_CUPS2[continent]) {
+      } else if ((subTicket || qual.tier === 2) && CONTINENTAL_CUPS2[continent]) {
         tier = 2; reachP = BALANCE.subCupReach.c2[lvl] || 0; cup = CONTINENTAL_CUPS2[continent];
-      } else if (lvl === c3Lvl && CONTINENTAL_CUPS3[continent]) {
-        tier = 3; reachP = BALANCE.subCupReach.c3[c3Lvl] || 0; cup = CONTINENTAL_CUPS3[continent];
+      } else if (qual.tier === 3 && CONTINENTAL_CUPS3[continent]) {
+        tier = 3; reachP = BALANCE.subCupReach.c3[lvl] || 0; cup = CONTINENTAL_CUPS3[continent];
       }
+      // Le joueur sait dès le début de saison ce que joue son club. Un club élite privé
+      // d'Europe, c'est une nouvelle : on le dit. Un club modeste sans Europe, non.
+      report.contTier = tier;
+      if (cup) report.lines.push({ text: tx(s, "lineContSeason", { cupName: cup.name }), impact: 0 });
+      else if (lvl === "elite") report.lines.push({ text: tx(s, "lineContNone"), impact: -3 });
       // contMult : certains championnats (Pays-Bas, Portugal) placent rarement leurs
       // clubs en finale européenne malgré un bon niveau interne. Défaut 1.
       const contM = (countryOf(s.club.countryId) || {}).contMult;
@@ -272,7 +274,9 @@ export function playSeason(s: CareerState) {
       // moitié des objectifs hors élite est de type « top N » — ils étaient donc
       // décidés par un tirage sur lequel le joueur n'avait aucune prise. On réutilise
       // l'écart à la note de référence (même 6.6 que teamBoost) pour décaler le rang.
-      const [lo, hi] = lvl === "elite" ? [2, 7] : lvl === "d1" ? [2, 12] : [4, 14];
+      // Fourchette selon le niveau ET le championnat (cf. clubcups.ts) : un D1 ordinaire
+      // finit derrière les clubs élite de son pays.
+      const [lo, hi] = leagueRange(lvl, s.club.countryId);
       // Jamais 1er ici : la première place est celle du champion, décidée plus haut.
       report.leaguePos = clamp(randInt(lo, hi) - Math.round((rating - 6.6) * 2.4), 2, hi + 2);
     }
@@ -510,6 +514,17 @@ export function playSeason(s: CareerState) {
   else if (pt > 0.85) s.moral = clamp(s.moral + 3, 5, 100);
 
   if (s.loan) s.loan.rating = report.rating;
+  // Le classement final ouvre (ou non) une coupe continentale pour la saison prochaine.
+  const nextTier = noteClubQualification(s, report.leaguePos, isTopFlight);
+  const nextCup = cupOf(nextTier, s.club.countryId);
+  if (nextCup) {
+    report.lines.push({
+      text: report.leaguePos === 1 ? tx(s, "lineContQualChamp", { cupName: nextCup.name }) : tx(s, "lineContQual", { cupName: nextCup.name, rank: report.leaguePos }),
+      impact: nextTier === 1 ? 5 : 3,
+    });
+  } else if (isTopFlight && lvl === "elite") {
+    report.lines.push({ text: tx(s, "lineContQualMissed", { rank: report.leaguePos }), impact: -4 });
+  }
   s.lastSeason = { clubId: s.club.id, leaguePos: report.leaguePos, promoted: !!report.promoted, relegated: !!report.relegated, rating: report.rating, wonLeague: report.trophies.includes("league") };
   reviewRole(s, report); // statut dynamique : promotion / rétrogradation / recrue concurrente
   reviewSquad(s, report); // un jeune dépassé peut redescendre en réserve
@@ -628,6 +643,11 @@ function applyRoomClubSeason(s: CareerState, report: SeasonReport, club: RoomClu
       moment: keyMomentFor(s, "cup_final"), sharedWin: club.cupWin,
     });
   }
+  // Même annonce de début de saison qu'en solo : la coupe jouée vient du classement passé.
+  const seasonCup = cupOf(club.contTier, s.club.countryId);
+  report.contTier = club.contTier;
+  if (seasonCup) report.lines.push({ text: tx(s, "lineContSeason", { cupName: seasonCup.name }), impact: 0 });
+  else if (lvl === "elite") report.lines.push({ text: tx(s, "lineContNone"), impact: -3 });
   if (club.contFinal && !evTrophies.includes("continental") && !evTrophies.includes("continental2") && !evTrophies.includes("continental3")) {
     const continent = continentOf(s.club.countryId) || "eu";
     const tier = club.contTier;
@@ -748,7 +768,10 @@ export function resolveSeasonMoment(s: CareerState, report: SeasonReport, entry:
       // Océanie exclue : aucun palier C2 pour ce continent (cf. content).
       if (CONTINENTAL_CUPS2[continentOf(s.club.countryId) ?? ""]) {
         s.subCupTicket = true;
-        if (lvlOf(s, s.club) !== "elite") report.lines.push({ text: tx(s, "lineEuroTicket"), impact: 5 });
+        // Déjà qualifié en C1 ou en C2 par le classement : le billet n'apporte rien de plus.
+        const q = s.contNext;
+        const alreadyIn = q && q.clubId === s.club.id && q.year === s.year && (q.tier === 1 || q.tier === 2);
+        if (!alreadyIn) report.lines.push({ text: tx(s, "lineEuroTicket"), impact: 5 });
       }
     } else {
       s.moral = clamp(s.moral - 5, 5, 100);

@@ -4405,5 +4405,10 @@ window.I18N_DATA = { en: {
  "Il vous faut désormais trois jours pour récupérer d'un match. Le staff adapte votre semaine.": "You now need three days to recover from a match. The staff adapt your week.",
  "Un ancien coéquipier, devenu entraîneur adverse, vous salue d'un clin d'œil avant le coup d'envoi.": "A former teammate, now the opposing coach, greets you with a wink before kick-off.",
  "Après le match, les joueurs adverses font la queue pour un selfie avec vous.": "After the match, the opposing players queue up for a selfie with you.",
- "Pour votre anniversaire, le virage déploie une banderole géante : « Éternel ».": "For your birthday, the ultras unfurl a giant banner: “Eternal”."
+ "Pour votre anniversaire, le virage déploie une banderole géante : « Éternel ».": "For your birthday, the ultras unfurl a giant banner: “Eternal”.",
+ "🌍 Cette saison, {club} est engagé en {cupName}.": "🌍 This season, {club} are playing in the {cupName}.",
+ "📉 Pas de coupe continentale cette saison pour {club} : la place s'est perdue au classement.": "📉 No continental cup for {club} this season: the place was lost in the league table.",
+ "🎟️ {rank}ᵉ place : {club} décroche sa place en {cupName} pour la saison prochaine.": "🎟️ League position {rank}: {club} earn a place in the {cupName} next season.",
+ "🎟️ Champion : {club} jouera la {cupName} la saison prochaine.": "🎟️ Champions: {club} will play in the {cupName} next season.",
+ "📉 {rank}ᵉ place : {club} manque les places continentales. Pas de coupe la saison prochaine.": "📉 League position {rank}: {club} miss out on the continental places. No cup next season."
 } };

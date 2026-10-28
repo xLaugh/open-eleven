@@ -105,18 +105,20 @@ const BALANCE_VALUES = {
   // décisif). Hors d'Europe, la D1 EST le sommet (pas de clubs "élite") : elle
   // conteste donc sa Coupe des Champions comme l'élite européenne conteste la sienne.
   continentalReach: {
-    eu: { elite: 0.17, d1: 0.03, d2: 0, d3: 0, regional: 0 },
-    other: { elite: 0.17, d1: 0.15, d2: 0, d3: 0, regional: 0 },
+    eu: { elite: 0.17, d1: 0.03, d2: 0, d3: 0, d4: 0, regional: 0 },
+    // Hors d'Europe, seuls les deux ou quatre premiers de D1 jouent la C1 (cf.
+    // CLUB_CUP_SLOTS) : ce sont les favoris du continent, d'où une portée plus haute.
+    other: { elite: 0.17, d1: 0.3, d2: 0, d3: 0, d4: 0, regional: 0 },
   },
   // Coupes continentales secondaires de clubs (TOUS continents, pas seulement
-  // l'Europe). C2 = Trophée (vainqueur de Coupe Nationale, TOUTES divisions) ;
-  // C3 = division juste sous le sommet continental par défaut (D1 en Europe,
-  // D2 ailleurs — cf. engine, pas de club "élite" hors Europe). Portée
-  // d'ATTEINDRE la finale (× teamBoost). Mêmes probabilités partout : aucune
-  // raison de rendre un continent plus facile qu'un autre à ce palier.
+  // l'Europe). On s'y qualifie au classement de première division (cf.
+  // CLUB_CUP_SLOTS) ; la C2 s'ouvre aussi au vainqueur de Coupe Nationale, TOUTES
+  // divisions. Portée d'ATTEINDRE la finale (× teamBoost), par niveau du club.
+  // Mêmes probabilités partout : aucune raison de rendre un continent plus facile
+  // qu'un autre à ce palier. Un géant tombé en C3 en est le grand favori.
   subCupReach: {
     c2: { elite: 0.22, d1: 0.16, d2: 0.08, d3: 0.06, regional: 0.04 },
-    c3: { d1: 0.15, d2: 0.15 },
+    c3: { elite: 0.35, d1: 0.3, d2: 0.25, d3: 0.15 },
   },
   // Récompenses C2/C3 (le C1 garde son barème codé en dur, ternaire eu/hors-eu).
   subCupReward: {
@@ -210,6 +212,9 @@ const BALANCE_VALUES = {
   relegationChance: { d1: 0.045, d2: 0.07, d3: 0.08, d4: 0.09 }, // par saison, modulé par vos perfs
   // Les géants historiques (élite de base) ne coulent presque jamais en D2
   eliteRelegShield: 0.25,
+  // Dans un pays qui a des clubs élite, un club de D1 ordinaire joue le titre face à
+  // eux : il le gagne moins souvent, et finit plus bas (cf. engine/clubcups.ts).
+  d1TitleInEliteLeague: 0.5,
   playoffChance: { regional: 0.17, d4: 0.155, d3: 0.14, d2: 0.12 }, // barrage de montée si saison solide
   clubRiseSeasons: 2, // saisons consécutives dans le haut du classement pour
   clubFadeSeasons: 2, // changer de dimension (d1→élite) ou décliner (élite→d1)

@@ -224,6 +224,55 @@ test("les grands championnats ont un échelon régional, proposé au départ", (
   assert.ok(reg > 40 && reg < 260, "un départ « Rég. » doit être possible sans être la règle : " + reg + "/400");
 });
 
+test("coupes de clubs : les places européennes et continentales, comme dans la réalité", () => {
+  const places = (country, n) => Array.from({ length: n }, (_, i) => E.tierForRank(country, i + 1));
+  assert.deepEqual(places("en", 7), [1, 1, 1, 1, 2, 3, 0], "Angleterre : top 4 en C1, 5e en C2, 6e en C3");
+  assert.deepEqual(places("fr", 6), [1, 1, 1, 2, 3, 0], "France : top 3 en C1");
+  assert.deepEqual(places("pt", 5), [1, 1, 2, 3, 0], "Portugal : top 2 en C1");
+  assert.deepEqual(places("be", 6), [1, 1, 2, 3, 3, 0], "Belgique : top 2 en C1, 3e en C2, 4e et 5e en C3");
+  assert.deepEqual(places("ch", 6), [1, 2, 2, 3, 3, 0], "championnats moyens : le champion en C1, plus de places en C2 et C3");
+  assert.deepEqual(places("is", 5), [1, 2, 3, 3, 0], "petits championnats : le champion en C1, 2e en C2, 3e et 4e en C3");
+  assert.deepEqual(places("br", 7), [1, 1, 1, 1, 2, 2, 0], "Brésil : top 4 en C1, 5e et 6e en C2");
+  assert.deepEqual(places("ma", 4), [1, 1, 2, 0], "Afrique : top 2 en C1, 3e en C2 (pas de C3)");
+  assert.deepEqual(places("jp", 5), [1, 1, 2, 3, 0], "Asie : top 2 en C1, puis C2 et C3");
+  assert.deepEqual(places("nz", 3), [1, 0, 0], "Océanie : le champion seul (ni C2 ni C3)");
+  // Le classement d'un club qu'on rejoint ne dépend que du club et de l'année : le même
+  // dans toutes les carrières, et pour tous les membres d'une salle.
+  const club = { id: "en_city", countryId: "en" };
+  const a = E.seasonCupTier({ club, year: 2031, contNext: null }, "elite", true);
+  const b = E.seasonCupTier({ club, year: 2031, contNext: { clubId: "autre", year: 2030, tier: 0 } }, "elite", true);
+  assert.deepEqual(a, b);
+  assert.equal(a.simulated, true);
+  // Le joueur y était la saison passée : c'est SON classement qui compte.
+  assert.equal(E.seasonCupTier({ club, year: 2031, contNext: { clubId: club.id, year: 2030, tier: 3, rank: 6 } }, "elite", true).tier, 3);
+});
+
+test("coupes de clubs : l'élite finit en haut sans être qualifiée d'office, les D1 de son pays finissent derrière", () => {
+  const elite = [], d1 = [];
+  let checked = 0;
+  for (let i = 0; i < 300; i++) {
+    const choices = Array.from({ length: 400 }, (_, k) => ((i * 11 + k * 3 + (k % 7) * i) % 5) - 1);
+    const s = E.replayDuel(52001 + i * 97, choices);
+    for (const se of s.seasons) {
+      if (!se.leaguePos || !se.matches) continue;
+      if (se.level === "elite") elite.push(E.tierForRank(se.countryId, se.leaguePos));
+      else if (se.level === "d1" && E.hasEliteClubs(se.countryId)) d1.push(se.leaguePos);
+    }
+    // La qualification notée en fin de carrière suit le dernier classement du club.
+    const last = s.seasons[s.seasons.length - 1];
+    if (s.contNext && last && last.leaguePos && last.level === "elite") {
+      assert.equal(s.contNext.tier, E.tierForRank(last.countryId, last.leaguePos), "qualification ≠ classement final");
+      checked++;
+    }
+  }
+  assert.ok(elite.length > 200 && d1.length > 50, "pas assez de saisons pour juger : " + elite.length + " / " + d1.length);
+  const c1 = elite.filter((t) => t === 1).length / elite.length;
+  assert.ok(c1 > 0.6 && c1 < 0.97, "un club élite se qualifie souvent pour la C1, mais pas toujours : " + c1.toFixed(2));
+  const d1Top4 = d1.filter((p) => p <= 4).length / d1.length;
+  assert.ok(d1Top4 < 0.2, "un D1 d'un pays à clubs élite finit rarement dans le top 4 : " + d1Top4.toFixed(2));
+  assert.ok(checked > 0, "aucune fin de carrière en élite pour vérifier la qualification");
+});
+
 test("qualifications : la bonne taille de tournoi, les hôtes qualifiés, et la force qui compte", () => {
   const sizes = { wc: new Set(), eu: new Set(), af: new Set(), as: new Set(), am: new Set(), oc: new Set() };
   const wc = {};

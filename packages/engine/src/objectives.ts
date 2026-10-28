@@ -4,6 +4,7 @@ import { rng } from "./rng";
 import { tx } from "./text";
 import { playingTimeFactor } from "./role";
 import { lvlOf } from "./clubs";
+import { hasEliteClubs } from "./clubcups";
 import { ovr } from "./player";
 import type { CareerState, Objective, SeasonReport } from "./types";
 import { BALANCE } from "@open-eleven/content";
@@ -44,7 +45,10 @@ export function setSeasonObjective(s: CareerState) {
   // le top 5 d'un randInt(4,14) ne réussissait qu'une fois sur trois, et chaque
   // échec coûte de la confiance du coach, donc du temps de jeu.
   if (lvl === "elite") return { type: "trophy", label: tx(s, "objTrophy") };
-  if (lvl === "d1") return { type: "top", n: 8, label: "Accrocher le top 8" };
+  // Un D1 d'un pays à clubs élite finit derrière eux (cf. clubcups.ts) : cible élargie.
+  if (lvl === "d1") return hasEliteClubs(s.club.countryId)
+    ? { type: "top", n: 10, label: "Accrocher le top 10" }
+    : { type: "top", n: 8, label: "Accrocher le top 8" };
   if (lvl === "d2") return { type: "top", n: 7, label: "Jouer la montée (top 7)" };
   if (lvl === "d3") return { type: "top", n: 8, label: "Jouer la montée (top 8)" };
   return { type: "top", n: 10, label: "Viser le haut de tableau (top 10)" };
