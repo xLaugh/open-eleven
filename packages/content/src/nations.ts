@@ -170,7 +170,7 @@ export const NATIONALITIES: Nationality[] = [
   { id: "ro", name: "Roumanie", flag: "🇷🇴", img: "src/img/flag/Flag_of_Romania.png", weight: 0.4, wcWeight: 0.1, homeCountryId: "ro" },
   { id: "sk", name: "Slovaquie", flag: "🇸🇰", img: "src/img/flag/Flag_of_Slovakia.png", weight: 0.4, wcWeight: 0.1, homeCountryId: "sk" },
   { id: "uy", name: "Uruguay", flag: "🇺🇾", img: "src/img/flag/Flag_of_Uruguay.png", weight: 0.7, wcWeight: 0.45, homeCountryId: "uy" },
-  { id: "ma", name: "Maroc", flag: "🇲🇦", img: "src/img/flag/Flag_of_Morocco.png", weight: 0.75, wcWeight: 0.4, homeCountryId: "ma" },
+  { id: "ma", name: "Maroc", flag: "🇲🇦", img: "src/img/flag/Flag_of_Morocco.png", weight: 0.8, wcWeight: 0.5, homeCountryId: "ma" },
   { id: "mx", name: "Mexique", flag: "🇲🇽", img: "src/img/flag/Flag_of_Mexico.png", weight: 0.55, wcWeight: 0.22, homeCountryId: "mx" },
   { id: "co", name: "Colombie", flag: "🇨🇴", img: "src/img/flag/Flag_of_Colombia.png", weight: 0.65, wcWeight: 0.3, homeCountryId: "co" },
   { id: "ch", name: "Suisse", flag: "🇨🇭", img: "src/img/flag/Flag_of_Switzerland.png", weight: 0.6, wcWeight: 0.35, homeCountryId: "ch" },
