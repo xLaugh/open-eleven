@@ -98,8 +98,13 @@ import { Engine } from "@open-eleven/engine";
 
     // --- Créer une salle : seulement sans salle active -------------------------------
     if (!hasActive) {
-      html += '<div class="rm-hero"><p>' + esc(T("Vivez une carrière à plusieurs : jusqu'à 4 amis dans le même club, et les grandes décisions se votent ensemble.")) + "</p>" +
-        '<button class="acc-btn primary" id="rm-create">＋ ' + esc(T("Créer une salle")) + "</button></div>";
+      html += '<div class="rm-hero"><p>' + esc(T("Vivez une carrière à plusieurs, jusqu'à 4 amis. Choisissez votre mode :")) + "</p>" +
+        '<div class="rm-modes">' +
+        '<button class="rm-mode rm-create" data-mode="together"><span class="rm-mode-t">🤝 ' + esc(T("Ensemble")) + "</span>" +
+        '<span class="rm-mode-d">' + esc(T("Tous dans le même club : le club de départ et les transferts se votent.")) + "</span></button>" +
+        '<button class="rm-mode rm-create" data-mode="rivals"><span class="rm-mode-t">⚔️ ' + esc(T("Rivaux")) + "</span>" +
+        '<span class="rm-mode-d">' + esc(T("Chacun sa carrière et son club : le meilleur score l'emporte.")) + "</span></button>" +
+        "</div></div>";
     }
 
     // --- Invitations reçues : une carte par salle ------------------------------------
@@ -137,18 +142,27 @@ import { Engine } from "@open-eleven/engine";
       const mine = joinedM.find((m) => m.user_id === me);
       const setup = room.phase === "profile_setup";
       const playing = room.phase === "in_season" || room.phase === "season_vote";
-      // Étape en cours : ① Équipe ② Profils ③ Club ④ Carrière.
-      const step = playing ? 4 : room.phase === "starting_vote" ? 3
-        : joinedM.length < 2 ? 1 : joinedM.every((m) => m.ready) ? 3 : 2;
-      const steps = [T("Équipe"), T("Profils"), T("Club"), T("Carrière")];
-      const stepper = '<ol class="rm-steps">' + steps.map((label, i) =>
+      const rivals = room.mode === "rivals";
+      // Étape en cours. Ensemble : ① Équipe ② Profils ③ Club ④ Carrière.
+      // Rivaux : ① Rivaux ② Profils et clubs ③ Carrière (pas de club commun à choisir).
+      const step = rivals
+        ? (playing ? 3 : joinedM.length < 2 ? 1 : 2)
+        : playing ? 4 : room.phase === "starting_vote" ? 3
+          : joinedM.length < 2 ? 1 : joinedM.every((m) => m.ready) ? 3 : 2;
+      const steps = rivals ? [T("Rivaux"), T("Profils et clubs"), T("Carrière")] : [T("Équipe"), T("Profils"), T("Club"), T("Carrière")];
+      const stepper = '<p class="rm-mode-tag">' + (rivals ? "⚔️ " + esc(T("Mode Rivaux")) : "🤝 " + esc(T("Mode Ensemble"))) + "</p>" +
+        '<ol class="rm-steps">' + steps.map((label, i) =>
         '<li class="' + (i + 1 < step ? "done" : i + 1 === step ? "on" : "") + '"><span>' + (i + 1 < step ? "✓" : i + 1) + "</span>" + esc(label) + "</li>").join("") + "</ol>";
-      const hint = [
+      const hint = (rivals ? [
+        T("Invite jusqu'à 3 amis : ils reçoivent une notification."),
+        T("Chacun crée son joueur et réserve son centre de formation. L'hôte lance quand tout le monde est prêt."),
+        T("Chacun son club, jamais le même : finis devant tes rivaux."),
+      ] : [
         T("Invite jusqu'à 3 amis : ils reçoivent une notification."),
         T("Chacun crée son joueur. L'hôte choisira ensuite le club de départ."),
         T("L'hôte choisit le club de départ, puis la carrière commence."),
         T("Même club pour tous : les transferts se votent ensemble."),
-      ][step - 1];
+      ])[step - 1];
 
       // Les 4 places : membres, invités, puis places libres (tant que la salle se forme).
       const slot = (m) => {
@@ -193,7 +207,7 @@ import { Engine } from "@open-eleven/engine";
       const primary = room.phase === "season_vote" ? btn("primary rm-vote-now", "🗳️ " + esc(T("Voter maintenant")), room.id)
         : playing ? btn("primary rm-play", "▶️ " + esc(T("Reprendre la carrière")), room.id)
         : room.phase === "starting_vote" ? btn("primary rm-play", "🗳️ " + esc(T("Choisir le club")), room.id)
-        : mine && mine.ready ? btn("primary rm-play", room.isCreator ? "🏟️ " + esc(T("Choisir le club de départ")) : "⏳ " + esc(T("Rejoindre l'attente")), room.id)
+        : mine && mine.ready ? btn("primary rm-play", room.isCreator && !rivals ? "🏟️ " + esc(T("Choisir le club de départ")) : "⏳ " + esc(T("Rejoindre l'attente")), room.id)
         : btn("primary rm-play", "🎮 " + esc(T("Créer mon joueur")), room.id);
       const secondary = '<div class="rm-sub-acts">' +
         (setup ? btn("ghost rm-open-invite", "👥 " + esc(inviteOpen === room.id ? T("Masquer les invitations") : T("Inviter des amis")), room.id) : "") +
@@ -209,13 +223,12 @@ import { Engine } from "@open-eleven/engine";
 
     const on = (sel, fn) => content.querySelectorAll(sel).forEach((b) => (b.onclick = () => fn(b)));
     const act = (sel, fn) => on(sel, async (b) => { b.disabled = true; render(await fn(b.dataset.i, b)); });
-    const createBtn = content.querySelector("#rm-create");
-    if (createBtn) createBtn.onclick = async () => {
-      createBtn.disabled = true;
-      const { data, error } = await api.rpc("room_create");
+    on(".rm-create", async (b) => {
+      content.querySelectorAll(".rm-create").forEach((x) => (x.disabled = true));
+      const { data, error } = await api.rpc("room_create", { p_mode: b.dataset.mode === "rivals" ? "rivals" : "together" });
       if (!error) inviteOpen = data; // salle neuve : on enchaîne directement sur les invitations
       render(error ? { text: T("Échec, réessaie."), cls: "err" } : { text: T("Salle créée ✔ Invite maintenant tes amis."), cls: "ok" });
-    };
+    });
     act(".rm-join", async (roomId) => {
       const { error } = await api.rpc("room_join", { p_room_id: roomId });
       return error ? { text: T("Échec, réessaie."), cls: "err" } : { text: T("Tu as rejoint la salle ✔"), cls: "ok" };
@@ -232,7 +245,8 @@ import { Engine } from "@open-eleven/engine";
     });
     on(".rm-play", (b) => {
       overlay.classList.remove("on");
-      if (window.OE && window.OE.startRoomCareer) window.OE.startRoomCareer(b.dataset.i);
+      const room = myRooms.find((r) => r.id === b.dataset.i);
+      if (window.OE && window.OE.startRoomCareer) window.OE.startRoomCareer(b.dataset.i, room && room.mode === "rivals" ? "rivals" : "together");
     });
     on(".rm-open-invite", (b) => { inviteOpen = inviteOpen === b.dataset.i ? null : b.dataset.i; render(); });
     act(".rm-invite-friend", async (data) => {
@@ -392,9 +406,14 @@ import { Engine } from "@open-eleven/engine";
   }
 
   async function buildStatsListHtml(roomId) {
-    const members = joined(await roomState(roomId));
-    const rows = (members || []).slice().sort((a, b) =>
-      ((snapshotOf(b) || {}).totalGoals || 0) - ((snapshotOf(a) || {}).totalGoals || 0));
+    const st = await roomState(roomId);
+    const members = joined(st);
+    // Mode Rivaux : classement au score de carrière (le bilan final s'il existe, sinon le direct).
+    const rivals = !!(st && st.room && st.room.mode === "rivals");
+    const scoreOf = (m) => num(m.final_score != null ? m.final_score : (m.live_stats || {}).score) || 0;
+    const rows = (members || []).slice().sort((a, b) => rivals
+      ? scoreOf(b) - scoreOf(a)
+      : ((snapshotOf(b) || {}).totalGoals || 0) - ((snapshotOf(a) || {}).totalGoals || 0));
     if (!rows.length) return '<p class="lb-empty">' + esc(T("Aucun membre actif.")) + "</p>";
 
     const lines = rows.map((m, i) => {
@@ -405,7 +424,8 @@ import { Engine } from "@open-eleven/engine";
           '<span class="lb-name">👤 ' + esc(m.pseudo) + statusTag + "</span>" +
           '<span class="lb-sub">' + esc(T("Pas encore de données pour cette carrière.")) + "</span></li>";
       }
-      const rank = i === 0 && s.totalGoals ? "🥇 " : "";
+      const rank = rivals ? (["🥇 ", "🥈 ", "🥉 "][i] || "") : i === 0 && s.totalGoals ? "🥇 " : "";
+      const scoreTag = rivals ? ' <span class="lb-sub">· ' + esc(Math.round(scoreOf(m))) + " pts</span>" : "";
       const cc = s.countryId ? E.countryOf(s.countryId) : null;
       const clubLine = s.club
         ? '<span class="lb-sub">' + (s.level ? '<span class="level-tag level-' + esc(s.level) + '">' + esc(E.divShort(s.level, s.countryId)) + "</span> " : "") +
@@ -419,7 +439,7 @@ import { Engine } from "@open-eleven/engine";
         (s.ovr != null ? " · " + n(s.ovr) + " OVR" : "");
       const statLine = '<span class="lb-sub">' + esc(T("Saison")) + " : " + seasonPart + " — " + esc(T("Carrière")) + " : " + careerPart + "</span>";
       return '<li class="lb-row" style="flex-direction:column;align-items:flex-start;gap:4px">' +
-        '<span class="lb-name">' + rank + "👤 " + esc(m.pseudo) + statusTag + "</span>" + clubLine + statLine + historyHtml(m, s) + "</li>";
+        '<span class="lb-name">' + rank + "👤 " + esc(m.pseudo) + scoreTag + statusTag + "</span>" + clubLine + statLine + historyHtml(m, s) + "</li>";
     }).join("");
     return compareTableHtml(rows) + '<ul class="lb-list">' + lines + "</ul>";
   }
@@ -829,6 +849,125 @@ import { Engine } from "@open-eleven/engine";
     return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
   }
 
+  // ---- Mode « Rivaux » --------------------------------------------------------
+  // Chacun sa carrière et son club, jamais celui d'un autre membre (cf. migration 009).
+  // Les rivaux sont les autres membres, avec leur dernier instantané publié (tout ce
+  // qui vient d'un autre client est borné ou échappé à l'affichage).
+  const clubOfMember = (m) => {
+    const s = m.live_stats || {};
+    if (typeof s.clubId === "string") return s.clubId;
+    return Array.isArray(m.starting_offers) && typeof m.starting_offers[0] === "string" ? m.starting_offers[0] : null;
+  };
+  async function rivalsInfo(roomId) {
+    const st = await roomState(roomId);
+    if (!st) return null;
+    const rivals = joined(st).filter((m) => m.user_id !== st.me).map((m) => {
+      const s = m.live_stats || {};
+      return {
+        pseudo: m.pseudo, avatar: m.avatar, ended: !!m.career_ended, clubId: clubOfMember(m),
+        name: typeof s.name === "string" ? s.name.slice(0, 40) : null,
+        club: typeof s.club === "string" ? s.club.slice(0, 60) : null, countryId: typeof s.countryId === "string" ? s.countryId : null,
+        level: typeof s.level === "string" ? s.level : null, year: num(s.year), age: num(s.age), ovr: num(s.ovr), score: num(s.score),
+        seasonGoals: num(s.seasonGoals), seasonAssists: num(s.seasonAssists), seasonRating: num(s.seasonRating),
+        seasonTrophies: Array.isArray(s.seasonTrophies) ? s.seasonTrophies.filter((t) => typeof t === "string").slice(0, 8) : [],
+      };
+    });
+    return { rivals, blocked: rivals.filter((r) => r.clubId && !r.ended).map((r) => r.clubId) };
+  }
+
+  // Écran « centre de formation » en mode Rivaux : chacun réserve SON club parmi ses
+  // offres (celles d'un rival en sont retirées), puis l'hôte lance quand tout le monde est
+  // prêt. makeOffers(clubsPris) rend les offres du joueur (moteur, côté game.ts) ;
+  // onStart(clubId) est appelé une fois la salle lancée.
+  function renderRivalAcademyStep(roomId, makeOffers, els, onStart) {
+    const { subEl, listEl } = els;
+    let stopped = false, started = false, choosing = false, offers = null, lastHtml = null;
+    let stop = null;
+    const paint = (sub, html, bind) => {
+      if (subEl.textContent !== sub) subEl.textContent = sub;
+      if (html !== lastHtml) { lastHtml = html; listEl.innerHTML = html; bind(); }
+    };
+
+    async function refreshOnce() {
+      if (stopped) return;
+      const st = await getRoomState(roomId);
+      if (!st || stopped) return;
+      const { room, members, me } = st;
+      const joinedM = members.filter((m) => m.status === "joined");
+      const myClub = clubOfMember(joinedM.find((m) => m.user_id === me) || {});
+      if (room.status === "active") {
+        if (started || !myClub) return;
+        started = true;
+        if (stop) stop();
+        onStart(myClub);
+        return;
+      }
+      const taken = joinedM.filter((m) => m.user_id !== me).map(clubOfMember).filter(Boolean);
+
+      if (!myClub || choosing || taken.includes(myClub)) {
+        if (!offers) offers = makeOffers(taken);
+        let shown = offers.filter((o) => !taken.includes(o.club.id));
+        if (!shown.length) { offers = makeOffers(taken); shown = offers; } // un rival a pris toutes mes offres
+        const html = shown.map((offer) => {
+          const cc = E.countryOf(offer.club.countryId);
+          return '<button class="origin-card academy-card rm-offer-pick" data-club="' + esc(offer.club.id) + '">' +
+            '<p class="origin-name"><span class="level-tag level-' + esc(offer.level) + '">' + esc(E.divShort(offer.level, offer.club.countryId)) + "</span> " +
+            esc(offer.club.name) + (offer.club.colors ? " " + offer.club.colors : "") + " " + flagHtml(cc) + "</p>" +
+            '<p class="origin-desc">' + esc(offer.blurb || "") + (offer.surprise ? " — <strong>" + esc(T("contre toute attente, ils vous veulent VOUS.")) + "</strong>" : "") + "</p></button>";
+        }).join("");
+        paint(T("Choisis ton centre de formation. Les clubs déjà réservés par un rival ne sont pas proposés."), html, () => {
+          listEl.querySelectorAll(".rm-offer-pick").forEach((b) => (b.onclick = async () => {
+            listEl.querySelectorAll(".rm-offer-pick").forEach((x) => (x.disabled = true));
+            const { error } = await api.rpc("room_pick_start_club", { p_room_id: roomId, p_club_id: b.dataset.club });
+            if (!error) choosing = false;
+            lastHtml = null; // repeindre même si rien d'autre n'a changé
+            refresh();
+          }));
+        });
+        return;
+      }
+
+      // Club réservé : on attend les autres, puis l'hôte lance.
+      const creatorActive = joinedM.some((m) => m.user_id === room.created_by);
+      const canLaunch = room.created_by === me || !creatorActive;
+      const allReady = joinedM.length >= 2 && joinedM.every((m) => clubOfMember(m));
+      const myClubObj = CLUBS.find((c) => c.id === myClub);
+      const rows = joinedM.map((m) => {
+        const c = CLUBS.find((x) => x.id === clubOfMember(m));
+        return '<li class="lb-row"><span class="lb-name">' + (c ? "✓ " : "… ") + esc(m.pseudo) + (m.user_id === me ? " (" + esc(T("toi")) + ")" : "") + "</span>" +
+          '<span class="lb-sub">' + (c ? esc(c.name) + " " + flagHtml(E.countryOf(c.countryId)) : esc(T("choisit son club…"))) + "</span></li>";
+      }).join("");
+      const html = '<ul class="lb-list">' + rows + "</ul>" +
+        (canLaunch && allReady ? '<button class="btn btn-primary rm-rival-launch">🚀 ' + esc(T("Lancer la carrière")) + "</button>" : "") +
+        '<button class="btn btn-secondary rm-rival-change">' + esc(T("Changer de club")) + "</button>";
+      const sub = myClubObj ? T("Tu commences à {club}.", { club: myClubObj.name }) + " " : "";
+      const wait = canLaunch ? (allReady ? T("Tout le monde est prêt : lance la carrière quand tu veux.") : T("En attente que chaque rival choisisse son club…"))
+        : T("En attente que l'hôte lance la carrière…");
+      paint(sub + wait, html, () => {
+        const launch = listEl.querySelector(".rm-rival-launch");
+        if (launch) launch.onclick = async () => {
+          launch.disabled = true;
+          const { error } = await api.rpc("room_launch", { p_room_id: roomId, p_club_id: null });
+          if (error) launch.disabled = false;
+          refresh();
+        };
+        const change = listEl.querySelector(".rm-rival-change");
+        if (change) change.onclick = () => { choosing = true; lastHtml = null; refresh(); };
+      });
+    }
+
+    const refresh = serialized(refreshOnce);
+    stop = watchRoom(roomId, refresh);
+    refresh();
+    return { stop: () => { stopped = true; if (stop) stop(); } };
+  }
+
+  // Barrière de fin de saison en mode Rivaux : aucun vote, on attend seulement que chaque
+  // rival ait fini la même saison. Puis les nouvelles des rivaux (cf. game.ts).
+  function renderRivalBarrierStep(roomId, renderFn, onResolved) {
+    return renderSeasonBarrierStep(roomId, null, [], renderFn, onResolved);
+  }
+
   // ---- pastille d'accueil : compte des invitations reçues, sondage 60 s ----
   // Même discipline que account.ts (refreshNotifs) : actif seulement onglet
   // visible + session active, jamais de canal ouvert en permanence (le temps
@@ -841,6 +980,6 @@ import { Engine } from "@open-eleven/engine";
   refreshBadge();
   setInterval(() => { if (document.visibilityState === "visible" && acc.getSession()) refreshBadge(); }, 60000);
 
-  window.OpenElevenRoom = { open, renderAcademyStep, renderSeasonBarrierStep, renderNarrativeVoteStep, renderRelocationVoteStep, markCareerEnded, pushLiveStats, renderMembersStats, teamOvr, renderPreSeasonSync, refreshBadge, claimSeasonClub };
+  window.OpenElevenRoom = { open, renderAcademyStep, renderSeasonBarrierStep, renderNarrativeVoteStep, renderRelocationVoteStep, markCareerEnded, pushLiveStats, renderMembersStats, teamOvr, renderPreSeasonSync, refreshBadge, claimSeasonClub, rivalsInfo, renderRivalAcademyStep, renderRivalBarrierStep };
   if (btn) btn.addEventListener("click", open);
 })();

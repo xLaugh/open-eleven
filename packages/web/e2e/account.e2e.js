@@ -97,9 +97,9 @@ export async function run({ browser, stackUrl, mailpit, report }) {
 
   report.section("Salle");
   await alice.js("document.getElementById('btn-room').click()");
-  await alice.until(`/Créer une salle/i.test(${"(document.querySelector('.acc-overlay.on .lb-box') || { textContent: '' }).textContent"})`);
+  await alice.until(`/Choisissez votre mode/i.test(${"(document.querySelector('.acc-overlay.on .lb-box') || { textContent: '' }).textContent"})`);
   const roomText = "(document.querySelector('.acc-overlay.on .lb-box') || { textContent: '' }).textContent";
-  const created = await alice.js("(function(){ var b = [...document.querySelectorAll('.acc-overlay.on button')].find(x => /cr[ée]er/i.test(x.textContent)); if (!b) return 'pas de bouton Créer'; b.click(); return 'ok'; })()");
+  const created = await alice.js("(function(){ var b = document.querySelector('.acc-overlay.on .rm-create[data-mode=together]'); if (!b) return 'pas de bouton Ensemble'; b.click(); return 'ok'; })()");
   report.check("salle créée depuis l'interface", created === "ok" && await alice.until(`/créée|inviter|membres?/i.test(${roomText})`), created);
   // Le panneau d'invitation s'ouvre de lui-même après la création ; sinon, on l'ouvre.
   const invited = await alice.js("(async function(){ var o = document.querySelector('.acc-overlay.on .rm-open-invite'); if (!o) return 'pas de place à inviter'; if (!document.querySelector('.acc-overlay.on .rm-invite-panel')) o.click(); for (var i = 0; i < 40 && !document.querySelector('.acc-overlay.on .rm-invite-friend'); i++) await new Promise(r => setTimeout(r, 100)); var b = document.querySelector('.acc-overlay.on .rm-invite-friend'); if (!b) return 'aucun ami à inviter'; b.click(); return 'ok'; })()");

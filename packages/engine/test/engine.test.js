@@ -224,6 +224,37 @@ test("les grands championnats ont un échelon régional, proposé au départ", (
   assert.ok(reg > 40 && reg < 260, "un départ « Rég. » doit être possible sans être la règle : " + reg + "/400");
 });
 
+test("salle « Rivaux » : le club d'un rival n'est jamais proposé (formation, transfert, prêt)", () => {
+  const { loadContent } = require("./load-engine");
+  const C = loadContent();
+  const nat = C.NATIONALITIES.find((n) => n.id === "fr");
+  const profile = { nationality: nat, origin: C.ORIGINS[0], lifestyle: C.LIFESTYLES[0], entourage: C.ENTOURAGES[0], potCap: 90 };
+  E.setSeed(4242);
+  const free = E.academyOffers(profile).map((o) => o.club.id);
+  for (let i = 0; i < 40; i++) {
+    E.setSeed(4242 + i);
+    const blocked = E.academyOffers(profile).map((o) => o.club.id);
+    E.setSeed(4242 + i);
+    const offers = E.academyOffers({ ...profile, blockedClubs: blocked }).map((o) => o.club.id);
+    assert.ok(offers.length > 0, "toujours des offres de formation");
+    assert.ok(offers.every((id) => !blocked.includes(id)), "un centre réservé par un rival est proposé");
+  }
+  assert.ok(free.length > 0);
+  // Transferts et prêts : tous les clubs français de première division interdits sauf un.
+  const s = E.replayDuel(777, Array(400).fill(0));
+  s.careerEnded = false; s.retiring = false; s.age = 24;
+  s.club = C.CLUBS.find((c) => c.id === "fr_paris");
+  const d1 = C.CLUBS.filter((c) => c.countryId === "fr" && (c.level === "elite" || c.level === "d1") && c.id !== "fr_paris").map((c) => c.id);
+  s.blockedClubs = d1.slice(1);
+  for (let i = 0; i < 30; i++) {
+    E.setSeed(900 + i);
+    for (const o of E.offersFor(s, { d: 0, domestic: true })) assert.ok(!s.blockedClubs.includes(o.club.id), "transfert vers le club d'un rival");
+    for (const o of E.offersFor(s, { d: -1 })) assert.ok(!s.blockedClubs.includes(o.club.id), "transfert vers le club d'un rival");
+    for (const o of E.loanOffersFor(s)) assert.ok(!s.blockedClubs.includes(o.club.id), "prêt chez un rival");
+  }
+  E.clearSeed();
+});
+
 test("coupes de clubs : les places européennes et continentales, comme dans la réalité", () => {
   const places = (country, n) => Array.from({ length: n }, (_, i) => E.tierForRank(country, i + 1));
   assert.deepEqual(places("en", 7), [1, 1, 1, 1, 2, 3, 0], "Angleterre : top 4 en C1, 5e en C2, 6e en C3");

@@ -196,6 +196,8 @@ export interface NewCareerOptions extends Profile {
 /** Ce que le centre de formation attend du joueur : tout le profil, potentiel compris. */
 export interface AcademyProfile {
   nationality: Nationality; origin: Tagged; lifestyle: Tagged; entourage: Tagged; potCap: number;
+  /** Salle « Rivaux » : centres déjà pris par un rival, jamais proposés. */
+  blockedClubs?: string[];
 }
 
 export interface AcademyOffer {

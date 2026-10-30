@@ -75,14 +75,16 @@ export function offersFor(s: CareerState, spec?: OfferSpec | null): TransferOffe
     }
   }
   const minorLock = s.age < 18 && s.club.countryId === "br";
+  // Salle « Rivaux » : le club d'un rival n'est jamais une destination (aucun effet hors salle).
+  const free = (c: Club) => !(s.blockedClubs && s.blockedClubs.includes(c.id));
   let pool: Club[];
   if (spec && spec.clubId) {
     // Événement/Histoire ciblé : UN club précis vient vous chercher.
-    const target = CLUBS.filter((c) => c.id === spec.clubId && c.id !== s.club.id);
+    const target = CLUBS.filter((c) => c.id === spec.clubId && c.id !== s.club.id && free(c));
     return target.map((club) => buildOffer(s, club));
   } else if (spec && spec.origin) {
     // Retour aux sources : uniquement le club formateur (aucun repli)
-    const originPool = CLUBS.filter((c) => c.id === s.clubsPlayed[0] && c.id !== s.club.id);
+    const originPool = CLUBS.filter((c) => c.id === s.clubsPlayed[0] && c.id !== s.club.id && free(c));
     return originPool.map((club) => buildOffer(s, club));
   } else if (spec && (spec.gulf || spec.exotic) && !minorLock) {
     // « Or du désert » : un club du Golfe (Arabie Saoudite / Qatar) vient vous chercher.
@@ -100,11 +102,12 @@ export function offersFor(s: CareerState, spec?: OfferSpec | null): TransferOffe
       return true;
     });
   }
+  pool = pool.filter(free);
   if (pool.length === 0 && spec && spec.home) {
     // Aucun club du pays natal à ce niveau : élargir aux niveaux voisins
-    pool = CLUBS.filter((c) => c.countryId === clubHomeOf(s.nationality) && c.id !== s.club.id && !(countryOf(c.countryId) || {}).gulf);
+    pool = CLUBS.filter((c) => c.countryId === clubHomeOf(s.nationality) && c.id !== s.club.id && !(countryOf(c.countryId) || {}).gulf && free(c));
   }
-  if (pool.length === 0) pool = CLUBS_BY_LEVEL[targetLevel].filter((c) => c.id !== s.club.id);
+  if (pool.length === 0) pool = CLUBS_BY_LEVEL[targetLevel].filter((c) => c.id !== s.club.id && free(c));
   // Plus d'offres, venues de plus de pays (c'était 1 à 3), et pondérées par continent.
   const drawn = weightedRandom(BALANCE.offerCount, (e) => e[1])[0];
   const shift = (s.entourage && BALANCE.offerCountByEntourage[s.entourage.id]) || 0;
@@ -118,7 +121,7 @@ export function offersFor(s: CareerState, spec?: OfferSpec | null): TransferOffe
 export function loanOffersFor(s: CareerState) {
   const idx = LEVEL_ORDER.indexOf(lvlOf(s, s.club));
   const levels = [LEVEL_ORDER[Math.max(0, idx - 1)], LEVEL_ORDER[Math.max(0, idx - 2)]];
-  let pool = CLUBS.filter((c) => levels.includes(c.level) && c.id !== s.club.id && !(countryOf(c.countryId) || {}).gulf);
+  let pool = CLUBS.filter((c) => levels.includes(c.level) && c.id !== s.club.id && !(countryOf(c.countryId) || {}).gulf && !(s.blockedClubs && s.blockedClubs.includes(c.id)));
   const domestic = pool.filter((c) => c.countryId === s.club.countryId);
   if (domestic.length >= 2) pool = domestic;
   const count = Math.min(pool.length, weightedRandom(BALANCE.loanOfferCount, (e) => e[1])[0]);

@@ -44,7 +44,8 @@ const SQL_FUNCTIONS: Record<string, SqlFunction> = {
   duels_history: fn("rows", true),
   duel_cancel: fn("scalar", true, "p_id"),
   // Salles.
-  room_create: fn("scalar", true),
+  room_create: fn("scalar", true, "p_mode"),
+  room_pick_start_club: fn("void", true, "p_room_id", "p_club_id"),
   room_invite: fn("void", true, "p_room_id", "p_friend_id"),
   room_join: fn("void", true, "p_room_id"),
   room_decline: fn("void", true, "p_room_id"),

@@ -56,7 +56,8 @@ export function academyOffers(profile: AcademyProfile): AcademyOffer[] {
   const domesticCount = wantAbroad ? count - 1 : count;
   const offers: AcademyOffer[] = [];
   const remaining: Record<string, number> = { ...w };
-  const taken = new Set<string>();
+  // Salle « Rivaux » : le centre d'un rival n'est jamais proposé (aucun effet sinon).
+  const taken = new Set<string>(profile.blockedClubs || []);
   for (let i = 0; i < domesticCount; i++) {
     const entries = Object.entries(remaining).filter(([lvl, weight]) => weight > 0 && clubsAt(lvl).some((c) => !taken.has(c.id)));
     if (!entries.length) break;
@@ -68,7 +69,7 @@ export function academyOffers(profile: AcademyProfile): AcademyOffer[] {
   }
   if (!offers.some((o) => o.level === "elite") && clubsAt("elite").some((c) => !taken.has(c.id)) && rng() < BALANCE.academySurpriseChance) {
     offers[offers.length - 1] = {
-      club: pick(clubsAt("elite")), level: "elite",
+      club: pick(clubsAt("elite").filter((c) => !taken.has(c.id))), level: "elite",
       blurb: academyBlurb("elite"), surprise: true,
     };
   }
@@ -81,7 +82,7 @@ export function academyOffers(profile: AcademyProfile): AcademyOffer[] {
     const bestIdx = Math.max(...offers.map((o) => LEVEL_ORDER.indexOf(o.level)));
     const abroadAt = (lvl: LevelId) => CLUBS_BY_LEVEL[lvl].filter((c) => {
       const co = countryOf(c.countryId);
-      return c.countryId !== homeId && co?.continent === homeCont && !co?.gulf;
+      return c.countryId !== homeId && co?.continent === homeCont && !co?.gulf && !taken.has(c.id);
     });
     let lvl = LEVEL_ORDER[Math.min(LEVEL_ORDER.length - 1, bestIdx + 1)];
     let pool = abroadAt(lvl);

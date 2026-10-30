@@ -22,12 +22,15 @@ import { ARCHETYPES, ENTOURAGES, LIFESTYLES, ORIGINS, POSITIONS, ROLES, TRAITS, 
 import { BADGES, BADGE_CATS, DAILY_QUESTS, LEGEND_QUESTS, PERKS, STREAK_MILESTONES, WEEKLY_CHALLENGES } from "./progression";
 import { SPONSOR_TIERS } from "./sponsors";
 import { STORIES } from "./stories";
+import { BRAND } from "./brand";
 import { ENGINE_TEXT, HEADLINES, RIVAL_NEWS_AHEAD, RIVAL_NEWS_BAD, RIVAL_NEWS_BEHIND, RIVAL_NEWS_GOOD, UNTAKEN_PATH_TEMPLATES, WORLD_NEWS } from "./texts";
 
 /** Les propriétés d'une structure dont la valeur est un texte affiché au joueur. */
 export const TEXT_KEYS = new Set([
   "text", "title", "desc", "label", "hint", "winText", "failText", "winLabel", "failLabel",
   "championText", "effect", "blurb", "reveal", "sub", "name", "short", "of", "labelBase",
+  // Mode Histoire (surnom, époque, accroche de la légende) et signature du jeu.
+  "alias", "era", "teaser", "tagline",
 ]);
 
 /** Structures imbriquées : seules les propriétés de TEXT_KEYS (et les tables « labels ») se traduisent. */
@@ -48,6 +51,8 @@ export const TRANSLATABLE_STRUCTURES: Record<string, unknown> = {
   BALANCE,
   // Notes de mise à jour : titre et lignes de chaque version.
   CHANGELOG,
+  // Signature du jeu (BRAND.tagline seulement : le nom, l'adresse et le mot-dièse ne se traduisent pas).
+  BRAND,
 };
 
 /** Tables plates « identifiant → texte » : TOUTES leurs valeurs se traduisent. */

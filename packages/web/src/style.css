@@ -2305,7 +2305,7 @@ body { color: var(--text-0); }
   padding: 2px 7px; border-radius: 999px;
 }
 .news-dot[hidden] { display: none; }
-.version-line { text-align: center; color: var(--on-green-faint); font-size: 0.7rem; margin: 6px 0 0; }
+.version-line { text-align: center; color: var(--on-green-faint); font-size: 0.7rem; margin: 6px 0 0; unicode-bidi: plaintext; } /* « v10.89 · 28/10/2026 » garde son ordre, même en arabe */
 .news-list { width: 100%; max-width: 640px; margin: 0 auto 20px; display: flex; flex-direction: column; gap: 14px; }
 .news-entry {
   background: var(--card-bg); color: var(--green-ink);
@@ -2412,6 +2412,20 @@ body { color: var(--text-0); }
 /* ---------- Salle : création, invitations, places, étapes ---------- */
 .rm-hero { text-align: center; padding: 6px 4px 12px; }
 .rm-hero p { font-size: 0.86rem; line-height: 1.45; margin: 0 0 10px; }
+/* Choix du mode à la création : deux cartes cliquables, Ensemble et Rivaux. */
+.rm-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rm-mode {
+  font: inherit; text-align: start; cursor: pointer;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 12px; border-radius: 12px;
+  border: 1.5px solid rgba(12, 45, 30, 0.18); background: #fff; color: var(--text-0, #182);
+}
+.rm-mode:hover { border-color: var(--green, #087b4b); }
+.rm-mode:disabled { opacity: 0.6; cursor: default; }
+.rm-mode-t { font-weight: 700; font-size: 0.95rem; }
+.rm-mode-d { font-size: 0.76rem; line-height: 1.35; opacity: 0.8; }
+.rm-mode-tag { text-align: center; font-size: 0.74rem; font-weight: 700; margin: 0 0 6px; opacity: 0.75; }
+@media (max-width: 360px) { .rm-modes { grid-template-columns: 1fr; } }
 .rm-card, .rm-invite-card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px; margin: 0 0 12px; text-align: start; }
 .rm-card-title { font-weight: 800; font-size: 0.86rem; margin: 0 0 8px; }
 .rm-invite-card { display: flex; gap: 12px; align-items: flex-start; border-color: var(--gold-soft); }

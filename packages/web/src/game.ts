@@ -197,7 +197,7 @@ import { Engine } from "@open-eleven/engine";
     const dual = E.dualNatOf(G);
     const dualFlag = dual ? ` <span class="dual-nat" title="${T("Éligible à la sélection {nat}", { nat: esc(dual.name) })}">${flagHtml(dual)}</span>` : "";
     $("hh-player").innerHTML = `${flagHtml(G.nationality)}${dualFlag} ${esc(G.name)}`;
-    $("hh-age").textContent = `${G.age} ans · ${G.year}`;
+    $("hh-age").textContent = `${T("{n} ans", { n: G.age })} · ${G.year}`;
     const clubImg = G.club.img ? `<img class="club-logo" src="${encodeURI(G.club.img)}" alt="" />` : "";
     const lvl = E.lvlOf(G, G.club);
     const role = E.roleOf(G);
@@ -553,6 +553,20 @@ import { Engine } from "@open-eleven/engine";
     // TOUTES les propositions du groupe qui partent en vote commun. room.ts
     // possède toute la mécanique (soumission, temps réel, vote) ; on ne lui
     // fournit que les offres DE CE joueur et les deux éléments à peindre.
+    if (setup.roomId && setup.roomMode === "rivals") {
+      if (setup._roomStep) setup._roomStep.stop();
+      // Offres du joueur, sans les clubs déjà réservés par un rival (jamais le même club).
+      const makeOffers = (taken) => E.academyOffers({
+        nationality: setup.nationality, origin: setup.origin,
+        lifestyle: setup.lifestyle, entourage: setup.entourage, potCap: setup.potCap, blockedClubs: taken,
+      });
+      setup._roomStep = window.OpenElevenRoom.renderRivalAcademyStep(setup.roomId, makeOffers, { subEl: $("academy-sub"), listEl: list }, (clubId) => {
+        setup._roomStep = null;
+        const club = CLUBS.find((c) => c.id === clubId) || setup._academyOffers[0].club;
+        startCareer(club);
+      });
+      return;
+    }
     if (setup.roomId) {
       if (setup._roomStep) setup._roomStep.stop();
       setup._roomStep = window.OpenElevenRoom.renderAcademyStep(
@@ -680,7 +694,7 @@ import { Engine } from "@open-eleven/engine";
     // Carrière commune (room.ts) : G.room survit à la sérialisation locale
     // (saveCurrentGame stocke G tel quel) — aucune reprise particulière à
     // écrire pour que le mode salle traverse une fermeture d'onglet.
-    if (setup.roomId) G.room = { id: setup.roomId };
+    if (setup.roomId) G.room = { id: setup.roomId, mode: setup.roomMode || "together" };
     if (setup.dailyDate) {
       G.dailyDate = setup.dailyDate; // Défi du jour : aucun avantage (équité)
       G.choiceLog = (setup.duelChoices || []).slice(); // journal pour le classement vérifié
@@ -704,8 +718,10 @@ import { Engine } from "@open-eleven/engine";
     // consommation de hasard que l'adversaire, donc mêmes épreuves (équité).
     if (setup.duelRole === "respond") R = reconstructDuelRival(setup.duelRivalSummary, setup.duelFromLabel);
     else if (setup.duelRole === "create") R = null;
+    else if (setup.roomMode === "rivals") R = null; // salle « Rivaux » : les rivaux sont les autres membres
     else R = offSeed(() => E.newRival(setup.position)); // un vrai rival joue au même poste
     if (G.storyId && R) R.year = G.year; // le rival vit à la même époque que la légende
+    if (rivalsMode()) refreshRivals(); // salle « Rivaux » : leurs clubs et leurs noms, dès la première saison
     prevOvr = null;
     legendGuest = pickLegendGuest();
     legendGuestUsed = false;
@@ -725,7 +741,7 @@ import { Engine } from "@open-eleven/engine";
   // solo "Commencer ma carrière" (une partie en cours serait sinon écrasée en
   // silence), mais entryScreen porte roomId — l'écran académie (plus haut)
   // s'en sert pour dérouter vers le vote de groupe au lieu du choix libre.
-  async function startRoomCareer(roomId) {
+  async function startRoomCareer(roomId, mode) {
     if (readCurrentGame()) {
       const ok = await confirmModal({
         icon: "⚠️",
@@ -738,9 +754,60 @@ import { Engine } from "@open-eleven/engine";
       if (!ok) return;
     }
     track("career_start");
-    setup = { entryScreen: "screen-nationality", roomId };
+    setup = { entryScreen: "screen-nationality", roomId, roomMode: mode === "rivals" ? "rivals" : "together" };
     E.clearSeed();
     showScreen("screen-nationality");
+  }
+
+  // --- Salle « Rivaux » -----------------------------------------------------------
+  // Chacun sa carrière : les rivaux sont les autres membres. Leurs clubs sont interdits
+  // (moteur : G.blockedClubs), et leurs noms remplacent le rival IA dans les textes.
+  const rivalsMode = () => !!(G && G.room && G.room.mode === "rivals");
+  function rivalName() {
+    if (R) return R.name;
+    const names = rivalsMode() ? (G.room.rivals || []) : [];
+    return names.length ? names[G.age % names.length] : null; // null : « votre grand rival »
+  }
+  function applyRivalsInfo(info) {
+    if (!info || !G || !G.room) return;
+    G.blockedClubs = info.blocked;
+    G.room.rivals = info.rivals.filter((r) => !r.ended).map((r) => r.name || r.pseudo);
+  }
+  function refreshRivals() {
+    const Room = globalThis.OpenElevenRoom;
+    if (!Room || !Room.rivalsInfo || !G.room) return;
+    Room.rivalsInfo(G.room.id).then(applyRivalsInfo).catch(() => { /* hors ligne : on garde la dernière liste */ });
+  }
+  function rivalsBarrier() {
+    const Room = globalThis.OpenElevenRoom;
+    Room.renderRivalBarrierStep(G.room.id, showCard, async () => {
+      G.room.barrierYear = G.year;
+      let info = null;
+      try { info = await Room.rivalsInfo(G.room.id); } catch (_) { /* hors ligne */ }
+      applyRivalsInfo(info);
+      renderRivalsNews(info);
+    });
+  }
+  // Après la barrière : la saison de chaque rival, et où l'on en est au classement.
+  function renderRivalsNews(info) {
+    const rivals = info ? info.rivals : [];
+    const myScore = E.computeCareerScore(G);
+    const board = [{ me: true, score: myScore }, ...rivals.map((r) => ({ me: false, score: r.score || 0 }))].sort((a, b) => b.score - a.score);
+    const myRank = board.findIndex((x) => x.me) + 1;
+    const lines = rivals.map((r) => {
+      const cc = r.countryId ? E.countryOf(r.countryId) : null;
+      const trophies = (r.seasonTrophies || []).map((tr) => { const c = trophyInfo(tr, r.countryId); return c ? c.icon : ""; }).join(" ");
+      const stats = r.ended ? "🏁 " + T("carrière terminée")
+        : T("{g} buts · {a} passes · note {r}", { g: r.seasonGoals == null ? "?" : r.seasonGoals, a: r.seasonAssists == null ? "?" : r.seasonAssists, r: r.seasonRating == null ? "?" : r.seasonRating });
+      return `<p class="recap-micro">⚔️ <strong>${esc(r.pseudo)}</strong>${r.name ? ` — ${esc(r.name)}` : ""}${r.club ? ` · ${esc(r.club)} ${cc ? flagHtml(cc) : ""}` : ""}<br>${esc(stats)}${trophies ? ` ${trophies}` : ""}</p>`;
+    }).join("");
+    showCard(`
+      <div class="card-tag"><span class="card-icon">📰</span> ${esc(T("Nouvelles de tes rivaux"))}</div>
+      ${lines || `<p class="event-text">${esc(T("Pas encore de nouvelles de tes rivaux."))}</p>`}
+      <p class="recap-objective">${esc(T("Ton classement dans la salle : {rank} sur {n}", { rank: myRank, n: board.length }))}</p>
+      <button class="btn btn-secondary" id="btn-next">${esc(T("Saison suivante ▶"))}</button>
+    `, myRank === 1 ? "good" : "neutral");
+    $("btn-next").addEventListener("click", nextSeason);
   }
 
   // --- Boucle de saison ---------------------------------------------------------
@@ -757,13 +824,13 @@ import { Engine } from "@open-eleven/engine";
     // Les LIBELLÉS passent par renderText au même titre que le texte : sans ça,
     // « Rester fidèle à {nat} » s'affichait tel quel sur le bouton, alors que
     // l'énoncé au-dessus, lui, était correctement rendu.
-    const rt = (v) => esc(E.renderText(G, v || "", { rival: R ? R.name : null }));
+    const rt = (v) => esc(E.renderText(G, v || "", { rival: rivalName() }));
     const optionsHtml = visibleOptions
       .map((opt) => `<button class="opt-btn" data-opt="${currentEvent.options.indexOf(opt)}">${opt.hint ? `<span class="opt-hint">${rt(opt.hint)}</span>` : ""}${rt(opt.label)}</button>`)
       .join("");
     showCard(`
-      <div class="card-tag"><span class="card-icon">${currentEvent.icon}</span> ${esc(currentEvent.cat)} · ${G.age} ans</div>
-      <p class="event-text">${esc(E.renderText(G, currentEvent.text, { rival: R ? R.name : null }))}</p>
+      <div class="card-tag"><span class="card-icon">${currentEvent.icon}</span> ${esc(currentEvent.cat)} · ${T("{n} ans", { n: G.age })}</div>
+      <p class="event-text">${esc(E.renderText(G, currentEvent.text, { rival: rivalName() }))}</p>
       <div class="event-options">${optionsHtml}</div>
     `);
     $("game-card").querySelectorAll(".opt-btn").forEach((btn) => {
@@ -779,7 +846,7 @@ import { Engine } from "@open-eleven/engine";
       lastOutcome = res.outcome;
       lastMovedTo = res.movedTo || null;
       updateHeader();
-      let text = E.renderText(G, res.outcome.text, { rival: R ? R.name : null });
+      let text = E.renderText(G, res.outcome.text, { rival: rivalName() });
       showCard(`
         <div class="card-tag"><span class="card-icon">${currentEvent.icon}</span> ${esc(currentEvent.cat)}</div>
         <p class="result-text">${esc(text)}</p>
@@ -797,7 +864,7 @@ import { Engine } from "@open-eleven/engine";
     // les 3 autres suivent (candidats [clubId, "stay"], réutilise le moteur
     // de vote générique via renderRelocationVoteStep — le meneur a déjà son
     // propre bulletin posé côté serveur).
-    if (G.room && lastMovedTo) {
+    if (G.room && !rivalsMode() && lastMovedTo) {
       const clubId = lastMovedTo.id;
       lastMovedTo = null;
       window.OpenElevenRoom.renderRelocationVoteStep(G.room.id, clubId, showCard, (result, teamClub) => {
@@ -813,7 +880,7 @@ import { Engine } from "@open-eleven/engine";
       // Mode salle : ce choix de club devient un vote — immédiat, sans
       // barrière (cf. room.ts renderNarrativeVoteStep), car rien ne garantit
       // que les 3 autres membres soient à un point comparable de LEUR saison.
-      if (G.room) {
+      if (G.room && !rivalsMode()) {
         if (!offers.length) { proceedToSeason(); return; } // rien à trancher, pas de vote
         // Trois candidats au plus : un mercato en propose maintenant jusqu'à six, trop pour un
         // vote lisible à plusieurs (comme le bilan de fin de saison, qui n'en verse qu'un).
@@ -897,7 +964,7 @@ import { Engine } from "@open-eleven/engine";
       return `<button class="opt-btn" data-offer="${i}"><span class="opt-hint">${esc(E.divShort(E.lvlOf(G, offer.club), offer.club.countryId))}</span>${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)} — ${T("prêt d'une saison")}</button>`;
     }).join("");
     showCard(`
-      <div class="card-tag"><span class="card-icon">🔄</span> Prêt · ${G.age} ans</div>
+      <div class="card-tag"><span class="card-icon">🔄</span> ${T("Prêt")} · ${T("{n} ans", { n: G.age })}</div>
       <p class="event-text">Plusieurs clubs garantissent du temps de jeu au jeune que vous êtes. Le club conserve votre contrat et suivra chacun de vos matchs.</p>
       <div class="event-options">${buttons}</div>
     `);
@@ -925,7 +992,7 @@ import { Engine } from "@open-eleven/engine";
     } else if (window && window.contractUp) {
       buttons += `<button class="opt-btn" data-stay="1"><span class="opt-hint">${T("Prolonger")}</span>${T("Rester à {club} — {salary}/an", { club: esc(G.club.name), salary: E.fmtMoney(window.renewSalary) })}</button>`;
     } else if (window) {
-      buttons += `<button class="opt-btn" data-stay="1">Rester à ${esc(G.club.name)}</button>`;
+      buttons += `<button class="opt-btn" data-stay="1">${T("Rester à {club}", { club: esc(G.club.name) })}</button>`;
     } else if (offers.length === 0) {
       buttons += `<button class="opt-btn" data-stay="1">${T("Faute d'offre concrète, rester à {club}", { club: esc(G.club.name) })}</button>`;
     }
@@ -936,8 +1003,8 @@ import { Engine } from "@open-eleven/engine";
       const roleChip = role ? `<span class="role-chip role-${role.id}" title="${esc(role.desc)}">${role.icon} ${esc(role.label)}</span>` : "";
       buttons += `<button class="opt-btn" data-offer="${i}">
         <span class="opt-hint">${offer.gulf ? "💰 " : ""}${esc(E.divShort(E.lvlOf(G, offer.club), offer.club.countryId))}</span>
-        ${img}${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)} — ${E.fmtMoney(offer.salary)}/an · indemnité ${E.fmtMoney(offer.fee)}
-        <span class="opt-role">Statut proposé : ${roleChip}</span></button>`;
+        ${img}${esc(offer.club.name)}${offer.club.colors ? ` ${offer.club.colors}` : ""} ${flagHtml(cc)} — ${T("{salary}/an · indemnité {fee}", { salary: E.fmtMoney(offer.salary), fee: E.fmtMoney(offer.fee) })}
+        <span class="opt-role">${T("Statut proposé :")} ${roleChip}</span></button>`;
     });
     let legendLine = "";
     if (legendGuest && !legendGuestUsed && offers.length) {
@@ -946,8 +1013,8 @@ import { Engine } from "@open-eleven/engine";
       legendLine = `<p class="legend-line">${T("🏛️ Dans les tribunes, {who}, {src}, observe votre mercato.", { who: esc(legendGuest.name), src })}</p>`;
     }
     showCard(`
-      <div class="card-tag"><span class="card-icon">💼</span> Mercato · ${G.age} ans</div>
-      <p class="event-text">${esc(reason)}${offers.length === 0 ? " Mais aucune offre concrète n'arrive sur la table." : ""}</p>
+      <div class="card-tag"><span class="card-icon">💼</span> ${T("Mercato")} · ${T("{n} ans", { n: G.age })}</div>
+      <p class="event-text">${esc(reason)}${offers.length === 0 ? " " + T("Mais aucune offre concrète n'arrive sur la table.") : ""}</p>
       ${legendLine}
       <div class="event-options">${buttons}</div>
     `);
@@ -970,7 +1037,7 @@ import { Engine } from "@open-eleven/engine";
   function proceedToSeason() {
     // Mode salle : un vote de club en cours se tranche AVANT la saison, puis chacun rejoint
     // le club de l'équipe — tous jouent la saison dans le même club (cf. renderPreSeasonSync).
-    if (G.room && !G.roomPreSynced && globalThis.OpenElevenRoom && globalThis.OpenElevenRoom.renderPreSeasonSync) {
+    if (G.room && !rivalsMode() && !G.roomPreSynced && globalThis.OpenElevenRoom && globalThis.OpenElevenRoom.renderPreSeasonSync) {
       globalThis.OpenElevenRoom.renderPreSeasonSync(G.room.id, showCard, async (_result, teamClub) => {
         syncToTeamClub(teamClub);
         // Le club de CETTE saison est celui du premier membre à l'avoir commencée : un transfert
@@ -999,7 +1066,7 @@ import { Engine } from "@open-eleven/engine";
 
     // Mode salle : la saison du CLUB (classement, montée, finales) est tirée en commun
     // pour toute la salle — graine salle + année + club, note d'équipe fixée à la barrière.
-    if (G.room) G.roomClub = { seed: E.roomClubSeed(G.room.id, G.year, G.club.id), teamRating: G.room.teamRating != null ? G.room.teamRating : 6.6 };
+    if (G.room && !rivalsMode()) G.roomClub = { seed: E.roomClubSeed(G.room.id, G.year, G.club.id), teamRating: G.room.teamRating != null ? G.room.teamRating : 6.6 };
     lastReport = E.playSeason(G);
     // Mode salle : publie un instantané pour le comparatif en direct des autres membres,
     // avec l'OVR de fin de saison qui fixera la note d'équipe de la suivante.
@@ -1009,6 +1076,7 @@ import { Engine } from "@open-eleven/engine";
         ...roomSnapshot(),
         level: lastReport.level,
         seasonGoals: lastReport.goals, seasonAssists: lastReport.assists, seasonRating: lastReport.rating,
+        year: lastReport.year, seasonTrophies: (lastReport.trophies || []).filter((t) => t !== "worldCup").slice(0, 8),
       });
     }
     updateHeader();
@@ -1020,7 +1088,9 @@ import { Engine } from "@open-eleven/engine";
   function renderFirstCap(report) {
     showCard(`
       <div class="card-tag"><span class="card-icon">📣</span> Première convocation</div>
-      <p class="event-text">${flagHtml(G.nationality)} ${E.natForms(G.nationality).on ? `Le sélectionneur ${E.natForms(G.nationality).ofPrefix}` : "Le sélectionneur de "}<strong>${esc(G.nationality.name)}</strong> vous appelle pour la première fois. À ${G.age} ans, vous voilà international !</p>
+      <p class="event-text">${flagHtml(G.nationality)} ${window.I18N && window.I18N.lang !== "fr"
+        ? T("Le sélectionneur de {nat} vous appelle pour la première fois. À {n} ans, vous voilà international !", { nat: `<strong>${esc(G.nationality.name)}</strong>`, n: G.age })
+        : `${E.natForms(G.nationality).on ? `Le sélectionneur ${E.natForms(G.nationality).ofPrefix}` : "Le sélectionneur de "}<strong>${esc(G.nationality.name)}</strong> vous appelle pour la première fois. À ${G.age} ans, vous voilà international !`}</p>
       <p class="result-text">Vous porterez le maillot national dès cette saison. Vos matchs et vos buts en sélection sont désormais suivis dans le bilan de fin de saison.</p>
       <button class="btn btn-secondary" id="btn-next">Continuer</button>
     `, "great");
@@ -1237,7 +1307,7 @@ import { Engine } from "@open-eleven/engine";
         const teams = built.groupTeams.map((n) => `<div class="pool-team">${flagHtml(n)} ${esc(n.name)}</div>`).join("");
         showCard(`
           <div class="card-tag"><span class="card-icon">${icon}</span> ${esc(cupName)} · ${esc(T("Phase de poules"))}</div>
-          <p class="event-text">${flagHtml(G.nationality)} Votre poule pour cette édition :</p>
+          <p class="event-text">${flagHtml(G.nationality)} ${T("Votre poule pour cette édition :")}</p>
           <div class="pool-grid">${teams}</div>
           <button class="btn btn-secondary" id="btn-tstep">Coup d'envoi ▶</button>`);
       } else if (step.type === "phase") {
@@ -1466,7 +1536,8 @@ import { Engine } from "@open-eleven/engine";
   }
 
   function renderRecap(report) {
-    const rivalReport = G.duel ? null : offSeed(() => E.rivalSeason(R)); // en duel : rival figé, pas de sim
+    const rivalReport = G.duel || !R ? null : offSeed(() => E.rivalSeason(R)); // en duel : rival figé, pas de sim
+    if (rivalsMode()) refreshRivals(); // avant le mercato : jamais le club d'un rival
     const isGk = G.position.id === "gk";
     const trophyLine = report.trophies.length
       ? report.trophies.map((tr) => { const c = trophyInfo(tr, report.countryId); return c ? `${c.icon} ${c.name}` : tr; }).join(" · ")
@@ -1484,7 +1555,7 @@ import { Engine } from "@open-eleven/engine";
       ? `<p class="recap-trophies">🎖️ ${awardIds.map((id) => `${AWARDS[id].icon} ${AWARDS[id].name}`).join(" · ")}</p>`
       : "";
     let leagueLine;
-    if (report.leaguePos === 1) leagueLine = report.divisionTitle ? `🥇 Champion ${E.deOf(E.divShort(report.level, report.countryId))} !` : "🥇 Champion !";
+    if (report.leaguePos === 1) leagueLine = report.divisionTitle ? T("🥇 Champion de {div} !", { div: E.divShort(report.level, report.countryId) }) : T("🥇 Champion !");
     else if (report.promoted) leagueLine = T("{pos}ᵉ — 🚀 montée arrachée en barrage !", { pos: report.leaguePos });
     else if (report.playoffRun) leagueLine = T("{pos}ᵉ — barrage de montée perdu", { pos: report.leaguePos });
     else if (report.survivedPlayoff) leagueLine = T("{pos}ᵉ — 🛟 maintien arraché en barrage", { pos: report.leaguePos });
@@ -1520,10 +1591,10 @@ import { Engine } from "@open-eleven/engine";
     }
     const seasonLine = sq
       ? `<p class="recap-line">${sq === "youth" ? T("Saison avec les <strong>U17</strong> du club.") : T("Saison en <strong>équipe réserve</strong>.")} ${T("Ces matchs sont comptés à part, pas dans vos statistiques pro.")}</p>`
-      : `<p class="recap-line">Championnat : <strong>${leagueLine}</strong>${report.caps ? T(report.caps > 1 ? " · {flag} {n} sélections" : " · {flag} {n} sélection", { flag: flagHtml(G.nationality), n: report.caps }) + (report.natGoals ? T(report.natGoals > 1 ? ", {g} buts" : ", {g} but", { g: report.natGoals }) : "") : ""}</p>`;
+      : `<p class="recap-line">${T("Championnat :")} <strong>${leagueLine}</strong>${report.caps ? T(report.caps > 1 ? " · {flag} {n} sélections" : " · {flag} {n} sélection", { flag: flagHtml(G.nationality), n: report.caps }) + (report.natGoals ? T(report.natGoals > 1 ? ", {g} buts" : ", {g} but", { g: report.natGoals }) : "") : ""}</p>`;
 
     showCard(`
-      <div class="card-tag"><span class="card-icon">📊</span> Saison ${report.year}-${String((report.year + 1) % 100).padStart(2, "0")} · ${esc(report.clubName)} <span class="level-tag level-${report.level}">${esc(E.divShort(report.level, report.countryId))}</span>${squadTag}${report.onLoan ? " (prêt)" : ""}${report.captain ? " 🅒" : ""}</div>
+      <div class="card-tag"><span class="card-icon">📊</span> ${T("Saison")} ${report.year}-${String((report.year + 1) % 100).padStart(2, "0")} · ${esc(report.clubName)} <span class="level-tag level-${report.level}">${esc(E.divShort(report.level, report.countryId))}</span>${squadTag}${report.onLoan ? " (" + T("prêt") + ")" : ""}${report.captain ? " 🅒" : ""}</div>
       ${report.headline ? `<p class="recap-headline">📰 ${esc(report.headline)}</p>` : ""}
       <div class="recap-grid">
         <div class="recap-cell"><span class="recap-num">${st.matches}</span><span class="recap-lbl">Matchs</span></div>
@@ -1540,7 +1611,7 @@ import { Engine } from "@open-eleven/engine";
       ${squadChangeHtml}
       ${report.benched && !sq ? `<p class="recap-warn">⚠️ Cruellement court en temps de jeu : votre moral en souffre.</p>` : ""}
       ${report.benched && sq ? `<p class="recap-warn">${T("⏳ Toujours en réserve : des clubs d'un niveau inférieur pourraient vous offrir du temps de jeu.")}</p>` : ""}
-      ${report.seasonInjury ? `<p class="recap-warn">🚑 ${esc((E.BALANCE_REF.injury.labels || {})[report.seasonInjury.tier] || "Blessure")}${T(" : {n} semaines sur la touche.", { n: report.seasonInjury.weeks })}</p>` : (report.injuryWeeks ? `<p class="recap-warn">🩹 ${report.injuryWeeks} semaines d'infirmerie cette saison.</p>` : "")}
+      ${report.seasonInjury ? `<p class="recap-warn">🚑 ${esc((E.BALANCE_REF.injury.labels || {})[report.seasonInjury.tier] || T("Blessure"))}${T(" : {n} semaines sur la touche.", { n: report.seasonInjury.weeks })}</p>` : (report.injuryWeeks ? `<p class="recap-warn">🩹 ${T("{n} semaines d'infirmerie cette saison.", { n: report.injuryWeeks })}</p>` : "")}
       ${report.carryInjury ? `<p class="recap-warn">${T("🩼 Toujours en reconstruction : {n} semaines de retard traînées de la saison passée.", { n: report.carryInjury })}</p>` : ""}
       ${report.tournamentMissed ? `<p class="recap-warn">😔 Blessé, vous manquez le grand tournoi de votre sélection cette saison.</p>` : ""}
       ${report.frozenOutWarning ? `<p class="recap-warn">⚠️ ${esc(report.frozenOutWarning)}</p>` : report.forcedLoanWarning ? `<p class="recap-warn">⚠️ ${esc(report.forcedLoanWarning)}</p>` : ""}
@@ -1558,13 +1629,13 @@ import { Engine } from "@open-eleven/engine";
     // Confiance critique / sponsors : mode salle mis de côté pour l'instant
     // (pas de synchronisation prévue entre membres pour ces écrans) — le
     // reste du déroulé (mercato ci-dessous) reste inchangé pour ce mode.
-    if (!G.room && G.forcedLoanNext) {
+    if ((!G.room || rivalsMode()) && G.forcedLoanNext) {
       G.forcedLoanNext = false;
       const offers = E.loanOffersFor(G);
       if (offers.length) { renderForcedLoanChoice(offers); return; }
       // Aucun club preneur pour le prêt forcé : le mercato normal reprend son cours.
     }
-    if (!G.room && E.sponsorDealDue(G)) {
+    if ((!G.room || rivalsMode()) && E.sponsorDealDue(G)) {
       // sponsorTierFor AVANT sponsorOffersFor : même palier, et seul le
       // second consomme du hasard (ordre sans incidence sur le rejeu).
       renderSponsorChoice(E.sponsorTierFor(G), E.sponsorOffersFor(G), offseasonTransfer);
@@ -1652,7 +1723,7 @@ import { Engine } from "@open-eleven/engine";
     // de fin de saison, cf. room.ts renderSeasonBarrierStep. `window` masque
     // ici le global du même nom (idiome déjà utilisé par renderTransferChoice
     // plus haut) : on passe par globalThis, pas par `window.OpenElevenRoom`.
-    if (G.room) {
+    if (G.room && !rivalsMode()) {
       // Une seule offre par membre (la première) : avec 2-4 fenêtres × 2-4
       // offres chacune, l'union complète produisait 6-8 candidats illisibles
       // au vote — une par membre suffit, comme le club de départ (room_launch).
@@ -1696,7 +1767,7 @@ import { Engine } from "@open-eleven/engine";
     const info = (report && report.careerEndInjury) || {};
     const age = info.age || G.age;
     const labels = (E.BALANCE_REF.injury && E.BALANCE_REF.injury.labels) || {};
-    const label = labels[info.tier] || "Blessure grave";
+    const label = labels[info.tier] || T("Blessure grave");
     let text;
     if (age >= 30) text = "Le corps a fini par dire stop. Après tout ce que vous avez accompli, une dernière blessure referme le rideau — vous quittez les terrains la tête haute.";
     else if (age >= 24) text = "En pleine force de l'âge, le verdict médical est sans appel : vous ne rejouerez plus au haut niveau. Une carrière fauchée en plein vol.";
@@ -1711,6 +1782,7 @@ import { Engine } from "@open-eleven/engine";
 
   function nextSeason() {
     if (G.retiring || G.age >= E.BALANCE_REF.ageMax) { finalize(); return; }
+    if (rivalsMode() && G.room.barrierYear !== G.year) { rivalsBarrier(); return; }
     E.advanceYear(G);
     renderSeasonEvent();
   }
@@ -1837,7 +1909,7 @@ import { Engine } from "@open-eleven/engine";
     return `
       <p class="pantheon-name">${legendNat ? flagHtml(legendNat) : esc(l.nationalityFlag || "")} ${esc(l.name || "Anonyme")} ${esc(l.positionIcon || "")}</p>
       <p class="pantheon-title">${esc(l.title || "")}${l.peakOvr ? ` · OVR ${n(l.peakOvr)}` : ""}</p>
-      <p class="pantheon-trophies">${bits.length ? bits.join(" ") : "Aucun trophée majeur"}${l.money ? ` · 💰 ${n(l.money)} M€` : ""}</p>`;
+      <p class="pantheon-trophies">${bits.length ? bits.join(" ") : T("Aucun trophée majeur")}${l.money ? ` · 💰 ${n(l.money)} M€` : ""}</p>`;
   }
 
   // --- Panthéon : historique du compte ------------------------------------------
@@ -2393,8 +2465,8 @@ import { Engine } from "@open-eleven/engine";
       <div class="hc-head">Quêtes du jour</div>
       <div class="hc-body">
         <ul class="hc-lines">
-          <li><strong>${doneCount}/${daily.length}</strong> quête${doneCount > 1 ? "s" : ""} accomplie${doneCount > 1 ? "s" : ""} aujourd'hui</li>
-          <li>${streak > 0 ? T(streak > 1 ? "Série de <strong>{n} jours</strong> en cours 🔥" : "Série de <strong>{n} jour</strong> en cours 🔥", { n: streak }) : "Aucune série en cours — lancez-vous !"}</li>
+          <li><strong>${doneCount}/${daily.length}</strong> ${T(doneCount > 1 ? "quêtes accomplies aujourd'hui" : "quête accomplie aujourd'hui")}</li>
+          <li>${streak > 0 ? T(streak > 1 ? "Série de <strong>{n} jours</strong> en cours 🔥" : "Série de <strong>{n} jour</strong> en cours 🔥", { n: streak }) : T("Aucune série en cours — lancez-vous !")}</li>
         </ul>
         <div class="hc-cta">En voir plus</div>
       </div>`;
@@ -2473,7 +2545,7 @@ import { Engine } from "@open-eleven/engine";
           <span class="daily-chip">${esc(ch.origin.name)}</span>
         </div>
         <span class="daily-best${doneToday ? " done" : ""}">${bestLine}</span>
-        <div class="hc-cta">${doneToday ? "Rejouer maintenant" : "Jouer maintenant"}</div>
+        <div class="hc-cta">${T(doneToday ? "Rejouer maintenant" : "Jouer maintenant")}</div>
       </div>`;
   }
 
@@ -2525,7 +2597,7 @@ import { Engine } from "@open-eleven/engine";
     const best = (loadProgress().stories || {})[story.id];
     const bestLine = best && best.best != null
       ? T("Votre record : {n} pts", { n: best.best }) + (best.beaten ? T(" · 👑 légende battue") : "")
-      : `Objectif : battre ses ${story.baseline} pts`;
+      : T("Objectif : battre ses {n} pts", { n: story.baseline });
     panel.innerHTML = `
       <div class="hc-head">Mode Histoire</div>
       <div class="hc-body">
@@ -2544,9 +2616,9 @@ import { Engine } from "@open-eleven/engine";
       const best = (progress.stories || {})[st.id];
       const status = !unlocked
         ? `<span class="story-cost">🪙 ${st.cost}</span>`
-        : `<span class="story-free">${st.cost === 0 ? "Offerte" : "Débloquée"}</span>`;
+        : `<span class="story-free">${T(st.cost === 0 ? "Offerte" : "Débloquée")}</span>`;
       const bestLine = best && best.best != null
-        ? `<p class="story-record">Votre record : <strong>${best.best} pts</strong>${best.beaten ? " · 👑 légende battue" : ""}</p>`
+        ? `<p class="story-record">${T("Votre record :")} <strong>${T("{n} pts", { n: best.best })}</strong>${best.beaten ? T(" · 👑 légende battue") : ""}</p>`
         : "";
       return `<div class="story-card${unlocked ? "" : " locked"}">
         <div class="story-head">
@@ -2555,9 +2627,9 @@ import { Engine } from "@open-eleven/engine";
           ${status}
         </div>
         <p class="story-teaser">${esc(st.teaser)}</p>
-        <p class="story-goal">🎯 La légende a terminé sa carrière à <strong>${st.baseline} pts</strong>. Faites mieux.</p>
+        <p class="story-goal">${T("🎯 La légende a terminé sa carrière à <strong>{n} pts</strong>. Faites mieux.", { n: st.baseline })}</p>
         ${bestLine}
-        <button class="btn btn-secondary story-play" data-story="${st.id}"${!unlocked && jetonsBalance(progress) < st.cost ? " disabled" : ""}>${unlocked ? "Revivre cette légende" : T("Débloquer (🪙 {n} jetons)", { n: st.cost })}</button>
+        <button class="btn btn-secondary story-play" data-story="${st.id}"${!unlocked && jetonsBalance(progress) < st.cost ? " disabled" : ""}>${unlocked ? T("Revivre cette légende") : T("Débloquer (🪙 {n} jetons)", { n: st.cost })}</button>
       </div>`;
     }).join("");
     list.querySelectorAll(".story-play").forEach((btn) => {
@@ -2609,7 +2681,7 @@ import { Engine } from "@open-eleven/engine";
     track("story_started", { story_id: story.id });
     const reminder = $("daily-reminder");
     if (reminder) {
-      reminder.innerHTML = `${story.icon} <strong>Mode Histoire</strong> — ${esc(story.alias)} · ${esc(story.era)} · battez ${story.baseline} pts`;
+      reminder.innerHTML = `${story.icon} <strong>Mode Histoire</strong> — ${esc(story.alias)} · ${esc(story.era)} · ${T("battez {n} pts", { n: story.baseline })}`;
       reminder.hidden = false;
     }
     showScreen("screen-lifestyle");
@@ -2775,7 +2847,7 @@ import { Engine } from "@open-eleven/engine";
     const prof = duelChallengeFor(d.s);
     $("duel-body").innerHTML = `
       <p class="duel-intro-line"><strong>${esc(d.f.l)}</strong> te défie !</p>
-      <p class="duel-intro-sub">Profil imposé : ${prof.position.icon} ${esc(prof.position.name)} · ${flagHtml(prof.nationality)} ${esc(prof.nationality.name)} · ${esc(prof.origin.name)}</p>
+      <p class="duel-intro-sub">${T("Profil imposé :")} ${prof.position.icon} ${esc(prof.position.name)} · ${flagHtml(prof.nationality)} ${esc(prof.nationality.name)} · ${esc(prof.origin.name)}</p>
       <div class="rival-compare">${duelCol(entrySummary(d.f, d.s), d.f.l)}</div>
       <p class="duel-intro-hint">Mêmes épreuves que ton adversaire. À toi de faire mieux.</p>
       <button class="btn btn-primary" id="btn-duel-accept">Relever le défi</button>
@@ -2934,11 +3006,11 @@ import { Engine } from "@open-eleven/engine";
       <div class="streak-flame ${streak > 0 ? "streak-alive" : ""}">
         <span class="sf-emoji">${streak > 0 ? "🔥" : "🕯️"}</span>
         <span class="sf-num">${streak}</span>
-        <span class="sf-unit">jour${streak > 1 ? "s" : ""} de série</span>
+        <span class="sf-unit">${T(streak > 1 ? "jours de série" : "jour de série")}</span>
       </div>
       <div class="streak-dots">${dots}</div>
-      <p class="streak-cycle-note">🧊 +1 joker tous les 7 jours · en réserve : ${"🧊".repeat(jokers) || "aucun"}${jokers ? ` (${jokers}/2)` : ""} — un joker pardonne un jour manqué</p>
-      ${nextMs ? `<p class="streak-next">Prochain palier : <strong>${nextMs.days} jours</strong> → <strong>+${nextMs.jetons} 🪙</strong> (encore ${nextMs.days - streak} j)</p>` : `<p class="streak-next">👑 Tous les paliers sont conquis. Série mythique.</p>`}
+      <p class="streak-cycle-note">${T("🧊 +1 joker tous les 7 jours · en réserve : {j} — un joker pardonne un jour manqué", { j: ("🧊".repeat(jokers) || T("aucun")) + (jokers ? ` (${jokers}/2)` : "") })}</p>
+      ${nextMs ? `<p class="streak-next">${T("Prochain palier : <strong>{n} jours</strong> → <strong>+{j} 🪙</strong> (encore {left} j)", { n: nextMs.days, j: nextMs.jetons, left: nextMs.days - streak })}</p>` : `<p class="streak-next">👑 Tous les paliers sont conquis. Série mythique.</p>`}
       <div class="quest-hero-stats">
         <div class="qh-stat"><span class="qh-val">${progress.bestStreak}</span><span class="qh-lbl">Record</span></div>
         <div class="qh-stat"><span class="qh-val">${progress.questTotal}</span><span class="qh-lbl">Quêtes</span></div>
@@ -3191,7 +3263,7 @@ import { Engine } from "@open-eleven/engine";
     clearCurrentGame(); // carrière terminée : plus rien à reprendre
     // Le rival IA termine sa carrière en accéléré (jamais en duel : R est figé/absent)
     let guard = 0;
-    if (!G.duel) offSeed(() => { while (!R.careerEnded && R.age <= E.BALANCE_REF.ageMax && guard++ < 30) E.rivalSeason(R); });
+    if (!G.duel && R) offSeed(() => { while (!R.careerEnded && R.age <= E.BALANCE_REF.ageMax && guard++ < 30) E.rivalSeason(R); });
     saveToPantheon();
     const score = E.computeCareerScore(G);
     // Mode salle : signale la fin de CETTE carrière — le membre devient
@@ -3282,7 +3354,7 @@ import { Engine } from "@open-eleven/engine";
       titleGroups[key] = (titleGroups[key] || 0) + 1;
     });
     const leagueRows = Object.keys(titleGroups).length
-      ? Object.entries(titleGroups).map(([key, n]) => statRowHtml(`${COMPETITIONS.league.icon} Champion — ${esc(key)}`, n, true))
+      ? Object.entries(titleGroups).map(([key, n]) => statRowHtml(`${COMPETITIONS.league.icon} ${T("Champion — {k}", { k: esc(key) })}`, n, true))
       : [statRowHtml(`${COMPETITIONS.league.icon} ${COMPETITIONS.league.name}`, 0, false)];
 
     // Coupes continentales distinctes (Europe / Amériques / Asie…)
@@ -3396,7 +3468,8 @@ import { Engine } from "@open-eleven/engine";
     const t = G.trophies || {};
     return {
       name: G.name, age: G.age, position: G.position ? G.position.name : null,
-      club: G.club ? G.club.name : null, countryId: G.club ? G.club.countryId : null,
+      club: G.club ? G.club.name : null, clubId: G.club ? G.club.id : null, countryId: G.club ? G.club.countryId : null,
+      score: E.computeCareerScore(G),
       level: G.club ? E.lvlOf(G, G.club) : null,
       ovr: E.ovr(G), peakOvr: G.peakOvr,
       totalGoals: G.totals.goals, totalAssists: G.totals.assists, totalMatches: G.totals.matches,
@@ -3601,7 +3674,7 @@ import { Engine } from "@open-eleven/engine";
     const nickname = nicknameFor();
     $("final-nickname").textContent = nickname || "";
     const country = E.countryOf(G.club.countryId);
-    $("final-club").textContent = (!G.careerEnded || dignifiedInjuryEnd()) ? `Dernier club : ${G.club.name} (${country ? country.name : ""})` : "";
+    $("final-club").textContent = (!G.careerEnded || dignifiedInjuryEnd()) ? T("Dernier club : {club} ({country})", { club: G.club.name, country: country ? country.name : "" }) : "";
     $("final-trajectory").textContent = `${G.trajectory.label}${G.archetype ? ` · ${G.archetype.icon} ${G.archetype.name}` : ""} — ${G.trajectory.desc}`;
 
     // Percentile mondial : où se situe cette carrière parmi tous les destins
@@ -3755,6 +3828,9 @@ import { Engine } from "@open-eleven/engine";
     } else if (R) {
       rc.innerHTML = col(G, "Vous") + col(R, `${flagHtml(R.nationality)} ${esc(R.name)}`);
       $("rival-verdict").textContent = E.compareVerdict(G, R);
+    } else if (rivalsMode()) { // salle « Rivaux » : le classement est dans la section Salle
+      rc.innerHTML = `<p class="duel-intro-hint">${esc(T("Tes rivaux sont les autres joueurs de la salle : le classement est juste en dessous."))}</p>`;
+      $("rival-verdict").textContent = "";
     } else { // duel-création : pas encore d'adversaire
       rc.innerHTML = `<p class="duel-intro-hint">Personne ne t'a encore défié en retour. Partage ton défi pour comparer vos carrières !</p>`;
       $("rival-verdict").textContent = "";
@@ -3794,7 +3870,7 @@ import { Engine } from "@open-eleven/engine";
         let msg = dailyResult.stale
           ? T("🗓️ Défi du {date} — {n} pts (défi expiré : hors classement du jour, série intacte)", { date: dailyResult.date, n: dailyResult.score })
           : T("🗓️ Défi du jour — {n} pts", { n: dailyResult.score });
-        if (dailyResult.isAllTimeBest) msg += " · 🏆 nouveau record absolu !";
+        if (dailyResult.isAllTimeBest) msg += T(" · 🏆 nouveau record absolu !");
         else if (dailyResult.isTodayBest) msg += " · ✨ meilleur score du jour";
         if (!dailyResult.stale && dailyResult.streak > 1) msg += T(" · 🔥 série de {n} jours", { n: dailyResult.streak });
         dailyNote.textContent = msg;
@@ -3926,7 +4002,7 @@ import { Engine } from "@open-eleven/engine";
     if (!snap) { refreshHomeButtons(); return; }
     E.setSeedState(snap.seedState); // restaure le hasard (déterministe pour un défi ; null = Math.random)
     G = relinkCareer(snap.g);
-    R = snap.r ? relinkCareer(snap.r) : (G.duel ? null : offSeed(() => E.newRival(G.position)));
+    R = snap.r ? relinkCareer(snap.r) : (G.duel || (G.room && G.room.mode === "rivals") ? null : offSeed(() => E.newRival(G.position)));
     legendGuest = snap.legendGuest || null;
     legendGuestUsed = !!snap.legendGuestUsed;
     prevOvr = null;

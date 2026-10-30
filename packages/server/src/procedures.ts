@@ -366,7 +366,7 @@ export const procedures: Record<string, Procedure> = {
         "select m.room_id, coalesce(p.pseudo, 'Joueur') as from_pseudo, p.avatar as from_avatar from room_members m join rooms r on r.id = m.room_id " +
         "left join profiles p on p.user_id = m.invited_by where m.user_id = $1 and m.status = 'invited' and r.status <> 'ended' order by m.created_at desc", [me]);
       const rooms = await db.query(
-        "select r.id, r.status, r.phase, r.created_by from room_members m join rooms r on r.id = m.room_id " +
+        "select r.id, r.status, r.phase, r.mode, r.created_by from room_members m join rooms r on r.id = m.room_id " +
         "where m.user_id = $1 and m.status = 'joined' order by m.created_at desc", [me]);
       const roomIds = [...rooms.rows.map((r) => r.id), ...invitations.rows.map((r) => r.room_id)];
       // Chaque membre : avatar, qui l'a invité, et si son profil de départ est prêt.
@@ -382,7 +382,7 @@ export const procedures: Record<string, Procedure> = {
           members: members.rows.filter((m) => m.room_id === r.room_id && m.status === "joined").map((m) => ({ pseudo: m.pseudo, avatar: m.avatar })),
         })),
         rooms: rooms.rows.map((r) => ({
-          id: r.id, status: r.status, phase: r.phase, isCreator: r.created_by === me, createdBy: r.created_by,
+          id: r.id, status: r.status, phase: r.phase, mode: r.mode, isCreator: r.created_by === me, createdBy: r.created_by,
           members: members.rows.filter((m) => m.room_id === r.id),
         })),
       };

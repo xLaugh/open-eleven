@@ -123,3 +123,51 @@ test("le vote de la barrière avance l'année une fois et fait suivre le club", 
   assert.equal(st.progress.ready, false);
   assert.deepEqual(st.room.season_trophies, ["league"]);
 });
+
+test("mode Rivaux : chacun son club, jamais le même, lancement sans club commun et barrière sans vote", { skip }, async () => {
+  const a = await player("rva"), b = await player("rvb");
+  await a.rpc("friend_request", { friend_id: b.id });
+  await b.rpc("friend_accept", { from_id: a.id });
+  assert.equal((await a.rpc("room_create", { p_mode: "pirate" })).status, 400, "mode inconnu refusé");
+  const roomId = (await a.rpc("room_create", { p_mode: "rivals" })).data;
+  await a.rpc("room_invite", { p_room_id: roomId, p_friend_id: b.id });
+  await b.rpc("room_join", { p_room_id: roomId });
+  const state = async (p = a) => (await p.rpc("room_state", { room_id: roomId })).data;
+  assert.equal((await state()).room.mode, "rivals");
+  assert.equal((await a.rpc("rooms_mine")).data.rooms[0].mode, "rivals", "la liste des salles donne le mode");
+
+  // Chacun réserve son centre de formation ; un club déjà pris est refusé.
+  assert.equal((await a.rpc("room_pick_start_club", { p_room_id: roomId, p_club_id: "fr_paris" })).status, 200);
+  const taken = await b.rpc("room_pick_start_club", { p_room_id: roomId, p_club_id: "fr_paris" });
+  assert.equal(taken.status, 400);
+  assert.match(taken.error.message, /taken/);
+  assert.equal((await b.rpc("room_pick_start_club", { p_room_id: roomId, p_club_id: "fr_lyon" })).status, 200);
+  // A change d'avis : son ancien club redevient libre.
+  assert.equal((await a.rpc("room_pick_start_club", { p_room_id: roomId, p_club_id: "fr_marseille" })).status, 200);
+  const ready = (await a.rpc("rooms_mine")).data.rooms[0].members;
+  assert.deepEqual(ready.map((m) => m.ready), [true, true], "réserver son club rend prêt");
+
+  // Lancement sans club commun : chacun part du sien.
+  assert.equal((await a.rpc("room_launch", { p_room_id: roomId, p_club_id: null })).status, 200);
+  let st = await state();
+  assert.equal(st.room.phase, "in_season");
+  assert.equal(st.room.club_id, null);
+  assert.equal((await a.rpc("room_pick_start_club", { p_room_id: roomId, p_club_id: "fr_nice" })).status, 400, "plus de réservation une fois lancée");
+
+  // Barrière : aucun vote, l'année avance quand tout le monde a fini sa saison.
+  await a.rpc("room_report_season", noOffer(roomId));
+  assert.equal(season(await state()), 0, "on attend le rival");
+  await b.rpc("room_report_season", noOffer(roomId));
+  st = await state();
+  assert.equal(st.openVote, null);
+  assert.equal(st.room.phase, "in_season");
+  assert.equal(season(st), 1);
+});
+
+test("mode Ensemble : une salle créée sans mode reste une salle de coéquipiers", { skip }, async () => {
+  const a = await player("tga");
+  const roomId = (await a.rpc("room_create")).data;
+  assert.equal((await a.rpc("room_state", { room_id: roomId })).data.room.mode, "together");
+  assert.equal((await a.rpc("room_pick_start_club", { p_room_id: roomId, p_club_id: "fr_paris" })).status, 400, "pas de réservation de club en mode Ensemble");
+  await a.rpc("room_leave", { p_room_id: roomId });
+});
