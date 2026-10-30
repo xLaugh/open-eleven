@@ -22,7 +22,11 @@ import { TRANSLATABLE_FLATS, TRANSLATABLE_STRUCTURES, hasWords, visitFlat, visit
   "use strict";
 
   const STORE_KEY = "openEleven_lang";
-  const SUPPORTED = ["fr", "en"];
+  const SUPPORTED = ["fr", "en", "es", "ar"];
+  // Format des dates et des nombres, et sens de lecture : l'arabe s'écrit de droite à gauche.
+  // Arabe : chiffres occidentaux (« -u-nu-latn »), comme dans tous les textes du jeu.
+  const LOCALES = { fr: "fr-FR", en: "en-GB", es: "es-ES", ar: "ar-u-nu-latn" };
+  const RTL = ["ar"];
 
   // --- Dictionnaire anglais (clé = texte français exact) --------------------
   const EN = {
@@ -792,6 +796,9 @@ import { TRANSLATABLE_FLATS, TRANSLATABLE_STRUCTURES, hasWords, visitFlat, visit
     const saved = localStorage.getItem(STORE_KEY);
     if (SUPPORTED.includes(saved)) lang = saved;
   } catch (e) { /* stockage indisponible : on reste en français */ }
+  // L'espagnol et l'arabe portent leur dictionnaire d'interface dans leur pack (chargé par
+  // i18n-boot.js avant ce script) : le jeu des autres joueurs ne le télécharge pas.
+  if (lang !== "fr" && !DICT[lang] && window.I18N_UI && window.I18N_UI[lang]) DICT[lang] = window.I18N_UI[lang];
 
   /* `vars` : valeurs à injecter dans les marqueurs {…} du gabarit. Elles sont
      substituées DANS LES DEUX LANGUES — un gabarit non traduit reste donc
@@ -935,6 +942,7 @@ import { TRANSLATABLE_FLATS, TRANSLATABLE_STRUCTURES, hasWords, visitFlat, visit
       b.setAttribute("aria-pressed", on ? "true" : "false");
     });
     document.documentElement.setAttribute("lang", lang);
+    document.documentElement.setAttribute("dir", RTL.includes(lang) ? "rtl" : "ltr");
   }
 
   // Le contenu du jeu est traduit EN PLACE dans les structures de content : on
@@ -994,6 +1002,9 @@ import { TRANSLATABLE_FLATS, TRANSLATABLE_STRUCTURES, hasWords, visitFlat, visit
   // Exposé pour game.ts si un texte doit être traduit à la source un jour.
   window.I18N = {
     get lang() { return lang; },
+    /** Format des dates et des nombres (toLocaleDateString…). */
+    get locale() { return LOCALES[lang] || "fr-FR"; },
+    get rtl() { return RTL.includes(lang); },
     set: setLang,
     t: translate,
     dict: DICT,

@@ -662,7 +662,7 @@ import { api } from "./api";
     ".fr-acts{display:flex;align-items:center;gap:6px;flex-shrink:0}" +
     ".fr-badge{display:inline-block;min-width:1.5em;padding:1px 5px;border-radius:999px;background:#b3261e;color:#fff;font-size:.72rem;font-weight:800;line-height:1.4}" +
     ".lb-tab.on .fr-badge{background:#fff;color:var(--green,#087b4b)}" +
-    ".pf-best{padding:12px 14px;border-radius:12px;background:var(--panel-2,rgba(8,123,75,.1));border-left:4px solid var(--gold,#d4af37)}" +
+    ".pf-best{padding:12px 14px;border-radius:12px;background:var(--panel-2,rgba(8,123,75,.1));border-inline-start:4px solid var(--gold,#d4af37)}" +
     ".pf-best-top{font-weight:800;font-size:1.05rem;color:var(--green-ink,#0b3b26)}" +
     ".pf-best-title{font-size:.9rem;color:var(--text-1,#567);margin:1px 0 6px}" +
     ".pf-best-stats{font-weight:700;font-size:.9rem;color:var(--green-ink,#0b3b26)}" +

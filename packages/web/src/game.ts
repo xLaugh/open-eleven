@@ -1861,8 +1861,7 @@ import { Engine } from "@open-eleven/engine";
     return A && A.listCareers && A.getSession && A.getSession() ? A : null;
   };
   function careerDate(iso) {
-    const lang = window.I18N ? window.I18N.lang : "fr";
-    try { return new Date(iso).toLocaleDateString(lang === "en" ? "en-GB" : "fr-FR", { day: "numeric", month: "short", year: "numeric" }); } catch (e) { return ""; }
+    try { return new Date(iso).toLocaleDateString(window.I18N ? window.I18N.locale : "fr-FR", { day: "numeric", month: "short", year: "numeric" }); } catch (e) { return ""; }
   }
 
   function renderPantheonSource() {
@@ -3427,12 +3426,16 @@ import { Engine } from "@open-eleven/engine";
     };
   }
 
-  // Classement du club en championnat : « 1ᵉʳ, 2ᵉ… » en français, « 1st, 2nd… » en anglais.
+  // Classement du club en championnat : « 1ᵉʳ, 2ᵉ… » en français, « 1st, 2nd… » en anglais,
+  // « 1.º » en espagnol ; en arabe, le rang seul (la colonne dit déjà « classement »).
   function ordinal(n) {
-    if (window.I18N && window.I18N.lang === "en") {
+    const lang = window.I18N ? window.I18N.lang : "fr";
+    if (lang === "en") {
       const t = n % 100, u = n % 10;
       return n + (t >= 11 && t <= 13 ? "th" : u === 1 ? "st" : u === 2 ? "nd" : u === 3 ? "rd" : "th");
     }
+    if (lang === "es") return n + ".º";
+    if (lang === "ar") return String(n);
     return n === 1 ? "1ᵉʳ" : n + "ᵉ";
   }
 
@@ -3682,8 +3685,9 @@ import { Engine } from "@open-eleven/engine";
     // Historique saison par saison : division affichée chaque année,
     // avec montées (⬆) et descentes (⬇) visibles d'un coup d'œil.
     let prevSeason = null;
-    // Abréviations du tableau : b(uts)/p(asses) d(écisives) en français, g(oals)/a(ssists) en anglais.
-    const ab = window.I18N && window.I18N.lang === "en" ? { b: "g", pd: "a" } : { b: "b", pd: "pd" };
+    // Abréviations du tableau : b(uts)/p(asses) d(écisives) en français, g(oals)/a(ssists) en
+    // anglais, g(oles)/a(sistencias) en espagnol, ه(دف)/ت(مريرة) en arabe.
+    const ab = ({ en: { b: "g", pd: "a" }, es: { b: "g", pd: "a" }, ar: { b: "هـ", pd: "ت" } })[window.I18N ? window.I18N.lang : "fr"] || { b: "b", pd: "pd" };
     // En-tête : sans lui, on ne devine pas que « 3ᵉ » est le classement du club.
     const seasonsHead = `<div class="season-row season-head">
           <span class="season-age">${T("Âge")}</span>
@@ -3980,8 +3984,7 @@ import { Engine } from "@open-eleven/engine";
   const NEWS_SEEN_KEY = "openEleven_newsSeen";
   const NEWS_KINDS = { new: "✨ Nouveautés", balance: "⚖️ Équilibrage", fix: "🐛 Corrections" };
   const newsDate = (iso) => {
-    const lang = window.I18N ? window.I18N.lang : "fr";
-    return new Date(iso + "T12:00:00Z").toLocaleDateString(lang === "en" ? "en-GB" : "fr-FR", { day: "numeric", month: "long", year: "numeric" });
+    return new Date(iso + "T12:00:00Z").toLocaleDateString(window.I18N ? window.I18N.locale : "fr-FR", { day: "numeric", month: "long", year: "numeric" });
   };
   function readNewsSeen() { try { return localStorage.getItem(NEWS_SEEN_KEY); } catch (_) { return null; } }
 
@@ -3990,7 +3993,7 @@ import { Engine } from "@open-eleven/engine";
     const dot = $("news-dot");
     if (dot) dot.hidden = !latest || readNewsSeen() === latest.version;
     const line = $("version-line");
-    if (line) line.textContent = "v" + E.ENGINE_VERSION + (latest ? " · " + new Date(latest.date + "T12:00:00Z").toLocaleDateString("fr-FR") : "");
+    if (line) line.textContent = "v" + E.ENGINE_VERSION + (latest ? " · " + new Date(latest.date + "T12:00:00Z").toLocaleDateString(window.I18N ? window.I18N.locale : "fr-FR") : "");
   }
 
   function renderNewsScreen() {

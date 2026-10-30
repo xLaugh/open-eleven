@@ -22,8 +22,10 @@ interface Window {
   OpenElevenNotifs?: any;
   OpenElevenGame?: any;
   I18N?: any;
-  /** Pack de traduction du contenu, posé par public/i18n-content quand l'anglais est retenu. */
+  /** Pack de traduction du contenu, posé par le pack de la langue retenue (public/i18n-*.js). */
   I18N_DATA?: Record<string, Record<string, string>>;
+  /** Dictionnaire d'interface de l'espagnol et de l'arabe, posé par leur pack. */
+  I18N_UI?: Record<string, Record<string, string>>;
 }
 
 // --- Éléments trouvés par sélecteur ---------------------------------------------------------

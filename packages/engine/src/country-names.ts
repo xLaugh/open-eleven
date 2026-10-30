@@ -15,7 +15,9 @@ import { COUNTRIES, ENGINE_TEXT } from "@open-eleven/content";
 export const NO_ARTICLE = new Set(["Sainte-Lucie", "Saint-Vincent-et-les-Grenadines", "Saint-Kitts-et-Nevis", "Montserrat", "Porto Rico", "Taïwan", "Guam", "Macao", "Hong Kong", "São Tomé-et-Príncipe", "Tuvalu", "Kiribati", "Tahiti", "Singapour", "Bahreïn", "Maurice", "Djibouti", "Trinité-et-Tobago", "Cuba", "Curaçao", "Malte", "Saint-Marin", "Gibraltar", "Chypre", "Madagascar", "Saint-Martin", "Sint Maarten", "Bonaire", "Zanzibar", "La Réunion", "Niue", "Aruba", "Anguilla", "Oman", "Antigua-et-Barbuda", "Haïti", "Andorre"]);
 export function natForms(ent: Entity | null | undefined) {
   const name: string = ent && ent.name ? ent.name : "";
-  const plain = { on: false, plural: false, name, the: name, The: name, of: deOf(name), ofPrefix: frElide(name) ? "d'" : "de ", to: "à " + name };
+  // Hors du français, ni article ni élision : « de {nat} » reste « de Marruecos ».
+  const fr = ENGINE_TEXT.grammar === "articles-fr";
+  const plain = { on: false, plural: false, name, the: name, The: name, of: fr ? deOf(name) : "de " + name, ofPrefix: fr && frElide(name) ? "d'" : "de ", to: "à " + name };
   if (!ent || !name || ENGINE_TEXT.grammar !== "articles-fr") return plain;
   const c = COUNTRIES.find((x) => x.id === (ent.homeCountryId || ent.id));
   const of = c && c.of;

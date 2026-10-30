@@ -16,10 +16,12 @@ export function renderText(s: CareerState, text: string, extra?: TextVars): stri
   // joueur, {dualNat} la seconde sélection possible (vide si aucune — les
   // événements qui l'emploient sont filtrés par cond.dual), {altNat} l'autre
   // nation encore accessible après le premier choix, {country} le pays du club.
+  // Élision française (« de {club} » → « d'Osaka »), seulement en français : l'espagnol
+  // écrit « de Osaka » (ENGINE_TEXT.grammar est traduit par chaque pack de langue).
+  const of = ENGINE_TEXT.grammar === "articles-fr" ? deOf : (v: unknown) => "de " + String(v ?? "");
   let out = subNat(subNat(subNat(subNat(text, "nat", s.nationality), "dualNat", dualNatOf(s)), "altNat", altNatOf(s)), "country", country)
-    // Élision : « de {club/name} » → « d'Osaka », « d'Amiens »…
-    .replace(/\bde \{club\}/g, deOf(s.club.name))
-    .replace(/\bde \{name\}/g, deOf(s.name))
+    .replace(/\bde \{club\}/g, of(s.club.name))
+    .replace(/\bde \{name\}/g, of(s.name))
     .replace(/\{club\}/g, s.club.name)
     .replace(/\{coach\}/g, s.coach)
     .replace(/\{contCup\}/g, contCup) // coupe continentale du club (Europe/Amériques/Afrique…)
@@ -34,7 +36,7 @@ export function renderText(s: CareerState, text: string, extra?: TextVars): stri
     for (const k in extra) {
       if (k === "rival") continue;
       const v = extra[k] == null ? "" : String(extra[k]);
-      out = out.replace(new RegExp("\\bde \\{" + k + "\\}", "g"), deOf(v))
+      out = out.replace(new RegExp("\\bde \\{" + k + "\\}", "g"), of(v))
                .replace(new RegExp("\\{" + k + "\\}", "g"), v);
     }
   }
