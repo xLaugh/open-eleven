@@ -1047,7 +1047,10 @@ import { TRANSLATABLE_FLATS, TRANSLATABLE_STRUCTURES, hasWords, visitFlat, visit
     if (!SUPPORTED.includes(next) || next === lang) { closeMenu(); return; }
     try { localStorage.setItem(STORE_KEY, next); } catch (e) { /* ignoré */ }
     closeMenu();
-    location.reload();
+    // En ligne, chaque langue a son adresse (/, /en/, /es/, /ar/ — cf. scripts/seo.js) ;
+    // en développement, ces pages n'existent pas : on recharge simplement.
+    if (document.querySelector('meta[name="oe-lang-pages"]')) location.href = (next === "fr" ? "/" : "/" + next + "/") + location.search + location.hash;
+    else location.reload();
   }
 
   function closeMenu() {

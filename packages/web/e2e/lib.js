@@ -55,7 +55,8 @@ export function serveStatic(root) {
   const server = createServer((req, res) => {
     if (!up) { req.socket.destroy(); return; }
     let p = join(root, decodeURIComponent(req.url.split("?")[0]));
-    if (req.url === "/" || !extname(p)) p = join(root, "index.html");
+    // Une page par langue (/en/, /es/, /ar/ : leur index.html), comme Caddy en ligne.
+    if (!extname(p)) p = existsSync(join(p, "index.html")) ? join(p, "index.html") : join(root, "index.html");
     readFile(p, (err, buf) => {
       if (err) { res.writeHead(404); res.end(); return; }
       res.writeHead(200, { "Content-Type": TYPES[extname(p)] ?? "application/octet-stream", "Cache-Control": "no-store" });
