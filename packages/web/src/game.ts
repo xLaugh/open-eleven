@@ -4288,5 +4288,28 @@ import { Engine } from "@open-eleven/engine";
         enterDuel(d);
       }
     }
+    if (!dm) showEmailFixNotice();
   });
+
+  // Annonce affichée UNE fois par navigateur : les e-mails (confirmation d'inscription, mot
+  // de passe oublié) n'arrivaient pas à destination ; c'est réparé. Seulement sur l'accueil,
+  // et jamais pendant l'ouverture d'un lien (mot de passe, confirmation) ni sans compte possible.
+  const EMAIL_NOTICE_KEY = "openEleven_notice_emailFix";
+  function showEmailFixNotice() {
+    try { if (localStorage.getItem(EMAIL_NOTICE_KEY)) return; } catch (_) { return; }
+    if (!window.OpenElevenAccount || /type=recovery|confirm/.test(location.hash || "")) return;
+    setTimeout(async () => {
+      const active = document.querySelector(".screen.active");
+      if (!active || active.id !== "screen-home" || !$("modal-overlay").hidden) return;
+      try { localStorage.setItem(EMAIL_NOTICE_KEY, "1"); } catch (_) { /* navigation privée */ }
+      const ok = await confirmModal({
+        icon: "📧",
+        title: T("Les e-mails sont réparés"),
+        message: T("Un problème empêchait les e-mails d'arriver : il a été corrigé. N'hésitez pas à créer votre compte, ou à modifier votre mot de passe."),
+        confirmLabel: T("👤 Mon compte"),
+        cancelLabel: T("Plus tard"),
+      });
+      if (ok) { const acc = $("btn-account"); if (acc) acc.click(); }
+    }, 900);
+  }
 })();

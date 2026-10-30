@@ -853,6 +853,9 @@ import { TRANSLATABLE_FLATS, TRANSLATABLE_STRUCTURES, hasWords, visitFlat, visit
     "📊 Statistiques de la salle": "📊 Room stats",
     "en accomplissant des quêtes. Dépensez-les pour débloquer des avantages, puis équipez-en jusqu": "by completing quests. Spend them to unlock perks, then equip up to 2 for your next careers.",
     "Configurer ton profil pour cette salle effacera définitivement votre carrière actuelle. Vous pouvez la reprendre depuis l": "Setting up your profile for this room will permanently erase your current career. You can resume it from the home screen.",
+    "Les e-mails sont réparés": "Emails are fixed",
+    "Un problème empêchait les e-mails d'arriver : il a été corrigé. N'hésitez pas à créer votre compte, ou à modifier votre mot de passe.": "A problem was stopping emails from arriving: it has been fixed. Feel free to create your account, or to change your password.",
+    "👤 Mon compte": "👤 My account",
     // Salle : mode Rivaux
     "Vivez une carrière à plusieurs, jusqu'à 4 amis. Choisissez votre mode :": "Play a career together, up to 4 friends. Choose your mode:",
     "Ensemble": "Together",

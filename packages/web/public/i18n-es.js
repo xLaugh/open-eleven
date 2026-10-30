@@ -5206,5 +5206,8 @@ window.I18N_UI = { es: {
   "Aucun vote ouvert pour l'instant.": "No hay ninguna votación abierta por ahora.",
   "📊 Statistiques de la salle": "📊 Estadísticas de la sala",
   "en accomplissant des quêtes. Dépensez-les pour débloquer des avantages, puis équipez-en jusqu": "completando misiones. Gástalas para desbloquear ventajas y equipa hasta 2 en tus próximas carreras.",
-  "Configurer ton profil pour cette salle effacera définitivement votre carrière actuelle. Vous pouvez la reprendre depuis l": "Configurar tu perfil para esta sala borrará definitivamente tu carrera actual. Puedes retomarla desde el inicio."
+  "Configurer ton profil pour cette salle effacera définitivement votre carrière actuelle. Vous pouvez la reprendre depuis l": "Configurar tu perfil para esta sala borrará definitivamente tu carrera actual. Puedes retomarla desde el inicio.",
+  "Les e-mails sont réparés": "Los correos ya funcionan",
+  "Un problème empêchait les e-mails d'arriver : il a été corrigé. N'hésitez pas à créer votre compte, ou à modifier votre mot de passe.": "Un problema impedía que llegaran los correos: ya está corregido. No dudes en crear tu cuenta o en cambiar tu contraseña.",
+  "👤 Mon compte": "👤 Mi cuenta"
 } };

@@ -5206,5 +5206,8 @@ window.I18N_UI = { ar: {
   "Aucun vote ouvert pour l'instant.": "لا يوجد تصويت مفتوح حاليًا.",
   "📊 Statistiques de la salle": "📊 إحصائيات الغرفة",
   "en accomplissant des quêtes. Dépensez-les pour débloquer des avantages, puis équipez-en jusqu": "بإنجاز المهام. أنفقها لفتح المزايا، ثم جهّز حتى 2 منها لمسيراتك القادمة.",
-  "Configurer ton profil pour cette salle effacera définitivement votre carrière actuelle. Vous pouvez la reprendre depuis l": "إعداد ملفك لهذه الغرفة سيمحو مسيرتك الحالية نهائيًا. يمكنك استئنافها من الصفحة الرئيسية."
+  "Configurer ton profil pour cette salle effacera définitivement votre carrière actuelle. Vous pouvez la reprendre depuis l": "إعداد ملفك لهذه الغرفة سيمحو مسيرتك الحالية نهائيًا. يمكنك استئنافها من الصفحة الرئيسية.",
+  "Les e-mails sont réparés": "تم إصلاح رسائل البريد",
+  "Un problème empêchait les e-mails d'arriver : il a été corrigé. N'hésitez pas à créer votre compte, ou à modifier votre mot de passe.": "كانت هناك مشكلة تمنع وصول رسائل البريد، وقد تم إصلاحها. لا تتردد في إنشاء حسابك أو تغيير كلمة مرورك.",
+  "👤 Mon compte": "👤 حسابي"
 } };
