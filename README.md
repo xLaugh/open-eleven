@@ -21,23 +21,24 @@ Tout commence par la **création de votre joueur** : nationalité, poste, origin
 
 Ce qui vous attend au fil des saisons :
 
-- 🌍 **223 nationalités** jouables des cinq continents — quasiment toute la planète foot — dont **onze territoires hors FIFA à double sélection possible** (Groenland ou Danemark, Guadeloupe ou France, Zanzibar ou Tanzanie…), et **1195 clubs** sur 5 divisions (Régional · D3 · D2 · D1 · Élite), chaque nation avec **sa propre pyramide** (le « D1 » d'un petit pays équivaut à la D3 ou au Régional d'un grand championnat)
-- ⚡ Plus de **270 événements à choix** qui font et défont votre carrière
+- 🌍 **223 nationalités** jouables des cinq continents — quasiment toute la planète foot — dont **onze territoires hors FIFA à double sélection possible** (Groenland ou Danemark, Guadeloupe ou France, Zanzibar ou Tanzanie…), et **1266 clubs** sur 6 divisions (Régional · D4 · D3 · D2 · D1 · Élite), chaque nation avec **sa propre pyramide** (le « D1 » d'un petit pays équivaut à la D3 ou au Régional d'un grand championnat). Votre carrière peut commencer tout en bas, dans un club régional
+- 🏟️ Les **grands clubs** finissent plus souvent en haut du classement, mais doivent, comme tout le monde, gagner leur place européenne
+- ⚡ Plus de **320 événements à choix** qui font et défont votre carrière, et **60 brèves** de saison
 - 🎯 Des moments décisifs interactifs : penalty de finale, barrage de montée, derby…
 - 💸 Transferts (montants réalistes), prêts, **blessures** (dont graves et fins de carrière brutales), **capitanat**, sélection nationale
 - 📈 La **valeur marchande** de votre joueur, suivie en direct et courbe à l'appui du premier contrat à la retraite
 - ⏳ Une longévité poussée **jusqu'à 42 ans** — et au-delà pour de rares vétérans acharnés (jusqu'à 50 ans), mais à très bas niveau, les jambes en moins
 - 🃏 Une **fiche de légende** en fin de carrière, avec votre rang, votre palmarès et votre percentile mondial
-- 🗣️ Disponible en **français et en anglais**
+- 🗣️ Disponible en **français, anglais, espagnol et arabe** (avec une mise en page de droite à gauche pour l'arabe), chaque langue à sa propre adresse : [/](https://openeleven.laugh.yt), [/en/](https://openeleven.laugh.yt/en/), [/es/](https://openeleven.laugh.yt/es/), [/ar/](https://openeleven.laugh.yt/ar/)
 
 ## 🏆 Trophées & compétitions
 
 En club comme en sélection, tout se joue :
 
 - 🎖️ **Championnat** et **Coupe Nationale** (la gagner, même en D2, ouvre les portes des compétitions continentales)
-- 👑 **Coupe des Champions** sur les cinq continents, plus des paliers secondaires selon la profondeur de chacun : **Trophée** (Europe, Asie, Afrique, Amérique) et **Bouclier** (Europe, Asie)
-- 🏆 **Coupe du Monde**
-- 🌍 Le championnat continental de votre nation : **Euro**, **Coupe d'Amérique**, **Coupe d'Afrique des Nations**, **Coupe d'Asie**, **Coupe d'Océanie** — plus la **Ligue des Sélections** européenne, disputée entre deux grands tournois, et son pendant pour les 22 nations arabes : la **Coupe arabe**
+- 👑 **Coupe des Champions** sur les cinq continents, plus des paliers secondaires selon la profondeur de chacun : **Trophée** (Europe, Asie, Afrique, Amérique) et **Bouclier** (Europe, Asie). On s'y qualifie **au classement de la saison passée**, comme dans la réalité : top 4 en Angleterre, Espagne, Italie et Allemagne, top 3 en France, et des places en Trophée et en Bouclier plus nombreuses pour les championnats moyens et petits
+- 🏆 **Coupe du Monde** à 48, avec des **qualifications** jouées par toutes les nations du monde : seules les qualifiées y vont, et les barrages se jouent en moment décisif
+- 🌍 Le championnat continental de votre nation, lui aussi après qualifications : **Euro**, **Coupe d'Amérique**, **Coupe d'Afrique des Nations**, **Coupe d'Asie**, **Coupe d'Océanie** — plus la **Ligue des Sélections** européenne, en quatre divisions avec montées et descentes, disputée entre deux grands tournois, et son pendant pour les 22 nations arabes : la **Coupe arabe**
 - 🥇 Les **Jeux Olympiques** (tournoi U23, médailles or, argent et bronze) et leurs équivalents continentaux : **Jeux asiatiques**, **Jeux africains**, **Jeux panaméricains** et **Jeux du Pacifique**, proposés à ceux que le grand tournoi de l'année n'a pas retenus
 - ⭐ Le **Ballon d'Or**, pour les plus grands, et son pendant continental — **Asie, Afrique, Océanie** — pour des talents parfois moins sous les projecteurs (les deux sont cumulables sur une même carrière)
 - 👟 Le **Soulier d'Or**, pour les serial buteurs
@@ -50,6 +51,7 @@ En club comme en sélection, tout se joue :
 | 🗓️ **Défi du jour** | Le même profil imposé pour tout le monde, déterministe : le meilleur score l'emporte. |
 | 🆚 **Duel** | Par lien ou par pseudo : la même carrière de départ rejouée, deux légendes comparées à la fin, score vérifié par le serveur. |
 | 🎬 **Mode Histoire** | Revivez des carrières inspirées des plus grands et tentez de faire mieux qu'elles. |
+| 🏟️ **Salle** | Jusqu'à 4 amis, deux modes au choix. **Ensemble** : tous dans le même club, club de départ et transferts votés, finales au résultat partagé. **Rivaux** : chacun sa carrière et son club, jamais le même ; les saisons avancent ensemble, avec les nouvelles des rivaux et un classement au score. |
 
 ## ✨ Et de quoi revenir chaque jour
 
@@ -59,7 +61,8 @@ En club comme en sélection, tout se joue :
 - 🎯 Des **quêtes** du jour, de la semaine et légendaires
 - 🔥 Des **séries** à entretenir
 - 🏛️ Un **Panthéon** triable (score, trophées, note, fortune…) qui archive vos plus belles carrières, fiche complète consultable à l'appui
-- 👥 Un **compte cloud optionnel** : progression synchronisée entre appareils, amis, profils publics consultables et classement mondial
+- 👥 Un **compte cloud optionnel** : progression synchronisée entre appareils, **toutes vos carrières gardées** (jusqu'à 1000, favorites conservées pour toujours), amis, avatar, profils publics, notifications en direct et classement mondial
+- 📜 Un écran **Nouveautés** qui présente chaque version du jeu
 
 ## ▶️ Comment y jouer
 
@@ -77,6 +80,8 @@ docker compose up -d --build
 Le jeu répond alors sur l'adresse indiquée dans `.env` (par défaut http://localhost). Le fichier [`.env.example`](.env.example) décrit chaque réglage : avec un nom de domaine dans `SITE_ADDRESS`, le certificat HTTPS est obtenu et renouvelé tout seul ; avec `SMTP_URL`, les inscriptions sont confirmées par e-mail et le mot de passe oublié fonctionne.
 
 Les données vivent dans le volume Docker `db-data`. Pour une sauvegarde : `docker compose exec db pg_dump -U openeleven openeleven > sauvegarde.sql`.
+
+Pour que les e-mails arrivent à destination (et pas en indésirables), le domaine de `MAIL_FROM` doit déclarer votre fournisseur d'envoi dans son DNS : **SPF**, **DKIM** et **DMARC**, aux valeurs que donne le fournisseur.
 
 ## 🛠️ Développement
 
@@ -114,7 +119,9 @@ Les tests rejouent 240 carrières de référence et vérifient qu'elles restent 
 
 Chaque version a sa note, écrite pour les joueurs et affichée dans l'écran « 📜 Nouveautés » de l'accueil : une entrée en tête de [`packages/content/src/changelog.ts`](packages/content/src/changelog.ts), au numéro de `ENGINE_VERSION`. `npm test` échoue tant qu'elle manque.
 
-**Traduction anglaise.** Le pack `packages/web/public/i18n-data.js` associe chaque texte français du contenu à sa traduction. Modifier ou ajouter un texte du contenu fait échouer `npm test` tant qu'il n'est pas traduit ; l'outil `node packages/web/scripts/i18n.js` dit quoi (`--missing` sort un JSON à remplir, `--add` le fusionne, `--prune` retire les entrées devenues inutiles).
+**Traductions (anglais, espagnol, arabe).** Le français est la langue source. Chaque langue a son pack dans `packages/web/public` (`i18n-data.js` pour l'anglais, `i18n-es.js`, `i18n-ar.js`), qui associe chaque texte français à sa traduction ; seul celui de la langue choisie est téléchargé. L'interface anglaise est dans `packages/web/src/i18n.ts`, celles de l'espagnol et de l'arabe dans leur pack. Modifier ou ajouter un texte fait échouer `npm test` tant qu'il n'est pas traduit dans les trois langues ; l'outil `node packages/web/scripts/i18n.js --lang <en|es|ar>` dit quoi (`--missing` sort un JSON à remplir, `--add` le fusionne, `--prune` retire les entrées devenues inutiles). Un texte de l'interface passe par `T("…")`, sinon il reste en français dans les autres langues.
+
+**Une adresse par langue.** À l'assemblage, `packages/web/scripts/seo.js` génère `/en/`, `/es/` et `/ar/` depuis `index.html` (titre, description et aperçu de partage traduits, langue et sens de lecture, liens `hreflang`), plus `robots.txt` et `sitemap.xml`. C'est l'adresse qui fixe la langue de la page.
 
 **Pile complète sous Docker, avec un faux serveur d'e-mails** (pour les parcours de compte) :
 
