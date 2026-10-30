@@ -224,6 +224,41 @@ test("les grands championnats ont un échelon régional, proposé au départ", (
   assert.ok(reg > 40 && reg < 260, "un départ « Rég. » doit être possible sans être la règle : " + reg + "/400");
 });
 
+test("un champion n'est jamais relégué (titre de saison, titre d'événement, saison de salle)", () => {
+  const { loadContent } = require("./load-engine");
+  const C = loadContent();
+  const club = C.CLUBS.find((c) => c.countryId === "be" && c.level === "d1"); // D1 = première division en Belgique
+  let titles = 0;
+  for (let i = 0; i < 400; i++) {
+    E.setSeed(7000 + i);
+    const s = E.replayDuel(555, Array(400).fill(0));
+    Object.assign(s, { careerEnded: false, retiring: false, age: 26, club, loan: null, squad: "first", injuryWeeks: 0, seasonInjuryWeeks: 0 });
+    s.clubLevels = {};
+    s.stats = { t: 40, p: 40, m: 40, c: 40 }; // saison catastrophique : la relégation menace
+    s.seasonTrophies = ["league"]; // titre accordé par un événement
+    E.setSeed(9000 + i);
+    const report = E.playSeason(s);
+    assert.ok(report.trophies.includes("league"));
+    titles++;
+    assert.ok(!report.relegated && !report.relegationPlayoff, "champion envoyé en relégation");
+    assert.equal(report.leaguePos, 1);
+  }
+  assert.equal(titles, 400);
+  // Salle : la saison du club est tirée en commun ; un titre exclut toute descente.
+  const s = E.replayDuel(556, Array(400).fill(0));
+  s.club = club;
+  let roomTitles = 0;
+  for (let seed = 1; seed < 20000 && roomTitles < 200; seed++) {
+    s.roomClub = { seed, teamRating: 5 };
+    const r = E.roomClubSeason(s, "d1", true);
+    if (!r.title) continue;
+    roomTitles++;
+    assert.ok(!r.relegDirect && !r.relegPlayoff, "champion de salle envoyé en relégation (graine " + seed + ")");
+  }
+  assert.ok(roomTitles >= 50, "pas assez de titres tirés : " + roomTitles);
+  E.clearSeed();
+});
+
 test("salle « Rivaux » : le club d'un rival n'est jamais proposé (formation, transfert, prêt)", () => {
   const { loadContent } = require("./load-engine");
   const C = loadContent();

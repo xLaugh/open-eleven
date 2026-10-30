@@ -80,7 +80,8 @@ export function roomClubSeason(s: CareerState, lvl: LevelId, isTopFlight: boolea
   let relegBase = BALANCE.relegationChance[lvl] || 0;
   if (relegBase && lvl === "d1" && s.club.level === "elite") relegBase *= BALANCE.eliteRelegShield;
   const promotedNow = title && !isTopFlight;
-  const relegation = !promotedNow && !playoff && relegBase > 0 && d[2] < relegBase * clamp(1 - (rating - 6.3) * 0.35, 0.2, 1.6);
+  // Un champion ne descend jamais (le titre et la relégation étaient tirés séparément).
+  const relegation = !title && !playoff && relegBase > 0 && d[2] < relegBase * clamp(1 - (rating - 6.3) * 0.35, 0.2, 1.6);
   const relegDirect = relegation && rating <= BALANCE.relegDirectRating;
   const relegPlayoff = relegation && !relegDirect;
   const cupFinal = d[3] < BALANCE.cupChance[lvl] * BALANCE.cupFinalReachMult * boost;

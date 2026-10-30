@@ -4418,7 +4418,8 @@ window.I18N_DATA = { es: {
  "Espagnol, arabe et mode Rivaux": "Español, árabe y modo Rivales",
  "Le jeu se joue maintenant en espagnol et en arabe, avec une mise en page de droite à gauche pour l'arabe.": "El juego ya se puede jugar en español y en árabe, con un diseño de derecha a izquierda para el árabe.",
  "Salles : nouveau mode Rivaux. Chacun sa carrière et son club, jamais le même que les autres. Les saisons avancent ensemble, et après chacune, vous recevez les nouvelles de vos rivaux et votre place au classement.": "Salas: nuevo modo Rivales. Cada uno su carrera y su club, nunca el mismo que los demás. Las temporadas avanzan juntas y, tras cada una, recibes noticias de tus rivales y tu puesto en la clasificación.",
- "Des textes restaient en français dans les autres langues (accueil, compte, duels, salles, fiche finale) : ils sont traduits.": "Algunos textos seguían en francés en los demás idiomas (inicio, cuenta, duelos, salas, ficha final): ya están traducidos."
+ "Des textes restaient en français dans les autres langues (accueil, compte, duels, salles, fiche finale) : ils sont traduits.": "Algunos textos seguían en francés en los demás idiomas (inicio, cuenta, duelos, salas, ficha final): ya están traducidos.",
+ "Un club champion pouvait être envoyé au barrage de maintien, et relégué s'il le perdait : son titre le protège désormais, en solo comme en salle.": "Un club campeón podía acabar en la promoción de permanencia y descender si la perdía: ahora su título lo protege, en solitario y en sala."
 } };
 window.I18N_UI = { es: {
   "Écrivez une carrière de footballeur, saison après saison.": "Escribe una carrera de futbolista, temporada tras temporada.",

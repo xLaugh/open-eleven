@@ -26,6 +26,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       { kind: "new", text: "Le jeu se joue maintenant en espagnol et en arabe, avec une mise en page de droite à gauche pour l'arabe." },
       { kind: "new", text: "Salles : nouveau mode Rivaux. Chacun sa carrière et son club, jamais le même que les autres. Les saisons avancent ensemble, et après chacune, vous recevez les nouvelles de vos rivaux et votre place au classement." },
       { kind: "fix", text: "Des textes restaient en français dans les autres langues (accueil, compte, duels, salles, fiche finale) : ils sont traduits." },
+      { kind: "fix", text: "Un club champion pouvait être envoyé au barrage de maintien, et relégué s'il le perdait : son titre le protège désormais, en solo comme en salle." },
       { kind: "balance", text: "Le Maroc rejoint les grandes sélections : 10e force mondiale en Coupe du Monde, devant l'Italie, la Belgique et l'Uruguay." },
     ],
   },

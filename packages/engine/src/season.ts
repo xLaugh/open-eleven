@@ -191,8 +191,11 @@ export function playSeason(s: CareerState) {
     // géants historiques ne coulent presque jamais plus bas que la D1
     let relegBase = BALANCE.relegationChance[lvl] || 0;
     if (relegBase && lvl === "d1" && s.club.level === "elite") relegBase *= BALANCE.eliteRelegShield;
+    // Un champion ne descend jamais, titre gagné au fil de la saison ou accordé par un
+    // événement (il était sinon envoyé au barrage de maintien, et classé 17ᵉ s'il le perdait).
+    // Testé APRÈS le tirage, qui reste consommé : seules les carrières touchées changent.
     if (!report.promoted && !report.playoffRun && relegBase > 0 &&
-        rng() < relegBase * clamp(1 - (rating - 6.3) * 0.35, 0.2, 1.6)) {
+        rng() < relegBase * clamp(1 - (rating - 6.3) * 0.35, 0.2, 1.6) && !report.trophies.includes("league")) {
       // La descente ne tombe plus en silence : elle se joue en BARRAGE DE MAINTIEN,
       // moment décisif interactif — symétrique du barrage de montée. Une saison
       // vraiment catastrophique reste toutefois sans appel (relégation directe).

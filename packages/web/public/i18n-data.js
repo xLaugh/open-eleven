@@ -4427,5 +4427,6 @@ window.I18N_DATA = { en: {
  "Espagnol, arabe et mode Rivaux": "Spanish, Arabic and Rivals mode",
  "Le jeu se joue maintenant en espagnol et en arabe, avec une mise en page de droite à gauche pour l'arabe.": "The game can now be played in Spanish and Arabic, with a right-to-left layout for Arabic.",
  "Salles : nouveau mode Rivaux. Chacun sa carrière et son club, jamais le même que les autres. Les saisons avancent ensemble, et après chacune, vous recevez les nouvelles de vos rivaux et votre place au classement.": "Rooms: new Rivals mode. Everyone has their own career and club, never the same as the others. Seasons move forward together, and after each one you get news from your rivals and your place in the ranking.",
- "Des textes restaient en français dans les autres langues (accueil, compte, duels, salles, fiche finale) : ils sont traduits.": "Some texts were still in French in other languages (home screen, account, duels, rooms, final card): they are now translated."
+ "Des textes restaient en français dans les autres langues (accueil, compte, duels, salles, fiche finale) : ils sont traduits.": "Some texts were still in French in other languages (home screen, account, duels, rooms, final card): they are now translated.",
+ "Un club champion pouvait être envoyé au barrage de maintien, et relégué s'il le perdait : son titre le protège désormais, en solo comme en salle.": "A champion club could be sent to the relegation play-off, and go down if it lost: its title now protects it, in solo as in rooms."
 } };
