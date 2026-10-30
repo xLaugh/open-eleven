@@ -19,6 +19,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "10.90",
+    date: "2026-10-30",
+    title: "Espagnol, arabe et mode Rivaux",
+    items: [
+      { kind: "new", text: "Le jeu se joue maintenant en espagnol et en arabe, avec une mise en page de droite à gauche pour l'arabe." },
+      { kind: "new", text: "Salles : nouveau mode Rivaux. Chacun sa carrière et son club, jamais le même que les autres. Les saisons avancent ensemble, et après chacune, vous recevez les nouvelles de vos rivaux et votre place au classement." },
+      { kind: "fix", text: "Des textes restaient en français dans les autres langues (accueil, compte, duels, salles, fiche finale) : ils sont traduits." },
+      { kind: "balance", text: "Le Maroc rejoint les grandes sélections : 10e force mondiale en Coupe du Monde, devant l'Italie, la Belgique et l'Uruguay." },
+    ],
+  },
+  {
     version: "10.89",
     date: "2026-10-28",
     title: "Coupes d'Europe au classement et vingt nouveaux événements",
@@ -30,7 +41,6 @@ export const CHANGELOG: ChangelogEntry[] = [
       { kind: "new", text: "Dix nouveaux événements pour les débuts (16-19 ans) : bourse d'une université américaine, éducateur renvoyé, douleur cachée avant la vitrine des pros, semaine avec l'équipe première, duel avec votre rival au tournoi des centres… Les premières saisons se ressemblent beaucoup moins." },
       { kind: "new", text: "Cinq pour la fin de carrière (baisse de salaire ou offres de l'étranger, mémoires, enfant au centre de formation, ovation chez l'ennemi…) et cinq pour le cœur de carrière (coéquipier en détresse, tentative de corruption, coups francs, podcast sans filtre…)." },
       { kind: "new", text: "24 nouvelles brèves de saison, surtout pour les jeunes années et après 33 ans, qui n'en avaient presque pas." },
-      { kind: "balance", text: "Le Maroc rejoint les grandes sélections : 10e force mondiale en Coupe du Monde, devant l'Italie, la Belgique et l'Uruguay." },
     ],
   },
   {
