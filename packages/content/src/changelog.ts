@@ -19,6 +19,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "10.91",
+    date: "2026-11-01",
+    title: "Trente nouveaux événements",
+    items: [
+      { kind: "new", text: "Seize événements propres à votre poste : fiches des tireurs pour les gardiens, marquage de la star adverse pour les défenseurs, numéro 10 historique pour les milieux, panne de buts pour les attaquants…" },
+      { kind: "new", text: "Des histoires pour le bas de la pyramide (petit boulot, terrain inondé, car en panne), pour les joueurs prêtés, et selon votre profil et vos traits." },
+      { kind: "new", text: "Tous ces événements proposent trois choix, et certains ne s'ouvrent que si vous en avez les moyens." },
+    ],
+  },
+  {
     version: "10.90",
     date: "2026-10-30",
     title: "Espagnol, arabe et mode Rivaux",

@@ -5309,6 +5309,576 @@ export const EVENTS: GameEvent[] = [
       ] },
     ],
   },
+
+  // ══════════════ NOUVEAUX : PAR POSTE ══════════════
+  // Chaque poste n'avait que huit événements à lui : on en ajoute quatre, tous à trois choix.
+  {
+    id: "ev_gk_penalty_files", cat: "Terrain", icon: "🧤", w: 10,
+    cond: { aMin: 20, aMax: 34, pos: ["gk"] },
+    text: "Veille de quart de finale de coupe. L'analyste vidéo vous tend une tablette : les habitudes de chaque tireur adverse, penalty par penalty.",
+    options: [
+      { label: "Tout étudier, jusque tard dans la nuit", hint: "Studieux", outcomes: [
+        { weight: 50, text: "Séance de tirs au but : vous partez du bon côté trois fois. Héros de la soirée.", fx: { rep: 6, mor: 7, m: 2 } },
+        { weight: 30, text: "Vous savez tout, mais vous jouez fatigué. Qualification arrachée de justesse.", fx: { form: -4, m: 2 } },
+        { weight: 20, text: "Les tireurs ont changé leurs habitudes. Vous plongez à contretemps, et la presse s'en amuse.", fx: { mor: -5, rep: -2 } },
+      ] },
+      { label: "Vous fier à votre instinct", hint: "Instinct", outcomes: [
+        { weight: 50, text: "Vous lisez les corps, pas les fiches : deux arrêts décisifs.", fx: { rep: 5, mor: 5 } },
+        { weight: 50, text: "L'instinct vous trahit ce soir. Élimination aux tirs au but.", fx: { mor: -6 } },
+      ] },
+      { label: "Partager la tablette avec votre doublure", hint: "Collectif", outcomes: [
+        { weight: 60, text: "Vous la travaillez à deux. Le vestiaire salue l'état d'esprit, et vous êtes prêt.", fx: { team: 6, m: 2, rep: 2 } },
+        { weight: 40, text: "Votre doublure en profite pour se montrer à l'entraînement. Le coach hésite.", fx: { team: 3, coach: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_gk_feet_play", cat: "Identité de jeu", icon: "👟", w: 10,
+    cond: { aMin: 19, aMax: 30, pos: ["gk"] },
+    text: "Le nouveau coach veut un gardien qui relance court, au pied, même sous le pressing. Vos premières tentatives ont fait trembler tout le stade.",
+    options: [
+      { label: "Travailler le jeu au pied tous les jours", hint: "Patience", outcomes: [
+        { weight: 60, text: "Des centaines de passes plus tard, vous devenez le premier relanceur de l'équipe.", fx: { t: 4, coach: 6, m: 2 } },
+        { weight: 40, text: "Les progrès sont lents, et une relance ratée coûte un but. Vous tenez bon.", fx: { t: 2, mor: -3 } },
+      ] },
+      { label: "Dire au coach que ce n'est pas votre jeu", hint: "Franchise", outcomes: [
+        { weight: 40, text: "Il apprécie la franchise et adapte le plan de jeu.", fx: { coach: 3, mor: 3 } },
+        { weight: 60, text: "« Ici, tout le monde joue au pied. » Vous perdez votre place pour quelques matchs.", fx: { coach: -7, form: -4, mor: -4 } },
+      ] },
+      { label: "Dégager long à chaque fois, sans rien dire", hint: "Risqué", outcomes: [
+        { weight: 45, text: "Vos dégagements trouvent l'avant-centre : le coach finit par en faire une arme.", fx: { coach: 2, rep: 2 } },
+        { weight: 55, text: "Le coach y voit un refus d'obéir. Le banc vous attend.", fx: { coach: -8, mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_gk_howler_viral", cat: "Réseaux", icon: "🙈", w: 9,
+    cond: { aMin: 19, aMax: 35, pos: ["gk"] },
+    text: "Un ballon anodin vous passe sous le pied et finit au fond. Dix secondes de vidéo, des millions de vues, et votre visage partout sur les réseaux.",
+    options: [
+      { label: "En rire publiquement", hint: "Second degré", outcomes: [
+        { weight: 60, text: "Votre vidéo d'autodérision fait plus de vues que la boulette. Le public vous adopte.", fx: { rep: 4, mor: 4, c: 3 } },
+        { weight: 40, text: "Certains supporters trouvent que vous prenez ça un peu trop à la légère.", fx: { rep: -1, mor: 1 } },
+      ] },
+      { label: "Couper les réseaux et vous remettre au travail", hint: "Focus", outcomes: [
+        { weight: 65, text: "Trois matchs plus tard, une parade réflexe efface le souvenir.", fx: { m: 3, form: 3 } },
+        { weight: 35, text: "Le silence laisse le mème vivre sa vie. Chaque ballon aérien est sifflé.", fx: { mor: -4 } },
+      ] },
+      { label: "Demander à souffler un match ou deux", outcomes: [
+        { weight: 55, text: "Le coach accepte. Vous revenez reposé et concentré.", fx: { mor: 3, form: 2, coach: -1 } },
+        { weight: 45, text: "Votre doublure fait deux grands matchs. Votre place n'est plus garantie.", fx: { coach: -4, mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_gk_number_two", cat: "Mercato", icon: "🥈", w: 9,
+    cond: { aMin: 24, aMax: 36, pos: ["gk"] },
+    text: "{club} recrute un gardien international, présenté comme le nouveau numéro un. Le directeur sportif vous assure que « la concurrence sera ouverte ».",
+    options: [
+      { label: "Relever le défi et vous battre pour la place", hint: "Combatif", outcomes: [
+        { weight: 50, text: "Vous êtes impeccable en préparation : la place reste à vous.", fx: { m: 3, mor: 6, coach: 4 } },
+        { weight: 50, text: "Il est simplement plus fort cette saison. Vous voilà sur le banc.", fx: { mor: -6, form: -3 } },
+      ] },
+      { label: "Demander à partir", hint: "Temps de jeu", outcomes: [
+        { weight: 60, text: "Le club comprend et écoute les offres.", fx: { mor: 2, transfer: { d: 0 } } },
+        { weight: 40, text: "Le club refuse de vous laisser filer avant la fin du mercato. L'ambiance se tend.", fx: { coach: -5, mor: -4 } },
+      ] },
+      { label: "Accueillir le nouveau venu et l'aider à s'intégrer", hint: "Classe", outcomes: [
+        { weight: 60, text: "Votre attitude marque le vestiaire. Le coach vous confie la Coupe Nationale.", fx: { team: 7, coach: 4, c: 2 } },
+        { weight: 40, text: "Il s'intègre très vite, et vous jouez de moins en moins.", fx: { team: 4, mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_def_star_marking", cat: "Terrain", icon: "🛡️", w: 10,
+    cond: { aMin: 21, aMax: 33, pos: ["def"] },
+    text: "Grand match en vue. Le coach vous prend à part : « Tu suis leur numéro 10 partout. Partout. Même aux toilettes. »",
+    options: [
+      { label: "Le coller pendant quatre-vingt-dix minutes", hint: "Discipline", outcomes: [
+        { weight: 55, text: "Il ne touche pas un ballon. Les journaux parlent de votre match parfait.", fx: { rep: 6, coach: 6, m: 2 } },
+        { weight: 45, text: "Vous le suivez si bien que vous laissez un boulevard derrière vous. But adverse.", fx: { coach: -3, mor: -3 } },
+      ] },
+      { label: "Le provoquer pour le sortir de son match", hint: "Provocation", outcomes: [
+        { weight: 40, text: "Il perd ses nerfs et prend un carton rouge. Mission accomplie.", fx: { rep: 3, mor: 5, coach: 3 } },
+        { weight: 60, text: "L'arbitre vous a à l'œil. Carton jaune, puis rouge.", fx: { ban: 2, coach: -4, rep: -2 } },
+      ] },
+      { label: "Proposer une défense de zone à la place", hint: "Tactique", outcomes: [
+        { weight: 45, text: "Le coach adopte l'idée. Le bloc tient, et vous montez dans son estime.", fx: { coach: 5, m: 3 } },
+        { weight: 55, text: "« Je ne t'ai pas demandé ton avis. » Vous jouez le match en marquage, crispé.", fx: { coach: -4, form: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_def_set_piece_goals", cat: "Terrain", icon: "🎯", w: 9,
+    cond: { aMin: 20, aMax: 32, pos: ["def"] },
+    text: "Trois buts de la tête sur corner en un mois. Le coach veut que vous montiez sur chaque coup de pied arrêté, quitte à laisser la défense à découvert.",
+    options: [
+      { label: "Monter sur tous les coups de pied arrêtés", hint: "Ambitieux", outcomes: [
+        { weight: 55, text: "Vous terminez la saison meilleur buteur défenseur du championnat.", fx: { rep: 6, mor: 5, t: 1 } },
+        { weight: 45, text: "Deux contres assassins dans votre dos. Le public grogne.", fx: { mor: -4, coach: -2 } },
+      ] },
+      { label: "Ne monter que dans les matchs serrés", hint: "Équilibre", outcomes: [
+        { weight: 70, text: "Un but de la tête à la 89ᵉ offre la victoire dans un derby.", fx: { rep: 4, mor: 5 } },
+        { weight: 30, text: "Les matchs serrés se gagnent sans vous. Pas grave, la défense tient.", fx: { m: 1 } },
+      ] },
+      { label: "Laisser la place à un coéquipier plus grand", hint: "Collectif", outcomes: [
+        { weight: 100, text: "Vous restez couvrir la défense. Le vestiaire apprécie l'abnégation.", fx: { team: 4, coach: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_def_butcher_label", cat: "Médias", icon: "🔪", w: 9,
+    cond: { aMin: 20, aMax: 33, pos: ["def"] },
+    text: "Trois cartons en trois matchs. Un consultant vous surnomme « le Boucher » à la télévision, et les arbitres semblent l'avoir entendu.",
+    options: [
+      { label: "Adoucir votre jeu", hint: "Prudent", outcomes: [
+        { weight: 60, text: "Moins de fautes, plus d'anticipation : votre lecture du jeu progresse.", fx: { m: 3, t: 2 } },
+        { weight: 40, text: "Les attaquants ont compris que vous n'osez plus. Ils vous provoquent.", fx: { form: -3, mor: -2 } },
+      ] },
+      { label: "Assumer : un défenseur doit faire peur", hint: "Rugueux", outcomes: [
+        { weight: 50, text: "Les ailiers adverses évitent votre côté. Le surnom devient une fierté.", fx: { rep: 3, mor: 4 } },
+        { weight: 50, text: "Un tacle de trop, un rouge direct, quatre matchs de suspension.", fx: { ban: 4, coach: -5, rep: -3 } },
+      ] },
+      { label: "Répondre au consultant en direct", hint: "Exposé", outcomes: [
+        { weight: 45, text: "Votre réponse calme et chiffrée fait taire la polémique.", fx: { rep: 4, c: 3 } },
+        { weight: 55, text: "Le ton monte sur le plateau. La ligue vous rappelle à l'ordre.", fx: { rep: -3, coach: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_def_line_leader", cat: "Vestiaire", icon: "📣", w: 10,
+    cond: { aMin: 26, aMax: 35, pos: ["def"] },
+    text: "Le jeune latéral à côté de vous enchaîne les erreurs de placement. Le coach vous charge d'organiser la ligne, et de le recadrer s'il le faut.",
+    options: [
+      { label: "Le guider match après match", hint: "Mentor", outcomes: [
+        { weight: 65, text: "Il progresse à vue d'œil. La défense devient la meilleure du championnat.", fx: { team: 6, c: 3, coach: 4 } },
+        { weight: 35, text: "Il ne retient rien. Vous passez vos matchs à couvrir ses oublis.", fx: { form: -3, mor: -2 } },
+      ] },
+      { label: "Le recadrer sèchement devant tout le monde", hint: "Autorité", outcomes: [
+        { weight: 45, text: "Le choc est salutaire : il se met au niveau.", fx: { coach: 4, team: -2 } },
+        { weight: 55, text: "Il se braque, et le vestiaire vous trouve dur.", fx: { team: -5, mor: -2 } },
+      ] },
+      { label: "Demander au coach de le remplacer", hint: "Cash", outcomes: [
+        { weight: 50, text: "Le coach suit votre avis. La défense se stabilise.", fx: { coach: 2, form: 2 } },
+        { weight: 50, text: "Le jeune l'apprend. Toute la génération du centre vous en veut.", fx: { team: -6 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_mil_tempo_debate", cat: "Identité de jeu", icon: "🔄", w: 10,
+    cond: { aMin: 20, aMax: 32, pos: ["mil"] },
+    text: "Le coach veut un jeu vertical : récupérer, projeter, frapper. Vous, vous êtes un joueur de possession, qui aime garder le ballon.",
+    options: [
+      { label: "Vous adapter au jeu vertical", hint: "Adaptable", outcomes: [
+        { weight: 55, text: "Vos passes laser vers l'avant deviennent l'arme de l'équipe.", fx: { t: 3, coach: 5 } },
+        { weight: 45, text: "Vous perdez des ballons en voulant aller trop vite. Le doute s'installe.", fx: { mor: -4, form: -2 } },
+      ] },
+      { label: "Défendre votre style en réunion", hint: "Convaincu", outcomes: [
+        { weight: 40, text: "Le coach trouve un compromis : possession, puis accélération. Ça marche.", fx: { coach: 3, m: 3 } },
+        { weight: 60, text: "Le débat tourne court. Vous voilà remplaçant pour le prochain match.", fx: { coach: -6, mor: -3 } },
+      ] },
+      { label: "Changer de rôle : plus haut, derrière l'attaquant", hint: "Audace", outcomes: [
+        { weight: 50, text: "Plus près du but, vous trouvez une nouvelle liberté.", fx: { t: 2, rep: 4, mor: 4 } },
+        { weight: 50, text: "Le rôle ne vous va pas : vous êtes perdu entre les lignes.", fx: { form: -4, mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_mil_gps_data", cat: "Préparation", icon: "📡", w: 9,
+    cond: { aMin: 19, aMax: 29, pos: ["mil"] },
+    text: "Les données GPS sont sans appel : vous courez quatre kilomètres de moins par match que les autres milieux. Le préparateur physique affiche le tableau en salle vidéo.",
+    options: [
+      { label: "Courir plus, à tout prix", hint: "Volonté", outcomes: [
+        { weight: 55, text: "Vos chiffres explosent, et votre influence avec.", fx: { p: 4, coach: 4 } },
+        { weight: 45, text: "Vous courez plus, mais moins juste. Les passes décisives se font rares.", fx: { p: 2, form: -3, t: -1 } },
+      ] },
+      { label: "Expliquer que vous courez mieux, pas plus", hint: "Intelligence", outcomes: [
+        { weight: 50, text: "L'analyste vous donne raison : vos courses sont les plus utiles de l'équipe.", fx: { m: 3, coach: 3 } },
+        { weight: 50, text: "« Les chiffres ne mentent pas. » Le coach n'est pas convaincu.", fx: { coach: -4 } },
+      ] },
+      { label: "Engager un préparateur personnel", cond: { minMoney: 1 }, hint: "Investissement", outcomes: [
+        { weight: 70, text: "Programme sur mesure : vous terminez la saison en pleine forme.", fx: { money: -0.5, p: 4, form: 5 } },
+        { weight: 30, text: "Le club n'apprécie pas qu'on contourne son staff.", fx: { money: -0.5, p: 2, coach: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_mil_number_ten", cat: "Club", icon: "🔟", w: 9,
+    cond: { aMin: 22, aMax: 31, pos: ["mil"], minRep: 50 },
+    text: "Le numéro 10 historique de {club} est libre. Le président vous le propose, mais la légende qui l'a porté a fait savoir qu'il « faut le mériter ».",
+    options: [
+      { label: "Le prendre, et assumer la pression", hint: "Ambition", outcomes: [
+        { weight: 50, text: "Vous l'honorez dès le premier match. Le stade scande votre nom.", fx: { rep: 7, mor: 7, c: 2 } },
+        { weight: 50, text: "Chaque passe ratée est comparée à la légende. La pression vous pèse.", fx: { mor: -6, form: -3 } },
+      ] },
+      { label: "Garder votre numéro actuel", hint: "Humilité", outcomes: [
+        { weight: 70, text: "La légende salue publiquement votre humilité.", fx: { rep: 3, mor: 3 } },
+        { weight: 30, text: "Un coéquipier le récupère, et s'y révèle.", fx: { mor: -2 } },
+      ] },
+      { label: "Aller demander sa bénédiction à la légende", hint: "Respect", outcomes: [
+        { weight: 65, text: "Il vous le remet lui-même devant les caméras. Image forte.", fx: { rep: 6, mor: 6, team: 2 } },
+        { weight: 35, text: "Il refuse de vous recevoir. Le numéro reste libre, et la presse s'amuse.", fx: { mor: -3, rep: -1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_mil_holding_role", cat: "Terrain", icon: "⚓", w: 10,
+    cond: { aMin: 28, aMax: 35, pos: ["mil"] },
+    text: "Les jambes ne suivent plus comme avant. Le coach vous propose de reculer d'un cran, en sentinelle devant la défense.",
+    options: [
+      { label: "Accepter et réinventer votre jeu", hint: "Sagesse", outcomes: [
+        { weight: 65, text: "Votre lecture du jeu fait merveille. Une deuxième carrière commence.", fx: { m: 4, coach: 5, mor: 4 } },
+        { weight: 35, text: "Le rôle est plus exigeant que prévu. Il vous faut une demi-saison pour vous y faire.", fx: { form: -3, m: 2 } },
+      ] },
+      { label: "Refuser : vous restez un milieu offensif", hint: "Fierté", outcomes: [
+        { weight: 40, text: "Vous livrez une saison pleine, à l'ancienne. Le coach vous laisse faire.", fx: { rep: 3, mor: 4 } },
+        { weight: 60, text: "Le temps de jeu fond. Le coach mise sur plus jeune.", fx: { coach: -5, mor: -4 } },
+      ] },
+      { label: "Proposer un rôle hybride, selon les matchs", hint: "Compromis", outcomes: [
+        { weight: 55, text: "Le coach adore la flexibilité. Vous devenez indispensable.", fx: { coach: 4, m: 2 } },
+        { weight: 45, text: "À force de changer de rôle, vous ne brillez dans aucun.", fx: { form: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_att_drought", cat: "Crise", icon: "🌵", w: 10,
+    cond: { aMin: 20, aMax: 33, pos: ["att"] },
+    text: "Neuf matchs sans marquer. Les occasions tombent, et vous les manquez toutes. Le public commence à siffler à chaque raté.",
+    options: [
+      { label: "Rester des heures après l'entraînement à frapper", hint: "Travail", outcomes: [
+        { weight: 55, text: "Le déclic arrive enfin : doublé le week-end suivant.", fx: { t: 2, mor: 7, rep: 3 } },
+        { weight: 45, text: "Vous frappez trop, et une douleur à la cuisse vous met au repos.", fx: { inj: 3, mor: -3 } },
+      ] },
+      { label: "Voir un préparateur mental", hint: "Mental", outcomes: [
+        { weight: 65, text: "Vous arrêtez de compter. Les buts reviennent tout seuls.", fx: { m: 4, mor: 5 } },
+        { weight: 35, text: "Ça prend du temps. La série s'allonge encore un peu.", fx: { m: 2, mor: -2 } },
+      ] },
+      { label: "Laisser vos coéquipiers marquer et faire les passes", hint: "Collectif", outcomes: [
+        { weight: 60, text: "Trois passes décisives en deux matchs. Le vestiaire vous porte.", fx: { team: 6, mor: 3 } },
+        { weight: 40, text: "« Un attaquant, ça marque. » La presse s'acharne.", fx: { rep: -3, mor: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_att_penalty_dispute", cat: "Vestiaire", icon: "⚽", w: 10,
+    cond: { aMin: 21, aMax: 32, pos: ["att"] },
+    text: "Penalty à la 80ᵉ, match plié. Vous êtes le tireur désigné, mais votre coéquipier n'est qu'à un but d'un record personnel. Il vous regarde.",
+    options: [
+      { label: "Lui laisser le ballon", hint: "Générosité", outcomes: [
+        { weight: 70, text: "Il marque et fond en larmes. Il ne l'oubliera jamais.", fx: { team: 8, c: 2 } },
+        { weight: 30, text: "Il le manque. Le coach vous reproche d'avoir bousculé la hiérarchie.", fx: { team: 3, coach: -3 } },
+      ] },
+      { label: "Le tirer : c'est votre rôle", hint: "Rigueur", outcomes: [
+        { weight: 70, text: "Lucarne. Le coach apprécie que la hiérarchie soit respectée.", fx: { coach: 3, mor: 2 } },
+        { weight: 30, text: "Vous marquez, mais le vestiaire vous trouve égoïste.", fx: { team: -5 } },
+      ] },
+      { label: "Regarder le banc et laisser le coach décider", hint: "Diplomatie", outcomes: [
+        { weight: 100, text: "Le coach fait signe à votre coéquipier. Vous avez évité la polémique.", fx: { coach: 2, team: 3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_att_hattrick_ball", cat: "Supporters", icon: "🏐", w: 9,
+    cond: { aMin: 19, aMax: 33, pos: ["att"] },
+    text: "Premier triplé de votre carrière. Le ballon du match vous revient, signé par toute l'équipe. Une association vous demande s'il peut être mis aux enchères.",
+    options: [
+      { label: "Le mettre aux enchères pour l'association", hint: "Cœur", outcomes: [
+        { weight: 70, text: "Il part à un prix record. Les dons financent un terrain pour les jeunes.", fx: { rep: 5, mor: 6 } },
+        { weight: 30, text: "Belle soirée, mais l'acheteur revend le ballon le lendemain. La presse s'en amuse.", fx: { rep: 2, mor: -1 } },
+      ] },
+      { label: "Le garder pour vous, en souvenir", outcomes: [
+        { weight: 100, text: "Il trône sur votre cheminée. Chaque matin, il vous rappelle de quoi vous êtes capable.", fx: { mor: 4, m: 1 } },
+      ] },
+      { label: "L'offrir au ramasseur de balles qui pleurait de joie", hint: "Spontané", outcomes: [
+        { weight: 60, text: "La vidéo fait le tour du pays. Un geste qui vaut tous les triplés.", fx: { rep: 6, c: 3, mor: 3 } },
+        { weight: 40, text: "Vos coéquipiers auraient aimé être consultés avant. Ils en rient quand même.", fx: { rep: 4, team: -1 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_att_wing_switch", cat: "Terrain", icon: "↔️", w: 9,
+    cond: { aMin: 20, aMax: 30, pos: ["att"] },
+    text: "Le club recrute un avant-centre de grand gabarit. Le coach veut vous décaler sur l'aile pour jouer à deux.",
+    options: [
+      { label: "Accepter l'aile", hint: "Polyvalence", outcomes: [
+        { weight: 55, text: "Vos centres et vos appels font de lui le meilleur buteur. Et vous, le meilleur passeur.", fx: { t: 3, team: 4, coach: 4 } },
+        { weight: 45, text: "Loin du but, vous vous éteignez. Votre compteur stagne.", fx: { mor: -4, rep: -2 } },
+      ] },
+      { label: "Réclamer l'axe", hint: "Caractère", outcomes: [
+        { weight: 40, text: "Vous marquez dès votre retour dans l'axe. Le coach change d'avis.", fx: { rep: 4, mor: 5 } },
+        { weight: 60, text: "Le coach maintient son choix, et vous voilà en conflit ouvert.", fx: { coach: -7, mor: -3 } },
+      ] },
+      { label: "Proposer de jouer en duo, en pointe", hint: "Tactique", outcomes: [
+        { weight: 50, text: "Le duo fonctionne à merveille. Les défenses ne savent plus qui suivre.", fx: { team: 5, coach: 3, rep: 3 } },
+        { weight: 50, text: "Vous vous marchez sur les pieds. Le coach revient à son idée.", fx: { form: -2, coach: -2 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ NOUVEAUX : BAS DE LA PYRAMIDE (Régional, D4, D3) ══════════════
+  {
+    id: "ev_low_day_job", cat: "Vie perso", icon: "🧰", w: 11,
+    cond: { aMin: 18, aMax: 30, levels: ["regional", "d4"] },
+    text: "Le club paie à peine le carburant. Le garage du coin vous propose un emploi le matin : un vrai salaire, mais des entraînements en pointillé.",
+    options: [
+      { label: "Accepter l'emploi", hint: "Sécurité", outcomes: [
+        { weight: 60, text: "Vous tenez les deux. Les mains sales le matin, le terrain le soir.", fx: { money: 0.3, m: 3, form: -3 } },
+        { weight: 40, text: "La fatigue s'accumule. Vous jouez sur les nerfs.", fx: { money: 0.3, form: -6, mor: -2 } },
+      ] },
+      { label: "Refuser et tout miser sur le foot", hint: "Pari", outcomes: [
+        { weight: 50, text: "Vous vous entraînez comme un pro. Un club de l'échelon au-dessus vous remarque.", fx: { p: 3, t: 2, transfer: { d: 1 } } },
+        { weight: 50, text: "Les fins de mois sont rudes. Mais vous progressez.", fx: { t: 2, mor: -3 } },
+      ] },
+      { label: "Demander au président un emploi au club", hint: "Malin", outcomes: [
+        { weight: 55, text: "Vous voilà intendant le matin et joueur l'après-midi. Le club vous adore.", fx: { team: 5, money: 0.1, coach: 3 } },
+        { weight: 45, text: "Il n'y a rien. Mais il note votre motivation.", fx: { coach: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_low_pitch_flooded", cat: "Insolite", icon: "🌧️", w: 10,
+    cond: { aMin: 17, aMax: 34, levels: ["regional", "d4", "d3"] },
+    text: "Le terrain est inondé, et le match de demain sera reporté s'il n'est pas praticable. Le président appelle tous les bénévoles disponibles. Il est 22 heures.",
+    options: [
+      { label: "Prendre une raclette et y aller", hint: "Cœur", outcomes: [
+        { weight: 65, text: "À deux heures du matin, le terrain est sauvé. Le match a lieu, et vous marquez.", fx: { team: 7, rep: 3, mor: 5 } },
+        { weight: 35, text: "Le terrain est sauvé, mais vous jouez épuisé.", fx: { team: 6, form: -4 } },
+      ] },
+      { label: "Rester chez vous pour être frais demain", hint: "Professionnel", outcomes: [
+        { weight: 50, text: "Le match est reporté. Vous avez dormi, au moins.", fx: { form: 3 } },
+        { weight: 50, text: "Les bénévoles ont tout fait sans vous. Certains ne vous saluent plus.", fx: { team: -5 } },
+      ] },
+      { label: "Ramener toute votre famille en renfort", hint: "Généreux", outcomes: [
+        { weight: 100, text: "Votre mère prend les commandes, votre père apporte du café. Le club vous adopte pour de bon.", fx: { team: 8, mor: 6, rep: 2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_low_bus_breakdown", cat: "Insolite", icon: "🚌", w: 10,
+    cond: { aMin: 17, aMax: 34, levels: ["regional", "d4", "d3"] },
+    text: "Le car de l'équipe tombe en panne sur l'autoroute, à 80 kilomètres du stade. Coup d'envoi dans deux heures.",
+    options: [
+      { label: "Organiser le covoiturage avec les supporters", hint: "Leader", outcomes: [
+        { weight: 60, text: "Douze voitures de supporters, un convoi joyeux, et une victoire au bout.", fx: { team: 6, rep: 4, c: 3 } },
+        { weight: 40, text: "Vous arrivez à l'heure, mais l'échauffement se fait sur le parking.", fx: { team: 4, form: -2 } },
+      ] },
+      { label: "Faire du stop avec deux coéquipiers", hint: "Folie", outcomes: [
+        { weight: 50, text: "Un routier vous dépose devant le stade. L'histoire fait le tour de la région.", fx: { rep: 5, mor: 5 } },
+        { weight: 50, text: "Personne ne s'arrête. Vous ratez la première mi-temps.", fx: { coach: -4, mor: -3 } },
+      ] },
+      { label: "Attendre la dépanneuse avec le groupe", outcomes: [
+        { weight: 60, text: "Le match est reporté. Une après-midi de cartes et de chants au bord de l'autoroute.", fx: { team: 4, mor: 2 } },
+        { weight: 40, text: "La ligue donne match perdu. Le président est furieux.", fx: { mor: -4 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_low_butcher_sponsor", cat: "Finance", icon: "🥩", w: 9,
+    cond: { aMin: 18, aMax: 32, levels: ["regional", "d4", "d3"] },
+    text: "Le boucher du village, sponsor du club, vous propose une prime : un colis de viande par but marqué. Avec votre visage sur sa vitrine.",
+    options: [
+      { label: "Accepter avec le sourire", hint: "Folklore", outcomes: [
+        { weight: 70, text: "Votre visage trône entre les saucisses. Tout le village vous connaît.", fx: { rep: 3, mor: 4, c: 2 } },
+        { weight: 30, text: "Vos coéquipiers vous surnomment « le Gigot » pour le reste de la saison.", fx: { team: 3, mor: 2 } },
+      ] },
+      { label: "Demander que la prime aille à l'équipe", hint: "Collectif", outcomes: [
+        { weight: 100, text: "Barbecue géant chaque mois. Le vestiaire n'a jamais été aussi soudé.", fx: { team: 8, mor: 3 } },
+      ] },
+      { label: "Refuser poliment", outcomes: [
+        { weight: 60, text: "Il est un peu vexé, mais vous offre quand même un saucisson.", fx: { mor: 1 } },
+        { weight: 40, text: "Il retire son soutien au club pour l'été. Le président vous en veut.", fx: { coach: -3, team: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_low_scout_in_stands", cat: "Mercato", icon: "🔭", w: 10,
+    cond: { aMin: 18, aMax: 25, levels: ["regional", "d4", "d3"] },
+    text: "Un recruteur d'un club de l'élite est en tribune. Il vient pour l'attaquant adverse, mais vous avez quatre-vingt-dix minutes pour lui faire changer d'avis.",
+    options: [
+      { label: "Jouer pour vous et multiplier les gestes", hint: "Vitrine", outcomes: [
+        { weight: 40, text: "Il note votre nom. Un coup de fil arrive la semaine suivante.", fx: { rep: 5, transfer: { d: 1 } } },
+        { weight: 60, text: "Trop de gestes, pas assez d'efficacité. Le coach vous sort à l'heure de jeu.", fx: { coach: -4, mor: -3 } },
+      ] },
+      { label: "Jouer simple et faire gagner l'équipe", hint: "Maturité", outcomes: [
+        { weight: 50, text: "Victoire. Il vient vous serrer la main à la sortie du vestiaire.", fx: { rep: 3, coach: 3, mor: 4 } },
+        { weight: 50, text: "Vous gagnez, mais il ne regarde que l'attaquant adverse.", fx: { coach: 2 } },
+      ] },
+      { label: "Museler l'attaquant qu'il est venu voir", hint: "Culotté", outcomes: [
+        { weight: 55, text: "L'attaquant n'existe pas. Le recruteur repart avec votre nom à la place du sien.", fx: { rep: 6, mor: 6 } },
+        { weight: 45, text: "Il vous échappe une fois, et marque. Soirée cruelle.", fx: { mor: -5 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ NOUVEAUX : EN PRÊT ══════════════
+  {
+    id: "ev_loan_recall", cat: "Mercato", icon: "📞", w: 12,
+    cond: { aMin: 18, aMax: 25, loan: true },
+    text: "Le directeur sportif de votre club propriétaire appelle : « Tu fais une grosse saison. On pense te rappeler cet hiver. » Votre club d'accueil, lui, compte sur vous.",
+    options: [
+      { label: "Dire que vous voulez finir la saison ici", hint: "Loyauté", outcomes: [
+        { weight: 60, text: "Votre club d'accueil vous en est reconnaissant. Vous terminez en patron.", fx: { team: 6, mor: 5, rep: 3 } },
+        { weight: 40, text: "Votre club propriétaire est vexé. Votre place là-bas devra se reconquérir.", fx: { coach: -4, team: 4 } },
+      ] },
+      { label: "Laisser les deux clubs s'arranger", hint: "Discret", outcomes: [
+        { weight: 100, text: "Ils décident de vous laisser finir. Vous vous concentrez sur le terrain.", fx: { form: 3 } },
+      ] },
+      { label: "Pousser pour rentrer tout de suite", hint: "Ambition", outcomes: [
+        { weight: 50, text: "Votre club propriétaire est flatté par votre envie. Il vous garde à l'œil.", fx: { coach: 5, mor: 3 } },
+        { weight: 50, text: "Le rappel n'a finalement pas lieu, et votre club d'accueil a tout entendu.", fx: { team: -6, mor: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_loan_fans_adopt", cat: "Supporters", icon: "💚", w: 11,
+    cond: { aMin: 18, aMax: 26, loan: true },
+    text: "Les supporters de votre club d'accueil ont lancé une pétition : « Gardez-le ! » Une banderole à votre nom apparaît en tribune.",
+    options: [
+      { label: "Remercier le public sur le terrain", hint: "Cœur", outcomes: [
+        { weight: 70, text: "Tour d'honneur, maillot jeté dans la tribune. Une histoire d'amour est née.", fx: { rep: 4, mor: 6 } },
+        { weight: 30, text: "Votre club propriétaire voit d'un mauvais œil cette idylle.", fx: { mor: 4, coach: -2 } },
+      ] },
+      { label: "Rester neutre : votre avenir est ailleurs", hint: "Professionnel", outcomes: [
+        { weight: 100, text: "Vous restez poli et concentré. Le public est un peu déçu.", fx: { m: 2, rep: -1 } },
+      ] },
+      { label: "Laisser entendre que vous resteriez bien", hint: "Risqué", outcomes: [
+        { weight: 40, text: "Le public est en transe. Votre valeur aux yeux des clubs grimpe.", fx: { rep: 5, mor: 5 } },
+        { weight: 60, text: "Votre club propriétaire n'apprécie pas. Retour glacial en fin de saison.", fx: { coach: -6, mor: -2 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_loan_vs_parent", cat: "Terrain", icon: "🪞", w: 10,
+    cond: { aMin: 18, aMax: 26, loan: true },
+    text: "Tirage de coupe : votre club d'accueil affronte votre club propriétaire. Aucune clause ne vous empêche de jouer. Tout le monde vous regarde.",
+    options: [
+      { label: "Tout donner contre votre propre club", hint: "Compétiteur", outcomes: [
+        { weight: 50, text: "Vous marquez et éliminez votre club. Vos dirigeants sont piqués, mais impressionnés.", fx: { rep: 7, mor: 6, coach: 2 } },
+        { weight: 50, text: "Vous êtes partout, mais votre club passe. Belle vitrine malgré tout.", fx: { rep: 3, form: 2 } },
+      ] },
+      { label: "Jouer sérieusement, sans célébrer", hint: "Respect", outcomes: [
+        { weight: 100, text: "Votre attitude est saluée des deux côtés.", fx: { rep: 3, team: 3, c: 2 } },
+      ] },
+      { label: "Demander à ne pas jouer ce match", hint: "Prudent", outcomes: [
+        { weight: 60, text: "Votre coach accepte, à contrecœur.", fx: { coach: -3, mor: -1 } },
+        { weight: 40, text: "Votre coach refuse : « Ici, tu joues pour nous. » Vous jouez crispé.", fx: { coach: -2, form: -3 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ NOUVEAUX : SELON LE PROFIL ══════════════
+  {
+    id: "ev_street_club_face", cat: "Hygiène de vie", icon: "🪩", w: 11,
+    cond: { aMin: 18, aMax: 27, lifestyle: "street" },
+    text: "Le patron de la boîte de nuit la plus courue de la ville vous veut comme « visage » de ses soirées du jeudi. Grosse somme, entrée VIP à vie.",
+    options: [
+      { label: "Accepter le contrat", hint: "Jackpot", outcomes: [
+        { weight: 40, text: "Vous encaissez, et vous rentrez tôt. Pour l'instant.", fx: { money: 0.8, rep: 2 } },
+        { weight: 60, text: "Les jeudis deviennent des vendredis. Le coach a vu les photos.", fx: { money: 0.8, dis: -8, coach: -6, trait: "party" } },
+      ] },
+      { label: "Refuser : vous avez changé", hint: "Maturité", outcomes: [
+        { weight: 70, text: "Vos anciens amis ricanent, mais vos jambes vous remercient.", fx: { dis: 6, form: 4, m: 2 } },
+        { weight: 30, text: "La tentation revient chaque semaine. Vous tenez, difficilement.", fx: { dis: 3, mor: -2 } },
+      ] },
+      { label: "Négocier : une seule apparition par mois", hint: "Compromis", outcomes: [
+        { weight: 60, text: "Accord trouvé. Vous gardez le contrôle, et l'argent.", fx: { money: 0.4, dis: -2 } },
+        { weight: 40, text: "« Une par mois » devient vite trois. Le staff s'inquiète.", fx: { money: 0.4, dis: -5, coach: -3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_family_closer_home", cat: "Vie perso", icon: "🏡", w: 11,
+    cond: { aMin: 18, aMax: 25, entourage: "family", abroad: true },
+    text: "Vos parents vous rendent visite et repartent inquiets : vous avez maigri, vous parlez peu. Votre mère vous supplie de rentrer jouer au pays.",
+    options: [
+      { label: "Rentrer jouer au pays", hint: "Famille", outcomes: [
+        { weight: 60, text: "Retrouver les vôtres vous remet d'aplomb. Le sourire revient sur le terrain.", fx: { mor: 10, transfer: { home: true, d: 0 } } },
+        { weight: 40, text: "Vous rentrez, mais l'aventure inachevée vous laisse un goût amer.", fx: { mor: 4, transfer: { home: true, d: 0 } } },
+      ] },
+      { label: "Les rassurer et rester", hint: "Ambition", outcomes: [
+        { weight: 55, text: "Vous les appelez tous les soirs. La distance devient plus légère.", fx: { mor: 3, m: 2 } },
+        { weight: 45, text: "Le mal du pays revient après leur départ, plus fort.", fx: { mor: -5 } },
+      ] },
+      { label: "Les faire venir vivre près de vous", cond: { minMoney: 2 }, hint: "Investissement", outcomes: [
+        { weight: 100, text: "Vos parents s'installent à dix minutes. La maison sent de nouveau la cuisine de chez vous.", fx: { money: -1, mor: 10, form: 3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_futsal_summer_call", cat: "Sélection", icon: "🥅", w: 10,
+    cond: { aMin: 17, aMax: 24, origin: "futsal" },
+    text: "La fédération de futsal vous appelle pour un tournoi international cet été. Votre club, lui, préférerait que vous fassiez la préparation.",
+    options: [
+      { label: "Partir au tournoi de futsal", hint: "Passion", outcomes: [
+        { weight: 55, text: "Vous éblouissez le tournoi. Vos appuis et votre technique en sortent affûtés.", fx: { t: 4, rep: 4, coach: -3 } },
+        { weight: 45, text: "Vous revenez épuisé, et en retard sur la préparation.", fx: { t: 2, form: -5, coach: -4 } },
+      ] },
+      { label: "Rester pour la préparation", hint: "Professionnel", outcomes: [
+        { weight: 100, text: "Le coach apprécie. Vous attaquez la saison en pleine forme.", fx: { coach: 5, form: 4 } },
+      ] },
+      { label: "Négocier : une semaine de tournoi seulement", hint: "Compromis", outcomes: [
+        { weight: 60, text: "Les deux camps acceptent. Le meilleur des deux mondes.", fx: { t: 2, coach: 2 } },
+        { weight: 40, text: "Personne n'est vraiment content. Vous faites tout à moitié.", fx: { form: -2 } },
+      ] },
+    ],
+  },
+
+  // ══════════════ NOUVEAUX : SELON LES TRAITS ══════════════
+  {
+    id: "ev_leader_unpaid_wages", cat: "Crise", icon: "✊", w: 11,
+    cond: { aMin: 24, aMax: 35, trait: "leader" },
+    text: "Deux mois de salaires impayés. Le vestiaire se tourne vers vous : « Tu es notre voix. On fait quoi ? »",
+    options: [
+      { label: "Mener une grève de l'entraînement", hint: "Radical", outcomes: [
+        { weight: 50, text: "La direction plie en quarante-huit heures. Le vestiaire vous suivrait partout.", fx: { team: 10, coach: -4, rep: 3 } },
+        { weight: 50, text: "La direction vous désigne comme meneur. Amende, et mise à l'écart.", fx: { team: 6, coach: -8, money: -0.3 } },
+      ] },
+      { label: "Négocier en coulisses avec le président", hint: "Diplomatie", outcomes: [
+        { weight: 65, text: "Un échéancier est trouvé. Tout le monde est payé d'ici la fin du mois.", fx: { team: 6, coach: 3, c: 3 } },
+        { weight: 35, text: "Les promesses s'envolent. Le vestiaire vous trouve trop conciliant.", fx: { team: -4 } },
+      ] },
+      { label: "Avancer vous-même les salaires des plus jeunes", cond: { minMoney: 2 }, hint: "Générosité", outcomes: [
+        { weight: 100, text: "Les gamins du centre n'oublieront jamais. Le club non plus.", fx: { money: -1, team: 12, rep: 5 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_showman_celebration", cat: "Médias", icon: "🎭", w: 10,
+    cond: { aMin: 19, aMax: 32, trait: "showman" },
+    text: "Vous avez préparé une célébration spectaculaire pour le derby : une chorégraphie devant le virage adverse. Votre coéquipier vous prévient : « Ça va mal finir. »",
+    options: [
+      { label: "La faire quand même", hint: "Showman", outcomes: [
+        { weight: 45, text: "But, chorégraphie, et des images qui font le tour du monde.", fx: { rep: 7, mor: 6 } },
+        { weight: 55, text: "Projectiles, arrêt du match, commission de discipline.", fx: { ban: 2, rep: -2, coach: -4 } },
+      ] },
+      { label: "La faire devant vos propres supporters", hint: "Malin", outcomes: [
+        { weight: 75, text: "Votre virage exulte. Pas de polémique, que du bonheur.", fx: { rep: 4, mor: 5 } },
+        { weight: 25, text: "Vous ne marquez pas. La chorégraphie attendra.", fx: { mor: -1 } },
+      ] },
+      { label: "Renoncer et célébrer avec l'équipe", hint: "Collectif", outcomes: [
+        { weight: 100, text: "Un tas de joueurs dans le coin du terrain. Simple et fort.", fx: { team: 5, mor: 3 } },
+      ] },
+    ],
+  },
+  {
+    id: "ev_glass_scan", cat: "Blessure", icon: "🩻", w: 11,
+    cond: { aMin: 20, aMax: 33, trait: "glass" },
+    text: "Nouveaux examens : vos muscles sont fragiles, et le staff médical veut réduire votre temps de jeu de manière préventive.",
+    options: [
+      { label: "Accepter le plan de gestion", hint: "Sagesse", outcomes: [
+        { weight: 65, text: "Moins de matchs, mais aucun pépin de la saison. Une première.", fx: { form: 4, coach: 3, mor: 2 } },
+        { weight: 35, text: "Vous trépignez sur le banc. Le moral en prend un coup.", fx: { mor: -4, form: 2 } },
+      ] },
+      { label: "Refuser : vous voulez jouer tous les matchs", hint: "Risqué", outcomes: [
+        { weight: 45, text: "Vous tenez toute la saison. Les médecins n'en reviennent pas.", fx: { rep: 3, mor: 5 } },
+        { weight: 55, text: "Rupture musculaire en plein sprint. Trois mois d'arrêt.", fx: { inj: 12, p: -3, mor: -6 } },
+      ] },
+      { label: "Payer un programme de renforcement spécialisé", cond: { minMoney: 1 }, hint: "Investissement", outcomes: [
+        { weight: 60, text: "Le programme fonctionne : votre corps n'a jamais été aussi solide.", fx: { money: -0.6, p: 4, clearTrait: "glass" } },
+        { weight: 40, text: "Quelques progrès, mais la fragilité reste là.", fx: { money: -0.6, p: 2 } },
+      ] },
+    ],
+  },
 ];
 
 /* ============================================================
