@@ -4743,7 +4743,10 @@ window.I18N_DATA = { ar: {
  "FINALE DE LA COUPE DE LA LIGUE": "نهائي كأس الرابطة",
  "SUPERCOUPE NATIONALE": "الكأس السوبر الوطنية",
  "🏆 Coupe de la Ligue en poche : {club} jouera le {cupName} la saison prochaine !": "🏆 كأس الرابطة في الجيب: {club} سيلعب في {cupName} الموسم المقبل!",
- "⚜️ Titre de la saison passée : {club} dispute la Supercoupe nationale en ouverture de saison.": "⚜️ لقب الموسم الماضي: {club} يخوض الكأس السوبر الوطنية في افتتاح الموسم."
+ "⚜️ Titre de la saison passée : {club} dispute la Supercoupe nationale en ouverture de saison.": "⚜️ لقب الموسم الماضي: {club} يخوض الكأس السوبر الوطنية في افتتاح الموسم.",
+ "Plus de convocation en sélection depuis un championnat trop modeste : la France, le Brésil ou l'Angleterre n'appellent que des joueurs de première division (celles du Japon, des États-Unis ou de l'Arabie saoudite comptent), le Portugal ou la Croatie jusqu'à la deuxième, et les petites nations restent plus larges.": "لا استدعاء للمنتخب بعد الآن من دوري متواضع جدًا: فرنسا والبرازيل وإنجلترا لا تستدعي إلا لاعبي الدرجة الأولى (ويُحتسب دوري اليابان والولايات المتحدة والسعودية)، والبرتغال وكرواتيا حتى الدرجة الثانية، أما المنتخبات الصغيرة فتبقى أكثر انفتاحًا.",
+ "Un international qui descend trop bas n'est plus appelé, sans perdre sa place pour autant : il revient dès qu'il rejoue à un niveau suffisant. Un prêt compte comme le club où vous jouez.": "الدولي الذي يهبط إلى مستوى منخفض جدًا لا يُستدعى، دون أن يفقد مكانه نهائيًا: يعود بمجرد أن يلعب مجددًا في مستوى كافٍ. الإعارة تُحتسب للنادي الذي تلعب له.",
+ "📵 Pas de convocation cette saison : le sélectionneur ne regarde pas la {div}. Il faudra jouer plus haut pour revenir.": "📵 لا استدعاء هذا الموسم: المدرب الوطني لا يتابع {div}. عليك أن تلعب في مستوى أعلى لتعود."
 } };
 window.I18N_UI = { ar: {
   "Écrivez une carrière de footballeur, saison après saison.": "اكتب مسيرة لاعب كرة قدم، موسمًا بعد موسم.",

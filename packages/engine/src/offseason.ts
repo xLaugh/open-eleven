@@ -3,7 +3,7 @@
 import { rng } from "./rng";
 import { clamp, rand, randInt, pick } from "./utils";
 import { trajGrowthMult } from "./potential";
-import { natCallBarFor } from "./nationality";
+import { natCallBarFor, natClubFloorOk } from "./nationality";
 import { tx } from "./text";
 import { playingTimeFactor, longevityScore } from "./role";
 import { countryOf, divShort, lvlOf, setClubLevel, shiftClubLevel } from "./clubs";
@@ -210,7 +210,7 @@ export function advanceYear(s: CareerState) {
   if (s.dualNat && s.age > 23) { s.dualNatAlt = s.dualNat; s.dualNat = null; s.flags.natLocked = true; }
   // Une première sélection A ferme définitivement l'autre porte.
   if (s.dualNatAlt && (s.natTeam.active || s.natTeam.caps > 0)) s.dualNatAlt = null;
-  if (!s.natTeam.active && !s.natTeam.retired && !s.dualNat && s.age >= 17 && seasonInj < 20) {
+  if (!s.natTeam.active && !s.natTeam.retired && !s.dualNat && s.age >= 17 && seasonInj < 20 && natClubFloorOk(s)) {
     const curLvlId = lvlOf(s, s.club);
     let ovrNeed, repNeed;
     // FORCE DE LA NATION : la barre était la même pour la France et pour Saint-Marin,

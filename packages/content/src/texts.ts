@@ -213,6 +213,7 @@ export const ENGINE_TEXT: Record<string, string> = {
   momNatSupercup: "Supercoupe nationale",
   momNatSupercupTitle: "SUPERCOUPE NATIONALE",
   lineLeagueCupTicket: "🏆 Coupe de la Ligue en poche : {club} jouera le {cupName} la saison prochaine !",
+  lineNatSnubLevel: "📵 Pas de convocation cette saison : le sélectionneur ne regarde pas la {div}. Il faudra jouer plus haut pour revenir.",
   lineNatSupercup: "⚜️ Titre de la saison passée : {club} dispute la Supercoupe nationale en ouverture de saison.",
   momCupWin: "VAINQUEUR !",
   momCupFail: "Finale perdue",

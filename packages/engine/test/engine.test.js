@@ -401,3 +401,29 @@ test("Coupe de la Ligue (quatre pays seulement) et Supercoupe nationale du tenan
   assert.ok(!E.playSeason(s).pendingMoments.some((m) => m.type === "nat_supercup"), "Supercoupe jouée avec un autre club");
   E.clearSeed();
 });
+
+test("sélection : une grande nation n'appelle pas un joueur de D3, mais bien un joueur de D1 étrangère", () => {
+  const { loadContent } = require("./load-engine");
+  const C = loadContent();
+  const fr = C.NATIONALITIES.find((n) => n.id === "fr");
+  const national = C.CLUBS.find((c) => c.countryId === "fr" && c.level === "d3");
+  const japan = C.CLUBS.find((c) => c.countryId === "jp" && c.level === "d1");
+  const setup = (club) => {
+    const s = E.replayDuel(4242, Array(400).fill(0));
+    Object.assign(s, { careerEnded: false, retiring: false, age: 27, club, loan: null, squad: "first", injuryWeeks: 0, seasonInjuryWeeks: 0, nationality: fr, dualNat: null, dualNatAlt: null });
+    s.clubLevels = {};
+    s.stats = { t: 92, p: 92, m: 92, c: 92 };
+    s.rep = 95;
+    s.natTeam = { active: true, retired: false, caps: 20, goals: 5, assists: 3 };
+    return s;
+  };
+  for (let i = 0; i < 40; i++) {
+    E.setSeed(13000 + i);
+    const low = E.playSeason(setup(national));
+    assert.ok(!low.caps, "international français appelé depuis le National");
+    E.setSeed(13000 + i);
+    const abroad = E.playSeason(setup(japan));
+    assert.ok(abroad.caps > 0 || abroad.tournamentMissed, "international français en D1 japonaise non appelé");
+  }
+  E.clearSeed();
+});

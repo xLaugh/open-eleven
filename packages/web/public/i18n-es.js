@@ -4743,7 +4743,10 @@ window.I18N_DATA = { es: {
  "FINALE DE LA COUPE DE LA LIGUE": "FINAL DE LA COPA DE LA LIGA",
  "SUPERCOUPE NATIONALE": "SUPERCOPA NACIONAL",
  "🏆 Coupe de la Ligue en poche : {club} jouera le {cupName} la saison prochaine !": "🏆 Copa de la Liga en el bolsillo: ¡{club} jugará la {cupName} la próxima temporada!",
- "⚜️ Titre de la saison passée : {club} dispute la Supercoupe nationale en ouverture de saison.": "⚜️ Título de la temporada pasada: {club} disputa la Supercopa nacional al inicio de la temporada."
+ "⚜️ Titre de la saison passée : {club} dispute la Supercoupe nationale en ouverture de saison.": "⚜️ Título de la temporada pasada: {club} disputa la Supercopa nacional al inicio de la temporada.",
+ "Plus de convocation en sélection depuis un championnat trop modeste : la France, le Brésil ou l'Angleterre n'appellent que des joueurs de première division (celles du Japon, des États-Unis ou de l'Arabie saoudite comptent), le Portugal ou la Croatie jusqu'à la deuxième, et les petites nations restent plus larges.": "Se acabaron las convocatorias desde una liga demasiado modesta: Francia, Brasil o Inglaterra solo llaman a jugadores de primera división (cuentan las de Japón, Estados Unidos o Arabia Saudí), Portugal o Croacia hasta la segunda, y las selecciones pequeñas siguen siendo más abiertas.",
+ "Un international qui descend trop bas n'est plus appelé, sans perdre sa place pour autant : il revient dès qu'il rejoue à un niveau suffisant. Un prêt compte comme le club où vous jouez.": "Un internacional que baja demasiado deja de ser convocado, sin perder su sitio para siempre: vuelve en cuanto juega de nuevo a un nivel suficiente. Una cesión cuenta como el club en el que juegas.",
+ "📵 Pas de convocation cette saison : le sélectionneur ne regarde pas la {div}. Il faudra jouer plus haut pour revenir.": "📵 Sin convocatoria esta temporada: el seleccionador no mira la {div}. Tendrás que jugar más arriba para volver."
 } };
 window.I18N_UI = { es: {
   "Écrivez une carrière de footballeur, saison après saison.": "Escribe una carrera de futbolista, temporada tras temporada.",

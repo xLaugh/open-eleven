@@ -1,8 +1,9 @@
 // Double nationalité et barre de sélection selon la nation.
 
 import { rng } from "./rng";
-import type { CareerState } from "./types";
-import { BALANCE, DUAL_NATIONALITY, NATIONALITIES } from "@open-eleven/content";
+import type { CareerState, LevelId } from "./types";
+import { BALANCE, DUAL_NATIONALITY, LEVELS, NATIONALITIES } from "@open-eleven/content";
+import { lvlOf } from "./clubs";
 
 // --- Double nationalité ------------------------------------------------------
 // Tire la SECONDE nationalité à laquelle le joueur est éligible, ou null. La carte
@@ -43,4 +44,15 @@ export function natCallBarFor(s: CareerState) {
   const bars = BALANCE.natCallBar;
   for (const t of bars) if (w >= t.minW) return t.ovr;
   return bars[bars.length - 1].ovr;
+}
+
+// Le club (celui où l'on joue, prêt compris) est-il d'un niveau que la sélection regarde ?
+// Plancher selon la force de la nation (BALANCE.natCallBar[].minLevel). Aucun rng.
+export function natClubFloorOk(s: CareerState) {
+  const w = s.nationality.weight;
+  const bars = BALANCE.natCallBar;
+  const tier = bars.find((t) => w >= t.minW) || bars[bars.length - 1];
+  const min = LEVELS[tier.minLevel as LevelId];
+  const cur = LEVELS[lvlOf(s, s.club)];
+  return !min || !cur || cur.rank >= min.rank;
 }

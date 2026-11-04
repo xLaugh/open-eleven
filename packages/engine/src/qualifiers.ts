@@ -17,6 +17,7 @@
 import { rng } from "./rng";
 import { clamp } from "./utils";
 import { continentOf } from "./clubs";
+import { natClubFloorOk } from "./nationality";
 import { ovr } from "./player";
 import type { CareerState } from "./types";
 import { NATIONALITIES } from "@open-eleven/content";
@@ -158,7 +159,7 @@ function runZone(z: ZoneSpec, str: (n: Nat) => number): ZoneResult {
 
 // --- Les qualifications d'un tournoi ----------------------------------------------------
 function playerMult(s: CareerState): number {
-  if (!s.natTeam || !s.natTeam.active) return 1;
+  if (!s.natTeam || !s.natTeam.active || !natClubFloorOk(s)) return 1;
   return 1 + clamp((ovr(s) - 68) / 140, 0, 0.18) * clamp(s.form / 70, 0.6, 1.2);
 }
 

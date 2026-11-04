@@ -16,6 +16,7 @@ import { squadOf, reviewSquad, playDevSeason } from "./squad";
 import { marketValue } from "./transfers";
 import { continentOf, countryOf, divShort, isTopFlightOf, lvlOf, visibilityOf } from "./clubs";
 import { ovr, hasTrait } from "./player";
+import { natClubFloorOk } from "./nationality";
 import { roomClubSeason, type RoomClubOutcome } from "./rooms";
 import { isQualified, qualifiersFor, settleNatPlayoff } from "./qualifiers";
 import { cupOf, leagueRange, noteClubQualification, seasonCupTier, titleChanceFor } from "./clubcups";
@@ -385,8 +386,14 @@ export function playSeason(s: CareerState) {
   const qualFor = isWorldCupYear(s.year + 1) ? "wc" : isContinentalYear(s.year + 1) ? "cont" : null;
   if (qualFor && !s.careerEnded) narrateQualifiers(s, report, qualFor, s.year + 1);
 
-  // Sélection nationale
-  if (s.natTeam.active) {
+  // Sélection nationale. Un international dont le club est sous le plancher de sa
+  // nation (cf. natClubFloorOk) n'est pas appelé cette saison, sans perdre son statut :
+  // il revient dès qu'il rejoue assez haut. La finale scénarisée du mode Histoire passe.
+  const natFloor = natClubFloorOk(s) || !!storyWcFinalFor(s);
+  if (s.natTeam.active && !s.natTeam.retired && !natFloor) {
+    report.lines.push({ text: tx(s, "lineNatSnubLevel", { div: divShort(lvlOf(s, s.club), s.club.countryId) }), impact: -2 });
+  }
+  if (s.natTeam.active && natFloor) {
     // caps encore à 0 → c'est la toute première convocation en A (robuste au
     // rechargement d'une sauvegarde : aucun nouveau champ d'état requis).
     const firstCap = s.natTeam.caps === 0;
@@ -614,7 +621,7 @@ export function qualCompName(s: CareerState, comp: string) {
 
 function narrateQualifiers(s: CareerState, report: SeasonReport, comp: "wc" | "cont", year: number) {
   const q = qualifiersFor(s, comp, year);
-  if (!s.natTeam.active) return; // le monde a joué ses qualifications ; le joueur n'y était pas
+  if (!s.natTeam.active || !natClubFloorOk(s)) return; // le monde a joué ses qualifications ; le joueur n'y était pas
   const name = qualCompName(s, comp);
   const m = q.mine;
   if (m.stage === "host") report.lines.push({ text: tx(s, "lineQualHost", { comp: name, when: year }), impact: 4 });

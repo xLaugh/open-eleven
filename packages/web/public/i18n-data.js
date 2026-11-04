@@ -4752,5 +4752,8 @@ window.I18N_DATA = { en: {
  "FINALE DE LA COUPE DE LA LIGUE": "LEAGUE CUP FINAL",
  "SUPERCOUPE NATIONALE": "NATIONAL SUPER CUP",
  "🏆 Coupe de la Ligue en poche : {club} jouera le {cupName} la saison prochaine !": "🏆 League Cup in the bag: {club} will play in the {cupName} next season!",
- "⚜️ Titre de la saison passée : {club} dispute la Supercoupe nationale en ouverture de saison.": "⚜️ Last season's title: {club} plays the National Super Cup to open the season."
+ "⚜️ Titre de la saison passée : {club} dispute la Supercoupe nationale en ouverture de saison.": "⚜️ Last season's title: {club} plays the National Super Cup to open the season.",
+ "Plus de convocation en sélection depuis un championnat trop modeste : la France, le Brésil ou l'Angleterre n'appellent que des joueurs de première division (celles du Japon, des États-Unis ou de l'Arabie saoudite comptent), le Portugal ou la Croatie jusqu'à la deuxième, et les petites nations restent plus larges.": "No more call-ups from a league that is too modest: France, Brazil or England only pick first-division players (those of Japan, the United States or Saudi Arabia count), Portugal or Croatia go down to the second division, and smaller nations stay more open.",
+ "Un international qui descend trop bas n'est plus appelé, sans perdre sa place pour autant : il revient dès qu'il rejoue à un niveau suffisant. Un prêt compte comme le club où vous jouez.": "An international who drops too low is no longer called up, without losing his place for good: he comes back as soon as he plays at a high enough level again. A loan counts as the club you play for.",
+ "📵 Pas de convocation cette saison : le sélectionneur ne regarde pas la {div}. Il faudra jouer plus haut pour revenir.": "📵 No call-up this season: the national coach does not watch the {div}. You will have to play higher up to come back."
 } };

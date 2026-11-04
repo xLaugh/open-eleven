@@ -5,6 +5,7 @@ import { weightedRandom } from "./utils";
 import { renderText } from "./text";
 import { applyFx } from "./effects";
 import { isWorldCupYear } from "./international";
+import { natClubFloorOk } from "./nationality";
 import { offersFor, applyTransfer } from "./transfers";
 import { countryOf, clubHomeOf, lvlOf } from "./clubs";
 import { ovr, hasTrait } from "./player";
@@ -20,6 +21,10 @@ export function langOf(countryId: string) {
 // Vrai si le pays du club actuel ne parle PAS la langue natale du joueur.
 export function foreignLangFor(s: CareerState) {
   return langOf(s.club.countryId) !== langOf(s.nationality.homeCountryId);
+}
+
+function offersNatCall(ev: GameEvent) {
+  return (ev.options || []).some((o: any) => (o.outcomes || []).some((x: any) => x.fx && x.fx.natCall));
 }
 
 export function eventEligible(s: CareerState, ev: GameEvent) {
@@ -61,6 +66,8 @@ export function eventEligible(s: CareerState, ev: GameEvent) {
   if (c.trait && !hasTrait(s, c.trait)) return false;
   if (c.notTrait && hasTrait(s, c.notTrait)) return false;
   if (c.nat === true && !s.natTeam.active) return false;
+  // Un événement qui convoque en sélection ne vient pas sous le plancher de division.
+  if (offersNatCall(ev) && !natClubFloorOk(s)) return false;
   if (c.nat === false && (s.natTeam.active || s.natTeam.retired)) return false;
   if (c.wc === true && !isWorldCupYear(s.year)) return false;
   if (c.loan === true && !s.loan) return false;

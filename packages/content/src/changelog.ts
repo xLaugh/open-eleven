@@ -25,6 +25,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     items: [
       { kind: "new", text: "Coupe de la Ligue en Angleterre, en Écosse, au Portugal et au Japon : ouverte aux clubs pros, avec une finale à jouer en moment décisif. Le vainqueur gagne une place en Bouclier la saison suivante, comme en vrai." },
       { kind: "new", text: "Supercoupe nationale dans tous les pays : le champion ou le vainqueur de la coupe de la saison passée la dispute en ouverture de saison." },
+      { kind: "fix", text: "Plus de convocation en sélection depuis un championnat trop modeste : la France, le Brésil ou l'Angleterre n'appellent que des joueurs de première division (celles du Japon, des États-Unis ou de l'Arabie saoudite comptent), le Portugal ou la Croatie jusqu'à la deuxième, et les petites nations restent plus larges." },
+      { kind: "balance", text: "Un international qui descend trop bas n'est plus appelé, sans perdre sa place pour autant : il revient dès qu'il rejoue à un niveau suffisant. Un prêt compte comme le club où vous jouez." },
     ],
   },
   {
