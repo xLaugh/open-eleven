@@ -4733,7 +4733,17 @@ window.I18N_DATA = { ar: {
  "Trente nouveaux événements": "ثلاثون حدثًا جديدًا",
  "Seize événements propres à votre poste : fiches des tireurs pour les gardiens, marquage de la star adverse pour les défenseurs, numéro 10 historique pour les milieux, panne de buts pour les attaquants…": "ستة عشر حدثًا خاصًا بمركزك: ملفات منفذي ركلات الجزاء لحراس المرمى، ومراقبة نجم الخصم للمدافعين، والرقم 10 التاريخي للاعبي الوسط، وغياب الأهداف للمهاجمين…",
  "Des histoires pour le bas de la pyramide (petit boulot, terrain inondé, car en panne), pour les joueurs prêtés, et selon votre profil et vos traits.": "قصص لأسفل الهرم (عمل صباحي، ملعب غارق، حافلة معطلة)، وللاعبين المعارين، وحسب ملفك وصفاتك.",
- "Tous ces événements proposent trois choix, et certains ne s'ouvrent que si vous en avez les moyens.": "تقدم كل هذه الأحداث ثلاثة خيارات، وبعضها لا يُتاح إلا إذا كنت تملك الإمكانيات."
+ "Tous ces événements proposent trois choix, et certains ne s'ouvrent que si vous en avez les moyens.": "تقدم كل هذه الأحداث ثلاثة خيارات، وبعضها لا يُتاح إلا إذا كنت تملك الإمكانيات.",
+ "Coupe de la Ligue": "كأس الرابطة",
+ "Supercoupe nationale": "الكأس السوبر الوطنية",
+ "Coupe de la Ligue et Supercoupe nationale": "كأس الرابطة والكأس السوبر الوطنية",
+ "Coupe de la Ligue en Angleterre, en Écosse, au Portugal et au Japon : ouverte aux clubs pros, avec une finale à jouer en moment décisif. Le vainqueur gagne une place en Bouclier la saison suivante, comme en vrai.": "كأس الرابطة في إنجلترا واسكتلندا والبرتغال واليابان: مفتوحة للأندية المحترفة، ونهائيها يُلعب كلحظة حاسمة. الفائز يحجز مقعدًا في الدرع في الموسم التالي، كما في الواقع.",
+ "Supercoupe nationale dans tous les pays : le champion ou le vainqueur de la coupe de la saison passée la dispute en ouverture de saison.": "الكأس السوبر الوطنية في كل البلدان: يخوضها بطل الموسم الماضي أو الفائز بالكأس في افتتاح الموسم.",
+ "Finale de la Coupe de la Ligue": "نهائي كأس الرابطة",
+ "FINALE DE LA COUPE DE LA LIGUE": "نهائي كأس الرابطة",
+ "SUPERCOUPE NATIONALE": "الكأس السوبر الوطنية",
+ "🏆 Coupe de la Ligue en poche : {club} jouera le {cupName} la saison prochaine !": "🏆 كأس الرابطة في الجيب: {club} سيلعب في {cupName} الموسم المقبل!",
+ "⚜️ Titre de la saison passée : {club} dispute la Supercoupe nationale en ouverture de saison.": "⚜️ لقب الموسم الماضي: {club} يخوض الكأس السوبر الوطنية في افتتاح الموسم."
 } };
 window.I18N_UI = { ar: {
   "Écrivez une carrière de footballeur, saison après saison.": "اكتب مسيرة لاعب كرة قدم، موسمًا بعد موسم.",

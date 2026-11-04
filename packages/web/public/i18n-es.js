@@ -4733,7 +4733,17 @@ window.I18N_DATA = { es: {
  "Trente nouveaux événements": "Treinta nuevos eventos",
  "Seize événements propres à votre poste : fiches des tireurs pour les gardiens, marquage de la star adverse pour les défenseurs, numéro 10 historique pour les milieux, panne de buts pour les attaquants…": "Dieciséis eventos propios de tu posición: fichas de los lanzadores para los porteros, marcaje a la estrella rival para los defensas, el histórico número 10 para los centrocampistas, sequía goleadora para los delanteros…",
  "Des histoires pour le bas de la pyramide (petit boulot, terrain inondé, car en panne), pour les joueurs prêtés, et selon votre profil et vos traits.": "Historias para la base de la pirámide (trabajo por las mañanas, campo inundado, autobús averiado), para los jugadores cedidos, y según tu perfil y tus rasgos.",
- "Tous ces événements proposent trois choix, et certains ne s'ouvrent que si vous en avez les moyens.": "Todos estos eventos ofrecen tres opciones, y algunas solo se abren si te las puedes permitir."
+ "Tous ces événements proposent trois choix, et certains ne s'ouvrent que si vous en avez les moyens.": "Todos estos eventos ofrecen tres opciones, y algunas solo se abren si te las puedes permitir.",
+ "Coupe de la Ligue": "Copa de la Liga",
+ "Supercoupe nationale": "Supercopa nacional",
+ "Coupe de la Ligue et Supercoupe nationale": "Copa de la Liga y Supercopa nacional",
+ "Coupe de la Ligue en Angleterre, en Écosse, au Portugal et au Japon : ouverte aux clubs pros, avec une finale à jouer en moment décisif. Le vainqueur gagne une place en Bouclier la saison suivante, comme en vrai.": "Copa de la Liga en Inglaterra, Escocia, Portugal y Japón: abierta a los clubes profesionales, con una final que se juega como momento decisivo. El campeón gana una plaza en el Escudo la temporada siguiente, como en la realidad.",
+ "Supercoupe nationale dans tous les pays : le champion ou le vainqueur de la coupe de la saison passée la dispute en ouverture de saison.": "Supercopa nacional en todos los países: el campeón o el ganador de la copa de la temporada pasada la disputa al inicio de la temporada.",
+ "Finale de la Coupe de la Ligue": "Final de la Copa de la Liga",
+ "FINALE DE LA COUPE DE LA LIGUE": "FINAL DE LA COPA DE LA LIGA",
+ "SUPERCOUPE NATIONALE": "SUPERCOPA NACIONAL",
+ "🏆 Coupe de la Ligue en poche : {club} jouera le {cupName} la saison prochaine !": "🏆 Copa de la Liga en el bolsillo: ¡{club} jugará la {cupName} la próxima temporada!",
+ "⚜️ Titre de la saison passée : {club} dispute la Supercoupe nationale en ouverture de saison.": "⚜️ Título de la temporada pasada: {club} disputa la Supercopa nacional al inicio de la temporada."
 } };
 window.I18N_UI = { es: {
   "Écrivez une carrière de footballeur, saison après saison.": "Escribe una carrera de futbolista, temporada tras temporada.",

@@ -206,6 +206,14 @@ export const ENGINE_TEXT: Record<string, string> = {
   momStayWin: "MAINTIEN ARRACHÉ !",
   momStayFail: "Relégation au bout du barrage",
   momCup: "Finale de la Coupe Nationale",
+  // Coupe de la Ligue et Supercoupe nationale : le moment reprend celui de la finale de
+  // coupe, sous un autre titre.
+  momLeagueCup: "Finale de la Coupe de la Ligue",
+  momLeagueCupTitle: "FINALE DE LA COUPE DE LA LIGUE",
+  momNatSupercup: "Supercoupe nationale",
+  momNatSupercupTitle: "SUPERCOUPE NATIONALE",
+  lineLeagueCupTicket: "🏆 Coupe de la Ligue en poche : {club} jouera le {cupName} la saison prochaine !",
+  lineNatSupercup: "⚜️ Titre de la saison passée : {club} dispute la Supercoupe nationale en ouverture de saison.",
   momCupWin: "VAINQUEUR !",
   momCupFail: "Finale perdue",
   momCont: "Finale · {cupName}",

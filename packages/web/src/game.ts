@@ -1735,7 +1735,7 @@ import { Engine } from "@open-eleven/engine";
       // "worldCup", "ballon", "goldenBoot" ou un Ballon d'Or continental
       // ("ballonAsia"...), tous individuels/sélection, jamais partagés entre
       // coéquipiers de club (cf. creditClubTrophies).
-      const CLUB_TROPHY_KEYS = ["league", "cup", "continental", "continental2", "continental3", "supercup"];
+      const CLUB_TROPHY_KEYS = ["league", "cup", "leagueCup", "natSupercup", "continental", "continental2", "continental3", "supercup"];
       const myClubTrophies = (lastReport.trophies || []).filter((t) => CLUB_TROPHY_KEYS.includes(t));
       if (lastReport.divisionTitle && !myClubTrophies.includes("league")) myClubTrophies.push("league");
       // Changement de division venu d'un événement (investisseur…) : transmis à la salle,
@@ -1904,6 +1904,8 @@ import { Engine } from "@open-eleven/engine";
     if (t.arabCup) bits.push(`${ARAB_CUP.icon}×${n(t.arabCup)}`);
     if (t.games) bits.push(`🏅×${n(t.games)}`);
     if (t.league) bits.push(`🎖️×${n(t.league)}`);
+    if (t.leagueCup) bits.push(`🎗️×${n(t.leagueCup)}`);
+    if (t.natSupercup) bits.push(`⚜️×${n(t.natSupercup)}`);
     if (t.goldenBoot) bits.push(`👟×${n(t.goldenBoot)}`);
     const legendNat = l.nationalityId ? NATIONALITIES.find((x) => x.id === l.nationalityId) : null;
     return `
@@ -3443,6 +3445,9 @@ import { Engine } from "@open-eleven/engine";
       ...cont3Rows,
       ...leagueRows,
       statRowHtml(`${COMPETITIONS.cup.icon} ${COMPETITIONS.cup.name}`, t.cup, t.cup > 0),
+      // Coupe de la Ligue (quatre pays) et Supercoupe nationale : seulement une fois gagnées.
+      ...["leagueCup", "natSupercup"].filter((k) => (t[k] || 0) > 0)
+        .map((k) => statRowHtml(`${COMPETITIONS[k].icon} ${COMPETITIONS[k].name}`, t[k], true)),
       statRowHtml(`${COMPETITIONS.goldenBoot.icon} ${COMPETITIONS.goldenBoot.name}`, t.goldenBoot, t.goldenBoot > 0),
     ].join("") + youthTrophyRowsHtml(s);
   }

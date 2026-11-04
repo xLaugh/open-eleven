@@ -152,6 +152,8 @@ export function creditClubTrophies(s: CareerState, keys: string[]) {
       s.leagueTitlesDetail.push({ countryId: s.club.countryId, level: lvl, clubId: s.club.id, year: s.year });
     } else if (k === "cup") {
       s.trophies.cup += 1;
+    } else if (k === "leagueCup" || k === "natSupercup") {
+      s.trophies[k] = (s.trophies[k] || 0) + 1;
     } else if (k === "continental") {
       s.trophies.continental += 1;
       s.continentalDetail.push({ continent: cont, year: s.year });

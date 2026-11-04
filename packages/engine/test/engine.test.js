@@ -365,3 +365,39 @@ test("qualifications : la bonne taille de tournoi, les hôtes qualifiés, et la 
   for (const id of ["fr", "en", "br"]) if (wc[id] && wc[id][0] >= 5) assert.ok(wc[id][1] / wc[id][0] >= 0.8, id + " trop souvent absente du Mondial");
   for (const id of ["sm", "to"]) if (wc[id]) assert.equal(wc[id][1], 0, id + " qualifiée pour le Mondial");
 });
+
+test("Coupe de la Ligue (quatre pays seulement) et Supercoupe nationale du tenant", () => {
+  const { loadContent } = require("./load-engine");
+  const C = loadContent();
+  const reset = (s, club) => {
+    Object.assign(s, { careerEnded: false, retiring: false, age: 26, club, loan: null, squad: "first", injuryWeeks: 0, seasonInjuryWeeks: 0 });
+    s.clubLevels = {};
+    s.stats = { t: 85, p: 85, m: 85, c: 85 };
+  };
+  const finals = (clubPick) => {
+    let n = 0;
+    for (let i = 0; i < 300; i++) {
+      const s = E.replayDuel(777, Array(400).fill(0));
+      reset(s, clubPick);
+      E.setSeed(11000 + i);
+      const report = E.playSeason(s);
+      if (report.pendingMoments.some((m) => m.type === "league_cup_final")) n++;
+    }
+    return n;
+  };
+  const eng = C.CLUBS.find((c) => c.countryId === "en" && c.level === "elite");
+  const fra = C.CLUBS.find((c) => c.countryId === "fr" && c.level === "elite");
+  assert.ok(finals(eng) > 0, "aucune finale de Coupe de la Ligue en Angleterre");
+  assert.equal(finals(fra), 0, "Coupe de la Ligue jouée en France");
+  // Supercoupe : seulement avec le club tenant du titre, la saison qui suit.
+  const s = E.replayDuel(778, Array(400).fill(0));
+  reset(s, fra);
+  s.natSupercupTicket = { clubId: fra.id, year: s.year - 1 };
+  E.setSeed(12000);
+  assert.ok(E.playSeason(s).pendingMoments.some((m) => m.type === "nat_supercup"));
+  reset(s, eng);
+  s.natSupercupTicket = { clubId: fra.id, year: s.year - 1 };
+  E.setSeed(12001);
+  assert.ok(!E.playSeason(s).pendingMoments.some((m) => m.type === "nat_supercup"), "Supercoupe jouée avec un autre club");
+  E.clearSeed();
+});

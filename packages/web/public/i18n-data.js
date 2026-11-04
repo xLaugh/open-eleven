@@ -4742,5 +4742,15 @@ window.I18N_DATA = { en: {
  "Trente nouveaux événements": "Thirty new events",
  "Seize événements propres à votre poste : fiches des tireurs pour les gardiens, marquage de la star adverse pour les défenseurs, numéro 10 historique pour les milieux, panne de buts pour les attaquants…": "Sixteen events specific to your position: penalty-taker files for goalkeepers, man-marking the opposing star for defenders, the club's historic number 10 for midfielders, a goal drought for strikers…",
  "Des histoires pour le bas de la pyramide (petit boulot, terrain inondé, car en panne), pour les joueurs prêtés, et selon votre profil et vos traits.": "Stories for the bottom of the pyramid (a day job, a flooded pitch, a broken-down team bus), for loaned players, and depending on your profile and traits.",
- "Tous ces événements proposent trois choix, et certains ne s'ouvrent que si vous en avez les moyens.": "All these events offer three choices, and some only open up if you can afford them."
+ "Tous ces événements proposent trois choix, et certains ne s'ouvrent que si vous en avez les moyens.": "All these events offer three choices, and some only open up if you can afford them.",
+ "Coupe de la Ligue": "League Cup",
+ "Supercoupe nationale": "National Super Cup",
+ "Coupe de la Ligue et Supercoupe nationale": "League Cup and National Super Cup",
+ "Coupe de la Ligue en Angleterre, en Écosse, au Portugal et au Japon : ouverte aux clubs pros, avec une finale à jouer en moment décisif. Le vainqueur gagne une place en Bouclier la saison suivante, comme en vrai.": "League Cup in England, Scotland, Portugal and Japan: open to professional clubs, with a final played as a key moment. The winner earns a Shield spot the following season, just like in real life.",
+ "Supercoupe nationale dans tous les pays : le champion ou le vainqueur de la coupe de la saison passée la dispute en ouverture de saison.": "National Super Cup in every country: last season's champion or cup winner plays it at the start of the season.",
+ "Finale de la Coupe de la Ligue": "League Cup final",
+ "FINALE DE LA COUPE DE LA LIGUE": "LEAGUE CUP FINAL",
+ "SUPERCOUPE NATIONALE": "NATIONAL SUPER CUP",
+ "🏆 Coupe de la Ligue en poche : {club} jouera le {cupName} la saison prochaine !": "🏆 League Cup in the bag: {club} will play in the {cupName} next season!",
+ "⚜️ Titre de la saison passée : {club} dispute la Supercoupe nationale en ouverture de saison.": "⚜️ Last season's title: {club} plays the National Super Cup to open the season."
 } };

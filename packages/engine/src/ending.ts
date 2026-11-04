@@ -31,7 +31,7 @@ export function computeCareerScore(s: CareerState) {
     t.worldCup * 20 + t.ballon * 18 + t.continental * 9 + (t.contInt || 0) * 11 +
     (t.natLeague || 0) * 5 + (t.olympic || 0) * 8 + (t.arabCup || 0) * 5 + (t.games || 0) * 3 + (t.continental2 || 0) * 5 + (t.continental3 || 0) * 2 +
     ((t.ballonAsia || 0) + (t.ballonAfrica || 0) + (t.ballonOceania || 0)) * 7 +
-    t.league * 4 + t.cup * 2 + t.goldenBoot * 5 +
+    t.league * 4 + t.cup * 2 + (t.leagueCup || 0) * 1.5 + (t.natSupercup || 0) * 1 + t.goldenBoot * 5 +
     Math.min(12, totalAwards(s) * 1.2) +
     Math.min(20, s.natTeam.caps / 6) + Math.min(15, s.totals.goals / 30) +
     s.money * 0.05

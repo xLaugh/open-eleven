@@ -19,6 +19,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "10.92",
+    date: "2026-11-04",
+    title: "Coupe de la Ligue et Supercoupe nationale",
+    items: [
+      { kind: "new", text: "Coupe de la Ligue en Angleterre, en Écosse, au Portugal et au Japon : ouverte aux clubs pros, avec une finale à jouer en moment décisif. Le vainqueur gagne une place en Bouclier la saison suivante, comme en vrai." },
+      { kind: "new", text: "Supercoupe nationale dans tous les pays : le champion ou le vainqueur de la coupe de la saison passée la dispute en ouverture de saison." },
+    ],
+  },
+  {
     version: "10.91",
     date: "2026-11-01",
     title: "Trente nouveaux événements",

@@ -88,7 +88,7 @@ export function newCareer(opts: NewCareerOptions) {
     gamesMedals: { gold: 0, silver: 0, bronze: 0 }, // médailles des Jeux régionaux (asiatiques, africains…)
     totals: { matches: 0, goals: 0, assists: 0, cleanSheets: 0 },
     captainMatches: 0, // matchs disputés avec le brassard de capitaine (bilan de fin)
-    trophies: { league: 0, cup: 0, continental: 0, continental2: 0, continental3: 0, supercup: 0, worldCup: 0, contInt: 0, natLeague: 0, olympic: 0, arabCup: 0, games: 0, ballon: 0, goldenBoot: 0, ballonAsia: 0, ballonAfrica: 0, ballonOceania: 0 },
+    trophies: { league: 0, cup: 0, leagueCup: 0, natSupercup: 0, continental: 0, continental2: 0, continental3: 0, supercup: 0, worldCup: 0, contInt: 0, natLeague: 0, olympic: 0, arabCup: 0, games: 0, ballon: 0, goldenBoot: 0, ballonAsia: 0, ballonAfrica: 0, ballonOceania: 0 },
     seasons: [],
     transferHistory: [],
     history: [],

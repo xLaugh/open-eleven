@@ -20,7 +20,7 @@ import { roomClubSeason, type RoomClubOutcome } from "./rooms";
 import { isQualified, qualifiersFor, settleNatPlayoff } from "./qualifiers";
 import { cupOf, leagueRange, noteClubQualification, seasonCupTier, titleChanceFor } from "./clubcups";
 import type { CareerState, LevelId, SeasonMomentEntry, SeasonReport } from "./types";
-import { BALANCE, COMPETITIONS, CONTINENTAL_CUPS, CONTINENTAL_CUPS2, CONTINENTAL_CUPS3, ENGINE_TEXT, EVENTS, LEVEL_ORDER, MICRO_EVENTS } from "@open-eleven/content";
+import { BALANCE, COMPETITIONS, LEAGUE_CUPS, CONTINENTAL_CUPS, CONTINENTAL_CUPS2, CONTINENTAL_CUPS3, ENGINE_TEXT, EVENTS, LEVEL_ORDER, MICRO_EVENTS } from "@open-eleven/content";
 
 // --- Simulation d'une saison ----------------------------------------------
 export function playSeason(s: CareerState) {
@@ -221,6 +221,29 @@ export function playSeason(s: CareerState) {
         moment: keyMomentFor(s, "cup_final"),
       });
     }
+    // Supercoupe nationale : le club champion (ou vainqueur de la Coupe Nationale) de la
+    // saison passée l'ouvre. Pas de tirage pour y être : on la joue d'office.
+    const superTicket = s.natSupercupTicket;
+    s.natSupercupTicket = null;
+    if (superTicket && superTicket.clubId === s.club.id && superTicket.year === s.year - 1) {
+      report.lines.push({ text: tx(s, "lineNatSupercup"), impact: 0 });
+      report.pendingMoments.push({
+        type: "nat_supercup", label: tx(s, "momNatSupercup"),
+        winLabel: tx(s, "momCupWin"), failLabel: tx(s, "momCupFail"),
+        moment: momentTitled(s, "cup_final", tx(s, "momNatSupercupTitle")),
+      });
+    }
+    if (report.trophies.includes("league") && isTopFlight) s.natSupercupTicket = { clubId: s.club.id, year: s.year };
+    // Coupe de la Ligue (Angleterre, Écosse, Portugal, Japon) : clubs pros seulement. Le
+    // hasard n'est consommé que dans ces pays : les autres carrières ne changent pas.
+    const leagueCup = LEAGUE_CUPS[s.club.countryId];
+    if (leagueCup && leagueCup.levels.includes(lvl) && rng() < (BALANCE.leagueCupChance[lvl] || 0) * teamBoost) {
+      report.pendingMoments.push({
+        type: "league_cup_final", label: tx(s, "momLeagueCup"),
+        winLabel: tx(s, "momCupWin"), failLabel: tx(s, "momCupFail"),
+        moment: momentTitled(s, "cup_final", tx(s, "momLeagueCupTitle")),
+      });
+    }
     // Coupe continentale de club : ATTEINDRE la finale se joue ici, la GAGNER se
     // joue dans un moment décisif interactif (continental_final).
     // La coupe jouée vient du classement de la saison passée (cf. clubcups.ts) :
@@ -232,6 +255,9 @@ export function playSeason(s: CareerState) {
     if (!evTrophies.includes("continental") && !evTrophies.includes("continental2") && !evTrophies.includes("continental3")) {
       const continent = continentOf(s.club.countryId) || "eu";
       const qual = seasonCupTier(s, lvl, isTopFlight);
+      // Vainqueur de la Coupe de la Ligue la saison passée, avec ce club : place en C3.
+      const lt = s.leagueCupTicket;
+      const leagueCupTicket = !!(lt && lt.clubId === s.club.id && lt.year === s.year - 1);
       let tier = 0, reachP = 0, cup = null;
       if (qual.tier === 1) {
         tier = 1;
@@ -239,7 +265,7 @@ export function playSeason(s: CareerState) {
         cup = CONTINENTAL_CUPS[continent] || CONTINENTAL_CUPS.eu;
       } else if ((subTicket || qual.tier === 2) && CONTINENTAL_CUPS2[continent]) {
         tier = 2; reachP = BALANCE.subCupReach.c2[lvl] || 0; cup = CONTINENTAL_CUPS2[continent];
-      } else if (qual.tier === 3 && CONTINENTAL_CUPS3[continent]) {
+      } else if ((qual.tier === 3 || leagueCupTicket) && CONTINENTAL_CUPS3[continent]) {
         tier = 3; reachP = BALANCE.subCupReach.c3[lvl] || 0; cup = CONTINENTAL_CUPS3[continent];
       }
       // Le joueur sait dès le début de saison ce que joue son club. Un club élite privé
@@ -573,6 +599,13 @@ export function playSeason(s: CareerState) {
 // chacun : leur issue est fixée d'avance (sharedWin), le choix ne pèse que sur la
 // performance personnelle du joueur (cf. playKeyMoment).
 // --- Qualifications des sélections : le récit pour le joueur -----------------------
+// Un moment décisif repris sous un autre titre (la Coupe de la Ligue et la Supercoupe
+// reprennent ceux de la finale de coupe).
+function momentTitled(s: CareerState, id: string, title: string) {
+  const m = keyMomentFor(s, id);
+  return m ? { ...m, title } : m;
+}
+
 export function qualCompName(s: CareerState, comp: string) {
   if (comp === "wc") return ENGINE_TEXT.natCompWc;
   const cont = continentOf(s.nationality.homeCountryId) || "eu";
@@ -769,6 +802,8 @@ export function resolveSeasonMoment(s: CareerState, report: SeasonReport, entry:
       // Vainqueur de coupe → qualifié pour une coupe continentale la saison
       // prochaine (C2, ou C1 si le club est/passe au sommet). Aucun rng.
       // Océanie exclue : aucun palier C2 pour ce continent (cf. content).
+      // Le vainqueur de la coupe ouvre la Supercoupe nationale de la saison suivante.
+      s.natSupercupTicket = { clubId: s.club.id, year: s.year };
       if (CONTINENTAL_CUPS2[continentOf(s.club.countryId) ?? ""]) {
         s.subCupTicket = true;
         // Déjà qualifié en C1 ou en C2 par le classement : le billet n'apporte rien de plus.
@@ -779,6 +814,36 @@ export function resolveSeasonMoment(s: CareerState, report: SeasonReport, entry:
     } else {
       s.moral = clamp(s.moral - 5, 5, 100);
       s.history.push({ age: s.age, text: tx(s, "cupLoss", { cupName: COMPETITIONS.cup.name }), impact: -4 });
+    }
+  } else if (entry.type === "league_cup_final") {
+    const cupName = COMPETITIONS.leagueCup.name;
+    if (res.success) {
+      s.trophies.leagueCup = (s.trophies.leagueCup || 0) + 1;
+      report.trophies.push("leagueCup");
+      s.money += 0.2;
+      s.moral = clamp(s.moral + 6, 5, 100);
+      s.history.push({ age: s.age, text: tx(s, "cupWin", { cupName }), impact: 7 });
+      recheckObjective(s, report);
+      // Comme en vrai : la Coupe de la Ligue qualifie pour la C3 du continent, s'il en a une.
+      const c3 = CONTINENTAL_CUPS3[continentOf(s.club.countryId) ?? ""];
+      if (c3) {
+        s.leagueCupTicket = { clubId: s.club.id, year: s.year };
+        report.lines.push({ text: tx(s, "lineLeagueCupTicket", { cupName: c3.name }), impact: 4 });
+      }
+    } else {
+      s.moral = clamp(s.moral - 4, 5, 100);
+      s.history.push({ age: s.age, text: tx(s, "cupLoss", { cupName }), impact: -3 });
+    }
+  } else if (entry.type === "nat_supercup") {
+    const cupName = COMPETITIONS.natSupercup.name;
+    if (res.success) {
+      s.trophies.natSupercup = (s.trophies.natSupercup || 0) + 1;
+      report.trophies.push("natSupercup");
+      s.moral = clamp(s.moral + 4, 5, 100);
+      s.history.push({ age: s.age, text: tx(s, "supercupWin", { cupName }), impact: 5 });
+    } else {
+      s.moral = clamp(s.moral - 3, 5, 100);
+      s.history.push({ age: s.age, text: tx(s, "supercupLoss", { cupName }), impact: -2 });
     }
   } else if (entry.type === "continental_final") {
     const tier = entry.tier || 1;

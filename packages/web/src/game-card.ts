@@ -388,6 +388,8 @@ import { Engine as E } from "@open-eleven/engine";
       ...((t.games || 0) > 0 && gamesDef ? [[`${gamesDef.icon} ${gamesDef.name}`, t.games]] : []),
       [`🎖️ ${COMPETITIONS.league.name}`, t.league],
       [`🏵️ ${COMPETITIONS.cup.name}`, t.cup],
+      ...((t.leagueCup || 0) > 0 ? [[`${COMPETITIONS.leagueCup.icon} ${COMPETITIONS.leagueCup.name}`, t.leagueCup]] : []),
+      ...((t.natSupercup || 0) > 0 ? [[`${COMPETITIONS.natSupercup.icon} ${COMPETITIONS.natSupercup.name}`, t.natSupercup]] : []),
       [`👟 ${COMPETITIONS.goldenBoot.name}`, t.goldenBoot],
     ];
     drawSectionDivider(ctx, cx, y, "PALMARÈS", TS.accent, 300);

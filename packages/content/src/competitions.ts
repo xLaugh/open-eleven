@@ -128,6 +128,20 @@ export const COMPETITIONS: Dict<Named> = {
   continental2: { name: "Trophée d'Europe", icon: "🥈" },
   continental3: { name: "Bouclier d'Europe", icon: "🥉" },
   supercup: { name: "Supercoupe d'Europe", icon: "🏅" },
+  // Coupes nationales secondaires (cf. LEAGUE_CUPS) et supercoupe d'un pays.
+  leagueCup: { name: "Coupe de la Ligue", icon: "🎗️" },
+  natSupercup: { name: "Supercoupe nationale", icon: "⚜️" },
+};
+
+// --- Coupe de la Ligue --------------------------------------------------------------
+// Seconde coupe nationale, réservée aux clubs professionnels, dans les pays qui l'ont
+// encore : Angleterre, Écosse, Portugal, Japon. Le vainqueur gagne une place dans la C3
+// de son continent la saison suivante (cf. engine/season.ts), comme en vrai.
+export const LEAGUE_CUPS: Dict<{ levels: string[] }> = {
+  en: { levels: ["elite", "d1", "d2", "d3", "d4"] },
+  sco: { levels: ["d1", "d2"] },
+  pt: { levels: ["elite", "d1", "d2"] },
+  jp: { levels: ["d1", "d2"] },
 };
 
 // --- Récompenses individuelles de saison --------------------------------------

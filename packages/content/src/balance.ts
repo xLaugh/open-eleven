@@ -101,6 +101,9 @@ const BALANCE_VALUES = {
   // Titre de division (ne compte comme trophée national qu'en d1/élite)
   titleChance: { regional: 0.12, d4: 0.11, d3: 0.1, d2: 0.08, d1: 0.06, elite: 0.3 },
   cupChance: { regional: 0.004, d4: 0.007, d3: 0.01, d2: 0.02, d1: 0.08, elite: 0.18 },
+  // Coupe de la Ligue (pays de LEAGUE_CUPS) : chance d'en atteindre la finale (× teamBoost).
+  // Moins de clubs que la Coupe Nationale, et les grands y font tourner : un peu plus ouverte.
+  leagueCupChance: { regional: 0, d4: 0.02, d3: 0.03, d2: 0.06, d1: 0.12, elite: 0.22 },
   // Chance d'ATTEINDRE la finale continentale (la gagner se joue en moment
   // décisif). Hors d'Europe, la D1 EST le sommet (pas de clubs "élite") : elle
   // conteste donc sa Coupe des Champions comme l'élite européenne conteste la sienne.
