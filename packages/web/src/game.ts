@@ -697,6 +697,7 @@ import { Engine } from "@open-eleven/engine";
     if (setup.roomId) G.room = { id: setup.roomId, mode: setup.roomMode || "together" };
     if (setup.dailyDate) {
       G.dailyDate = setup.dailyDate; // Défi du jour : aucun avantage (équité)
+      G.rankedToken = setup.rankedToken || null; // partie classée du jour (ranked), sinon null
       G.choiceLog = (setup.duelChoices || []).slice(); // journal pour le classement vérifié
     } else if (setup.duelRole) {
       G.duel = true; G.duelRole = setup.duelRole; G.duelSeed = setup.duelSeed;
@@ -2506,7 +2507,7 @@ import { Engine } from "@open-eleven/engine";
     const today = todayKey();
     const isToday = dateKey === today;
     if (isToday) {
-      if (d.today !== dateKey) { d.today = dateKey; d.todayBest = null; d.attempts = 0; }
+      if (d.today !== dateKey) { d.today = dateKey; d.todayBest = null; d.attempts = 0; (d as any).todayStars = 0; }
       d.attempts += 1;
     }
     const isTodayBest = isToday && (d.todayBest == null || score > d.todayBest);
@@ -2527,6 +2528,21 @@ import { Engine } from "@open-eleven/engine";
     return { score, todayBest: d.todayBest, isTodayBest, isAllTimeBest, streak: d.streak, allTimeBest: d.allTimeBest, stale: !isToday, date: dateKey };
   }
 
+  function showRankedResult(res) {
+    const box = $("final-ranked-note");
+    const acc = window.OpenElevenAccount;
+    const r = res && res.ranked;
+    if (!box || !r || !acc || !acc.rankImg) return;
+    const after = { tier: r.after.tier, div: r.after.div, points: r.after.points };
+    const net = (r.delta || 0) - (r.decay || 0);
+    const move = r.newTier ? T("🎉 Nouveau palier : {rank} !", { rank: esc(acc.rankName(after)) })
+      : r.promoted ? T("⬆️ Promotion : {rank}", { rank: esc(acc.rankName(after)) })
+      : r.demoted ? T("⬇️ Descente : {rank}", { rank: esc(acc.rankName(after)) })
+      : esc(acc.rankName(after));
+    box.innerHTML = `${acc.rankImg(after, 56)}<div><strong>${T("Ranked")} · ${r.stars > 0 ? "⭐".repeat(r.stars) : T("0 étoile")} · ${net > 0 ? "+" : ""}${net} ${T("pts")}</strong><span>${move}</span>${r.decay ? `<span>${T("(dont −{n} pour inactivité)", { n: r.decay })}</span>` : ""}</div>`;
+    box.hidden = false;
+  }
+
   // Carte cliquable « Défi du jour » sur l'accueil.
   function renderDailyPanel() {
     const panel = $("daily-panel");
@@ -2538,6 +2554,8 @@ import { Engine } from "@open-eleven/engine";
     const alive = d.lastDate === today || d.lastDate === prevDayKey(today);
     const streak = alive ? d.streak : 0;
     const bestLine = doneToday ? T("Ton meilleur aujourd'hui : {n} pts", { n: d.todayBest }) : "Pas encore tenté aujourd'hui";
+    const obj = E.dailyObjective(today);
+    const bestStars = d.today === today ? (d as any).todayStars || 0 : 0;
     panel.innerHTML = `
       <div class="hc-head">Défi du jour${streak > 0 ? ` <span class="hc-streak">🔥 ${streak} j</span>` : ""}</div>
       <div class="hc-body">
@@ -2546,9 +2564,18 @@ import { Engine } from "@open-eleven/engine";
           <span class="daily-chip">${flagHtml(ch.nationality)} ${esc(ch.nationality.name)}</span>
           <span class="daily-chip">${esc(ch.origin.name)}</span>
         </div>
+        ${dailyObjectiveHtml(obj, bestStars)}
         <span class="daily-best${doneToday ? " done" : ""}">${bestLine}</span>
         <div class="hc-cta">${T(doneToday ? "Rejouer maintenant" : "Jouer maintenant")}</div>
       </div>`;
+  }
+
+  // Objectif du jour : trois paliers d'étoiles (cf. E.dailyObjective). `got` = étoiles
+  // déjà obtenues : les paliers atteints s'allument.
+  function dailyObjectiveHtml(obj, got) {
+    const steps = obj.steps.map((label, i) =>
+      `<li class="dobj-step${got > i ? " on" : ""}"><span class="dobj-stars">${"⭐".repeat(i + 1)}</span> ${esc(label)}</li>`).join("");
+    return `<div class="daily-obj"><div class="dobj-title">${T("Objectif du jour")} · ${obj.icon} ${esc(obj.title)}</div><ul class="dobj-steps">${steps}</ul></div>`;
   }
 
   // Lance le défi : verrouille l'identité imposée puis saute aux choix libres
@@ -2568,12 +2595,24 @@ import { Engine } from "@open-eleven/engine";
     const ch = dailyChallengeFor(todayKey());
     // duelChoices : journal des choix de création (hygiène/entourage/club) — sert
     // ensuite au rejeu serveur pour vérifier le score (anti-triche du classement).
-    setup = { nationality: ch.nationality, position: ch.position, origin: ch.origin, dailyDate: ch.id, duelChoices: [], entryScreen: "screen-lifestyle" };
+    // Ranked : la PREMIÈRE partie du jour est classée (le serveur remet un jeton). Les
+    // suivantes restent jouables, pour le score du jour seulement. Sans compte : pas de rang.
+    let ranked = null;
+    const acc = window.OpenElevenAccount;
+    if (acc && acc.rankedStart && acc.getSession && acc.getSession()) {
+      try { ranked = await acc.rankedStart(ch.id); } catch (_) { ranked = null; }
+    }
+    setup = { nationality: ch.nationality, position: ch.position, origin: ch.origin, dailyDate: ch.id, duelChoices: [], entryScreen: "screen-lifestyle", rankedToken: ranked && ranked.ranked ? ranked.token : null };
     E.setSeed(dailySeedFor(ch.id)); // moteur déterministe pour TOUT le run de défi
     track("daily_started", { date: ch.id });
     const reminder = $("daily-reminder");
     if (reminder) {
-      reminder.innerHTML = T("🗓️ <strong>Défi du jour</strong> — {profile}", { profile: `${ch.position.icon} ${esc(ch.position.name)} · ${flagHtml(ch.nationality)} ${esc(ch.nationality.name)} · ${esc(ch.origin.name)}` });
+      const obj = E.dailyObjective(ch.id);
+      const rankedTag = !ranked ? ""
+        : ranked.ranked ? ` · <span class="ranked-tag">${T("🏅 Partie classée")}</span>`
+        : ranked.reason === "already" ? ` · <span class="ranked-tag off">${T("Entraînement : ta partie classée du jour est déjà jouée")}</span>` : "";
+      reminder.innerHTML = T("🗓️ <strong>Défi du jour</strong> — {profile}", { profile: `${ch.position.icon} ${esc(ch.position.name)} · ${flagHtml(ch.nationality)} ${esc(ch.nationality.name)} · ${esc(ch.origin.name)}` })
+        + `<br>🎯 ${obj.icon} ${esc(obj.title)} : ⭐ ${esc(obj.steps[0])} · ⭐⭐ ${esc(obj.steps[1])} · ⭐⭐⭐ ${esc(obj.steps[2])}${rankedTag}`;
       reminder.hidden = false;
     }
     showScreen("screen-lifestyle");
@@ -3277,12 +3316,22 @@ import { Engine } from "@open-eleven/engine";
     }
     const questNotes = evaluateQuests(); // avant les badges (streak/total à jour)
     const newBadges = evaluateBadges();
-    const dailyResult = G.dailyDate ? recordDailyResult(G.dailyDate, score) : null;
+    const dailyResult: any = G.dailyDate ? recordDailyResult(G.dailyDate, score) : null;
+    if (dailyResult) {
+      // Étoiles de l'objectif du jour (le serveur recalcule les siennes pour le ranked).
+      dailyResult.objective = E.dailyObjective(G.dailyDate);
+      dailyResult.stars = E.objectiveStars(G, dailyResult.objective);
+      const pr = loadProgress();
+      const pd: any = pr.daily;
+      if (pd && pd.today === G.dailyDate) { pd.todayStars = Math.max(pd.todayStars || 0, dailyResult.stars); saveProgress(pr); }
+    }
     // Classement mondial vérifié : on envoie SEULEMENT (date, journal de choix) —
     // le serveur rejoue et recalcule le score lui-même (anti-triche). No-op si
     // pas de compte connecté.
     if (G.dailyDate && window.OpenElevenAccount && window.OpenElevenAccount.submitDaily) {
-      window.OpenElevenAccount.submitDaily(G.dailyDate, (G.choiceLog || []).slice(), score);
+      const sent = window.OpenElevenAccount.submitDaily(G.dailyDate, (G.choiceLog || []).slice(), G.rankedToken || null);
+      if (G.rankedToken && sent && sent.then) sent.then(showRankedResult).catch(() => {});
+      G.rankedToken = null; // une seule fois : un rechargement de la fiche ne renvoie rien
     }
     // Duel par pseudo : envoi automatique (le serveur rejoue + départage).
     if (G.duel && window.OpenElevenAccount) {
@@ -3869,6 +3918,8 @@ import { Engine } from "@open-eleven/engine";
       ? `🎯 ${questNotes.length > 1 ? "Quêtes accomplies" : "Quête accomplie"} : ${questNotes.join(" · ")}`
       : "";
 
+    const rankedNote = $("final-ranked-note");
+    if (rankedNote) { rankedNote.hidden = true; rankedNote.innerHTML = ""; } // rempli par showRankedResult à la réponse du serveur
     const dailyNote = $("final-daily-note");
     if (dailyNote) {
       if (dailyResult) {
@@ -3878,6 +3929,10 @@ import { Engine } from "@open-eleven/engine";
         if (dailyResult.isAllTimeBest) msg += T(" · 🏆 nouveau record absolu !");
         else if (dailyResult.isTodayBest) msg += " · ✨ meilleur score du jour";
         if (!dailyResult.stale && dailyResult.streak > 1) msg += T(" · 🔥 série de {n} jours", { n: dailyResult.streak });
+        if (dailyResult.objective) {
+          const o = dailyResult.objective;
+          msg += " · " + (dailyResult.stars > 0 ? "⭐".repeat(dailyResult.stars) : T("0 étoile")) + " — " + o.icon + " " + o.title;
+        }
         dailyNote.textContent = msg;
         dailyNote.style.display = "";
       } else {
@@ -4225,6 +4280,8 @@ import { Engine } from "@open-eleven/engine";
       onlineGroup.hidden = false;
       const lbBtn = $("btn-leaderboard");
       if (lbBtn && acc.openLeaderboard) lbBtn.addEventListener("click", () => acc.openLeaderboard());
+      const rkBtn = $("btn-ranked");
+      if (rkBtn && acc.openRanked) rkBtn.addEventListener("click", () => acc.openRanked());
       const socialBtn = $("btn-social");
       if (socialBtn && acc.openSocial) socialBtn.addEventListener("click", () => acc.openSocial());
     }

@@ -7,7 +7,7 @@
    • Auth : e-mail + mot de passe. Chaque joueur ne lit que SA sauvegarde :
      c'est le serveur qui le vérifie.
    ============================================================ */
-import { AVATAR_GROUPS, AVATAR_IDS, FORBIDDEN_WORDS } from "@open-eleven/content";
+import { AVATAR_GROUPS, AVATAR_IDS, FORBIDDEN_WORDS, RANKED_RULES, RANKED_TIERS, RANKED_UNRANKED } from "@open-eleven/content";
 import { Engine } from "@open-eleven/engine";
 import { api } from "./api";
 
@@ -618,9 +618,17 @@ import { api } from "./api";
   }
 
   // Envoi anti-triche : le serveur est seul juge du score.
-  async function submitDaily(date, choices) {
-    if (!session) return; // pas connecté → pas de classement (lecture reste publique)
-    await api.submitScore("daily", { date, choices, v: EV }); // silencieux : ne jamais gêner la fin de partie
+  // rankedToken : jeton de la partie classée du jour (cf. rankedStart) ; la réponse
+  // porte alors ses étoiles et le rang mis à jour (`ranked`).
+  async function submitDaily(date, choices, rankedToken?) {
+    if (!session) return null; // pas connecté → pas de classement (lecture reste publique)
+    const body: Record<string, unknown> = { date, choices, v: EV };
+    if (rankedToken) body.rankedToken = rankedToken;
+    return api.submitScore("daily", body); // silencieux : l'appelant n'attend la réponse que pour le ranked
+  }
+  async function rankedStart(date) {
+    if (!session) return { ranked: false, reason: "guest" };
+    return api.rankedStart({ date, v: EV });
   }
 
   function todayKeyLocal() {
@@ -1255,8 +1263,95 @@ import { api } from "./api";
   setInterval(() => { if (document.visibilityState === "visible" && session) refreshNotifs(); }, 60000);
 
   // ---- API publique pour le jeu ----------------------------------------------
+  // ---- Ranked ------------------------------------------------------------------
+  // Emblème, palier et division d'un rang : le serveur décide de tout, on affiche.
+  const LEGEND = RANKED_TIERS.length - 1;
+  const tierOf = (t) => RANKED_TIERS[Math.max(0, Math.min(LEGEND, num(t, LEGEND)))];
+  function rankName(r) {
+    if (!r || r.unranked) return RANKED_UNRANKED.name;
+    const t = tierOf(r.tier);
+    return r.tier >= LEGEND ? t.name : t.name + " " + ["III", "II", "I"][num(r.div, 2)];
+  }
+  function rankImg(r, size) {
+    const src = "/" + (!r || r.unranked ? RANKED_UNRANKED.img : tierOf(r.tier).img);
+    return '<img class="rk-emb" src="' + src + '" alt="" width="' + size + '" height="' + size + '">';
+  }
+  const rkStyle = document.createElement("style");
+  rkStyle.textContent =
+    ".rk-emb{display:block;object-fit:contain}" +
+    ".rk-hero{display:flex;flex-direction:column;align-items:center;gap:4px;margin:10px 0 6px;text-align:center}" +
+    ".rk-name{font-family:var(--font-display,inherit);font-size:1.35rem;font-weight:800;color:var(--green-ink,#0b3b26)}" +
+    ".rk-bar{width:100%;max-width:300px;height:10px;border-radius:999px;background:rgba(12,45,30,.12);overflow:hidden}" +
+    ".rk-bar>span{display:block;height:100%;border-radius:999px;background:var(--gold,#d4af37)}" +
+    ".rk-sub{font-size:.84rem;color:var(--text-1,#567);margin:4px 0 0}" +
+    ".rk-rules{margin:12px 0 4px;padding:10px 12px;border-radius:10px;background:var(--panel-2,rgba(8,123,75,.08));font-size:.82rem;line-height:1.5;color:var(--text-1,#567)}" +
+    ".rk-days{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}" +
+    ".rk-day{padding:4px 8px;border-radius:8px;background:var(--panel-2,rgba(8,123,75,.08));font-size:.78rem;font-weight:700;color:var(--green-ink,#0b3b26)}" +
+    ".rk-day.neg{color:#b3261e}" +
+    ".lb-row .rk-emb{flex:none}";
+  document.head.appendChild(rkStyle);
+
+  const rkOverlay = document.createElement("div");
+  rkOverlay.className = "acc-overlay";
+  rkOverlay.innerHTML = '<div class="lb-box" role="dialog" aria-modal="true"></div>';
+  document.body.appendChild(rkOverlay);
+  const rkBox = rkOverlay.querySelector(".lb-box");
+  rkOverlay.addEventListener("click", (e) => { if (e.target === rkOverlay) rkOverlay.classList.remove("on"); });
+
+  const starsTxt = (n) => (num(n, 3) > 0 ? "⭐".repeat(num(n, 3)) : "0 ⭐");
+  async function renderRanked() {
+    rkBox.innerHTML = '<button class="acc-x" aria-label="Fermer">×</button><h3>🏅 Ranked</h3><p class="lb-empty">…</p>';
+    rkBox.querySelector(".acc-x").onclick = () => rkOverlay.classList.remove("on");
+    const [me, top] = await Promise.all([
+      session ? api.rpc("ranked_me") : Promise.resolve({ data: null, error: null }),
+      api.rpc("ranked_top", { limit: 50 }),
+    ]);
+    const r = me.data;
+    let head = "";
+    if (!session) {
+      head = '<div class="rk-hero">' + rankImg(null, 96) + '<div class="rk-name">' + esc(RANKED_UNRANKED.name) + "</div>" +
+        '<p class="rk-sub">' + esc(T("Connecte-toi pour avoir un rang : la première partie du défi du jour compte.")) + "</p></div>";
+    } else if (r) {
+      const per = RANKED_RULES.pointsPerDivision;
+      const legend = !r.unranked && r.tier >= LEGEND;
+      const pct = legend ? 100 : Math.round((Math.min(per, num(r.points, per)) / per) * 100);
+      head = '<div class="rk-hero">' + rankImg(r, 112) + '<div class="rk-name">' + esc(rankName(r)) + "</div>" +
+        (r.unranked ? '<p class="rk-sub">' + esc(T("Joue le défi du jour pour entrer au classement.")) + "</p>"
+          : '<div class="rk-bar"><span style="width:' + pct + '%"></span></div>' +
+            '<p class="rk-sub">' + (legend ? esc(T("{n} points de Légende", { n: num(r.points, 1e6) })) : esc(T("{n} / {max} points", { n: num(r.points, per), max: per }))) +
+            (r.position ? " · " + esc(T("{n}ᵉ de la saison", { n: num(r.position, 1e9) })) : "") +
+            (num(r.protect, 9) > 0 ? " · 🛡️ " + esc(T("protégé {n} j", { n: num(r.protect, 9) })) : "") + "</p>") +
+        "</div>";
+      const days = (r.days || []).slice(0, 7);
+      if (days.length) {
+        head += '<div class="fr-head">' + esc(T("Derniers jours classés")) + '</div><div class="rk-days">' + days.map((d) => {
+          const delta = Math.max(-99, Math.min(99, Math.round(Number(d.delta) || 0)));
+          const tag = d.status === "started" ? T("en cours") : d.status === "forfeit" ? T("abandon") : starsTxt(d.stars);
+          return '<span class="rk-day' + (delta < 0 ? " neg" : "") + '">' + esc(String(d.date).slice(5)) + " · " + esc(tag) +
+            (d.status === "started" ? "" : " · " + (delta > 0 ? "+" : "") + delta) + "</span>";
+        }).join("") + "</div>";
+      }
+    }
+    const items = (top.data && top.data.items) || [];
+    const list = items.length
+      ? '<ul class="lb-list">' + items.map((it) => '<li class="lb-row" data-pseudo="' + esc(it.pseudo) + '"><span class="lb-rank">' + medal(num(it.rank, 1e9)) + "</span>" +
+          rankImg(it, 28) + '<span class="lb-name">' + esc(it.pseudo) + ' <span class="lb-sub">' + esc(rankName(it)) + '</span></span><span class="lb-pts">' + num(it.points, 1e6) + "</span></li>").join("") + "</ul>"
+      : '<p class="lb-empty">' + esc(T("Personne n'est encore classé cette saison.")) + "</p>";
+    rkBox.innerHTML = '<button class="acc-x" aria-label="Fermer">×</button><h3>🏅 Ranked</h3>' +
+      '<p class="acc-sub" style="margin:0 0 2px">' + esc(T("Saison {s} — la première partie du défi du jour compte.", { s: String((top.data && top.data.season) || "") })) + "</p>" +
+      head +
+      '<div class="rk-rules">' + esc(T("⭐ à ⭐⭐⭐ selon l'objectif du jour. 10 points pour monter d'une division ; plus le palier est haut, plus une mauvaise journée coûte. Chaque 1er du mois, un palier de moins.")) + "</div>" +
+      '<div class="fr-head">' + esc(T("Classement de la saison")) + "</div>" + list;
+    rkBox.querySelector(".acc-x").onclick = () => rkOverlay.classList.remove("on");
+    rkBox.querySelectorAll(".lb-row[data-pseudo]").forEach((row) => {
+      row.addEventListener("click", () => openProfile(row.getAttribute("data-pseudo")));
+    });
+  }
+  function openRanked() { renderRanked(); rkOverlay.classList.add("on"); }
+  async function rankedMe() { return session ? (await api.rpc("ranked_me")).data : null; }
+
   window.OpenElevenAccount = {
-    submitDaily, openLeaderboard, openProfile, getLegends, pushProfile: pushProfileStats,
+    submitDaily, rankedStart, openRanked, rankedMe, rankName, rankImg, openLeaderboard, openProfile, getLegends, pushProfile: pushProfileStats,
     submitDuelCreate, submitDuelRespond, openSocial,
     bumpStat, getStats, refreshNotifs,
     // Exposés pour room.ts (mode « carrière commune ») : ce module reste

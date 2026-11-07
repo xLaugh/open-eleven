@@ -13,6 +13,7 @@ export * from "./moments";
 export * from "./nations";
 export * from "./profile";
 export * from "./progression";
+export * from "./ranked";
 export * from "./sponsors";
 export * from "./stories";
 export * from "./texts";

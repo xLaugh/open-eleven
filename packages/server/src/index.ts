@@ -13,6 +13,7 @@ import { migrate, pool, waitForDb } from "./db";
 import { registerLive } from "./live";
 import { registerRpc } from "./rpc";
 import { registerScores } from "./scores";
+import { registerRanked } from "./ranked";
 
 const app = Fastify({
   logger: { level: process.env.LOG_LEVEL ?? "info" },
@@ -43,6 +44,7 @@ app.get("/api/health", async () => {
 registerAuth(app);
 registerRpc(app);
 registerScores(app);
+registerRanked(app);
 registerLive(app);
 
 await waitForDb();

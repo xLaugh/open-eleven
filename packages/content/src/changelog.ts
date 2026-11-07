@@ -19,6 +19,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "10.93",
+    date: "2026-11-06",
+    title: "Ranked et étoiles du défi du jour",
+    items: [
+      { kind: "new", text: "Le défi du jour a désormais un objectif, le même pour tous : parcours au Mondial, saison de club, Ballon d'Or, buts… Selon jusqu'où vous allez, vous décrochez une, deux ou trois étoiles." },
+      { kind: "new", text: "Ranked : six paliers, de Bronze à Légende, avec trois divisions chacun. La première partie du défi du jour fait monter ou descendre votre rang selon vos étoiles ; plus vous montez, plus une mauvaise journée coûte." },
+      { kind: "new", text: "Une saison par mois : le 1er, chacun redescend d'un palier et repart à l'assaut du classement. Les étoiles sont vérifiées par le serveur, comme les scores." },
+    ],
+  },
+  {
     version: "10.92",
     date: "2026-11-04",
     title: "Coupe de la Ligue et Supercoupe nationale",

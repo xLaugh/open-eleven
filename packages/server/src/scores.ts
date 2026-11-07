@@ -9,6 +9,7 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import { currentUser } from "./auth";
 import { pool } from "./db";
 import { notify } from "./notify";
+import { finishRanked } from "./ranked";
 
 // Fenêtre de rattrapage : au-delà, un défi passé n'entre plus au classement.
 // Sans elle, rejouer des centaines de défis anciens gonflait le classement
@@ -76,7 +77,12 @@ export function registerScores(app: FastifyInstance): void {
 
     const pseudo = (await pseudoOf(user.id)) ?? "Joueur " + user.id.slice(0, 4);
     const { rows } = await pool.query("select record_daily_score($1, $2, $3, $4::jsonb, $5) as best", [user.id, date, score, JSON.stringify(p.choices), pseudo]);
-    return { ok: true, score, best: rows[0].best, date, pseudo };
+    // Partie classée du jour (jeton remis par /api/ranked/start) : étoiles et rang.
+    let ranked = null;
+    if (typeof p.rankedToken === "string") {
+      try { ranked = await finishRanked(user.id, date, p.rankedToken, p.choices); } catch (err) { req.log.error(err); }
+    }
+    return { ok: true, score, best: rows[0].best, date, pseudo, ranked };
   });
 
   app.post("/api/scores/duel", async (req, reply) => {

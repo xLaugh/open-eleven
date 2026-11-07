@@ -21,6 +21,7 @@ import { NATIONALITIES } from "./nations";
 import { ARCHETYPES, ENTOURAGES, LIFESTYLES, ORIGINS, POSITIONS, ROLES, TRAITS, TRAJECTORIES } from "./profile";
 import { BADGES, BADGE_CATS, DAILY_QUESTS, LEGEND_QUESTS, PERKS, STREAK_MILESTONES, WEEKLY_CHALLENGES } from "./progression";
 import { SPONSOR_TIERS } from "./sponsors";
+import { DAILY_OBJECTIVES, RANKED_TIERS, RANKED_UNRANKED } from "./ranked";
 import { STORIES } from "./stories";
 import { BRAND } from "./brand";
 import { ENGINE_TEXT, HEADLINES, RIVAL_NEWS_AHEAD, RIVAL_NEWS_BAD, RIVAL_NEWS_BEHIND, RIVAL_NEWS_GOOD, UNTAKEN_PATH_TEMPLATES, WORLD_NEWS } from "./texts";
@@ -46,6 +47,8 @@ export const TRANSLATABLE_STRUCTURES: Record<string, unknown> = {
   REGIONAL_GAMES, COUNTRIES, NATIONALITIES, STREAK_MILESTONES,
   // Paliers de sponsoring : title/text du palier, labelBase/desc des offres.
   SPONSOR_TIERS,
+  // Ranked : noms des paliers et objectifs du défi du jour (titre et paliers d'étoiles).
+  DAILY_OBJECTIVES, RANKED_TIERS, RANKED_UNRANKED,
   // BALANCE est surtout numérique, mais porte les libellés de blessure
   // (BALANCE.injury.labels), affichés dans l'historique de carrière.
   BALANCE,

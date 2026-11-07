@@ -1,0 +1,160 @@
+<svg viewBox="0 0 512 512" width="512" height="512" xmlns="http://www.w3.org/2000/svg" role="img" class="tier-rare">
+<style>
+  .tier-rare {
+    --tr-l1:#c3e3f8;
+    --tr-l2:#8ec7ef;
+    --tr-l3:#529dd4;
+    --tr-l4:#36698f;
+    --tr-l5:#6db0df;
+    --tr-l6:#a6d4f1;
+    --tr-c1:#1b537b;
+    --tr-c2:#113856;
+    --tr-c3:#0a2336;
+    --tr-acc:#9FCEEE;
+    --tr-edge:#061420;
+    --tr-slot:#040D15;
+    --tr-shade:rgba(0,0,0,.50);
+    --tr-stitch:rgba(159,206,238,.22);
+    --tr-deboss:#1D5A85;
+    --tr-panneau:#36698f;
+    --tr-guilloche:#95CCF2;
+    --tr-rays-a:0;
+    --tr-mol-a:0;
+    --tr-eclat-a:0;
+    --tr-halo:#5FA9DC;
+    --tr-halo-a:0;
+    --tr-aura-a:0;
+    --tr-facettes:0;
+    --tr-filet:0.714;
+    --tr-grenetis:0.66;
+    --tr-vagues:0;
+    --tr-listel:0;
+    --tr-chanfrein:0.26;
+    --tr-creux:0;
+    --tr-sheen:0.235;
+  }
+</style>
+<defs>
+<linearGradient id="tr-rim" x1=".05" y1="0" x2=".8" y2="1">
+  <stop offset="0" stop-color="var(--tr-l1)"/>
+  <stop offset=".18" stop-color="var(--tr-l2)"/>
+  <stop offset=".40" stop-color="var(--tr-l3)"/>
+  <stop offset=".58" stop-color="var(--tr-l4)"/>
+  <stop offset=".80" stop-color="var(--tr-l5)"/>
+  <stop offset="1" stop-color="var(--tr-l6)"/>
+</linearGradient>
+<linearGradient id="tr-corps" x1="0" y1="0" x2=".2" y2="1">
+  <stop offset="0" stop-color="var(--tr-c1)"/>
+  <stop offset=".55" stop-color="var(--tr-c2)"/>
+  <stop offset="1" stop-color="var(--tr-c3)"/>
+</linearGradient>
+<linearGradient id="tr-band" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="var(--tr-l2)"/>
+  <stop offset=".5" stop-color="var(--tr-l4)"/>
+  <stop offset="1" stop-color="var(--tr-l5)"/>
+</linearGradient>
+<radialGradient id="tr-spec" cx=".33" cy=".22" r=".62">
+  <stop offset="0" stop-color="#fff" stop-opacity=".8"/>
+  <stop offset=".45" stop-color="#fff" stop-opacity=".22"/>
+  <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="tr-vol" cx=".72" cy=".85" r=".6">
+  <stop offset="0" stop-color="#000" stop-opacity=".3"/>
+  <stop offset="1" stop-color="#000" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="tr-creux" cx=".5" cy=".5" r=".54">
+  <stop offset="0" stop-color="var(--tr-c3)" stop-opacity=".92"/>
+  <stop offset=".55" stop-color="var(--tr-c3)" stop-opacity=".55"/>
+  <stop offset="1" stop-color="var(--tr-c3)" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="tr-eclat">
+  <stop offset="0" stop-color="#fff" stop-opacity="1"/>
+  <stop offset="1" stop-color="#fff" stop-opacity=".2"/>
+</radialGradient>
+<linearGradient id="tr-mark" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#EFC94C"/>
+  <stop offset="1" stop-color="#8F6200"/>
+</linearGradient>
+<filter id="tr-halo" x="-35%" y="-35%" width="170%" height="170%">
+  <feGaussianBlur stdDeviation="16"/>
+</filter>
+<filter id="tr-flou" x="-35%" y="-35%" width="170%" height="170%">
+  <feGaussianBlur stdDeviation="17"/>
+</filter>
+<clipPath id="tr-clip">
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z"/>
+</clipPath>
+<clipPath id="tr-ring">
+  <path clip-rule="evenodd" d="M 256 36 A 220 220 0 1 1 255.9 36 Z M 256 56 A 200 200 0 1 1 255.9 56 Z"/>
+</clipPath>
+</defs>
+<g id="lunette">
+  <path d="M 256 36 A 220 220 0 1 1 255.9 36 Z" fill="url(#tr-rim)" stroke="var(--tr-edge)" stroke-width="3" stroke-opacity=".45"/>
+</g>
+<g id="champ">
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="url(#tr-corps)"/>
+</g>
+<g id="contre-lunette" clip-path="url(#tr-clip)">
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="url(#tr-rim)" stroke-width="22"/>
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-edge)" stroke-opacity=".5" stroke-width="3" transform="scale(0.95) translate(6.7,6.7)"/>
+</g>
+<g id="gravures" clip-path="url(#tr-clip)">
+<g id="filet" style="opacity:var(--tr-filet)">
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-edge)" stroke-width="6.13" transform="translate(256,256) scale(0.8150) translate(-256,-256)"/>
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-acc)" stroke-width="4.40" transform="translate(256,256) scale(0.7950) translate(-256,-256)"/>
+</g>
+<g id="grenetis" style="opacity:var(--tr-grenetis)">
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-edge)" stroke-width="12.72" stroke-linecap="round" stroke-dasharray="0.01 24.17" transform="translate(256,256) scale(0.8650) translate(-256,-256)"/>
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-acc)" stroke-width="9.30" stroke-linecap="round" stroke-dasharray="0.01 24.17" transform="translate(256,256) scale(0.8600) translate(-256,-256)"/>
+</g>
+</g>
+<g id="chanfrein" clip-path="url(#tr-clip)" style="opacity:var(--tr-chanfrein)">
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="#000" stroke-opacity=".45" stroke-width="22" transform="translate(0,9)"/>
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-l1)" stroke-opacity=".28" stroke-width="14" transform="translate(0,-9)"/>
+</g>
+<g id="panneaux" clip-path="url(#tr-clip)">
+  <path d="M 256.0 56.0 L 307.4 93.3 L 287.7 153.7 L 224.3 153.7 L 204.6 93.3 Z" fill="var(--tr-panneau, var(--tr-edge))" opacity=".85"/>
+  <path d="M 287.7 358.3 L 307.4 418.7 L 256.0 456.0 L 204.6 418.7 L 224.3 358.3 Z" fill="var(--tr-panneau, var(--tr-edge))" opacity=".85"/>
+  <path d="M 156.7 130.0 L 171.9 177.0 L 132.0 206.0 L 92.1 177.0 L 107.3 130.0 Z" fill="var(--tr-panneau, var(--tr-edge))" opacity=".85"/>
+  <path d="M 404.7 130.0 L 419.9 177.0 L 380.0 206.0 L 340.1 177.0 L 355.3 130.0 Z" fill="var(--tr-panneau, var(--tr-edge))" opacity=".85"/>
+  <path d="M 132.0 306.0 L 171.9 335.0 L 156.7 382.0 L 107.3 382.0 L 92.1 335.0 Z" fill="var(--tr-panneau, var(--tr-edge))" opacity=".85"/>
+  <path d="M 380.0 306.0 L 419.9 335.0 L 404.7 382.0 L 355.3 382.0 L 340.1 335.0 Z" fill="var(--tr-panneau, var(--tr-edge))" opacity=".85"/>
+  <path d="M 316 66 L 307 93 M 196 66 L 205 93 M 316 446 L 307 419 M 196 446 L 205 419" stroke="var(--tr-panneau, var(--tr-edge))" stroke-width="8" opacity=".55" stroke-linecap="round"/>
+</g>
+<g id="brassard">
+  <path d="M 40 164 H 472 V 348 H 40 Z" fill="url(#tr-band)" clip-path="url(#tr-clip)"/>
+<g clip-path="url(#tr-clip)" stroke-linecap="round">
+  <path d="M 40 170 H 472" stroke="var(--tr-edge)" stroke-width="9" opacity=".26"/>
+  <path d="M 40 164 H 472 M 40 348 H 472" stroke="var(--tr-acc)" stroke-width="5"/>
+  <path d="M 40 182 H 472 M 40 330 H 472" stroke="var(--tr-stitch)" stroke-width="4.5" stroke-dasharray="12 11"/>
+</g>
+<g id="passants" fill="url(#tr-rim)" stroke="var(--tr-edge)" stroke-width="3">
+  <rect x="74" y="196" width="28" height="120" rx="12"/>
+  <rect x="410" y="196" width="28" height="120" rx="12"/>
+</g>
+</g>
+<g id="lumiere" clip-path="url(#tr-clip)">
+  <rect x="0" y="0" width="512" height="512" fill="url(#tr-vol)"/>
+  <rect x="0" y="0" width="512" height="512" fill="url(#tr-spec)" style="opacity:var(--tr-sheen)"/>
+</g>
+<g id="brand-slot" data-ratio="compact" data-regime="incrustation-noble">
+<g class="slot-safe-area" transform="translate(256,256)">
+<g class="inlay-sertissage" fill="url(#tr-rim)" stroke="url(#tr-rim)" stroke-width="7.17" stroke-linejoin="round" stroke-linecap="round" transform="translate(0,0) scale(5.3000) translate(-32,-32)">
+  <path d="M30 12 L30 52 L20 52 L20 24 L12 28.5 L12 19.5 Z"/>
+  <path d="M52 12 L52 52 L42 52 L42 24 L34 28.5 L34 19.5 Z"/>
+</g>
+<g class="inlay-gorge" fill="var(--tr-shade)" stroke="var(--tr-shade)" stroke-width="4.15" stroke-linejoin="round" stroke-linecap="round" transform="translate(0,0) scale(5.3000) translate(-32,-32)">
+  <path d="M30 12 L30 52 L20 52 L20 24 L12 28.5 L12 19.5 Z"/>
+  <path d="M52 12 L52 52 L42 52 L42 24 L34 28.5 L34 19.5 Z"/>
+</g>
+<g class="slot-fond" fill="var(--tr-slot)" stroke="var(--tr-slot)" stroke-width="2.26" stroke-linejoin="round" stroke-linecap="round" transform="translate(0,0) scale(5.3000) translate(-32,-32)">
+  <path d="M30 12 L30 52 L20 52 L20 24 L12 28.5 L12 19.5 Z"/>
+  <path d="M52 12 L52 52 L42 52 L42 24 L34 28.5 L34 19.5 Z"/>
+</g>
+<g class="brand-artwork" fill="url(#tr-mark)" transform="translate(0,0) scale(5.3000) translate(-32,-32)">
+  <path d="M30 12 L30 52 L20 52 L20 24 L12 28.5 L12 19.5 Z"/>
+  <path d="M52 12 L52 52 L42 52 L42 24 L34 28.5 L34 19.5 Z"/>
+</g>
+</g>
+</g>
+</svg>

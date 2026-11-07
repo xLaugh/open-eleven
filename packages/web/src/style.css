@@ -2474,3 +2474,19 @@ body { color: var(--text-0); }
 .rm-invite-panel .lb-row .acc-btn { width: auto; flex-shrink: 0; margin: 0; padding: 6px 14px; font-size: 0.78rem; }
 .rm-state { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 
+
+/* Défi du jour : objectif et paliers d'étoiles */
+.daily-obj { width: 100%; margin: 6px 0 4px; padding: 8px 10px; border-radius: 10px; background: var(--panel-2, rgba(8,123,75,.08)); text-align: start; }
+.dobj-title { font-size: 0.78rem; font-weight: 800; color: var(--text-1); margin-bottom: 4px; }
+.dobj-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.dobj-step { font-size: 0.76rem; color: var(--text-2); }
+.dobj-step .dobj-stars { display: inline-block; min-width: 3.6em; filter: grayscale(1); opacity: 0.55; }
+.dobj-step.on { color: var(--good-text); font-weight: 700; }
+.dobj-step.on .dobj-stars { filter: none; opacity: 1; }
+/* Ranked : étiquette de partie classée et résultat en fin de carrière */
+.ranked-tag { font-weight: 800; color: var(--gold, #b8860b); }
+.ranked-tag.off { font-weight: 600; color: var(--text-2); }
+.ranked-note { display: flex; align-items: center; gap: 12px; margin: 10px auto 4px; padding: 10px 14px; max-width: 420px; border-radius: 12px; background: var(--panel-2, rgba(8,123,75,.08)); text-align: start; }
+.ranked-note[hidden] { display: none; }
+.ranked-note div { display: flex; flex-direction: column; gap: 2px; font-size: 0.86rem; }
+.ranked-note img { flex: none; }

@@ -66,7 +66,48 @@ async function pseudoOf(db: Db, userId: string): Promise<string | null> {
   return rows[0]?.pseudo ?? null;
 }
 
+// Rang d'une ligne de la table ranked, vu depuis la saison en cours : une ligne
+// restée sur une saison close est présentée comme elle repartira (un palier de moins).
+function rankedView(r: Record<string, any> | undefined, season: string) {
+  if (!r || !r.season) return { tier: 0, div: 0, points: 0, protect: 0, bestTier: 0, bestDiv: 0, unranked: true };
+  if (r.season !== season) return { tier: Math.max(0, r.tier - 1), div: 0, points: 0, protect: 0, bestTier: Math.max(0, r.tier - 1), bestDiv: 0, unranked: false, carried: true };
+  return { tier: r.tier, div: r.div, points: r.points, protect: r.protect, bestTier: r.best_tier, bestDiv: r.best_div, unranked: false };
+}
+const utcToday = () => new Date().toISOString().slice(0, 10);
+
 export const procedures: Record<string, Procedure> = {
+  // --- Ranked (écritures : /api/ranked/start et /api/scores/daily, cf. ranked.ts) ----
+  ranked_me: {
+    auth: true,
+    async run(db, me) {
+      const season = utcToday().slice(0, 7);
+      const row = (await db.query("select * from ranked where user_id = $1", [me])).rows[0];
+      const days = (await db.query("select date, status, stars, delta, tier, div, points from ranked_days where user_id = $1 order by date desc limit 14", [me])).rows;
+      const seasons = (await db.query("select season, best_tier, best_div from ranked_seasons where user_id = $1 order by season desc limit 12", [me])).rows;
+      let position: number | null = null;
+      if (row && row.season === season) {
+        position = (await db.query(
+          "select count(*)::int + 1 as n from ranked where season = $1 and (tier, div, points) > ($2, $3, $4)",
+          [season, row.tier, row.div, row.points])).rows[0].n;
+      }
+      return {
+        season, position, ...rankedView(row, season),
+        days: days.map((d) => ({ date: d.date, status: d.status, stars: d.stars, delta: d.delta, tier: d.tier, div: d.div, points: d.points })),
+        seasons: seasons.map((x) => ({ season: x.season, bestTier: x.best_tier, bestDiv: x.best_div })),
+      };
+    },
+  },
+  ranked_top: {
+    auth: false,
+    async run(db, _me, args) {
+      const season = utcToday().slice(0, 7);
+      const limit = Math.min(100, Math.max(1, Number.isInteger(args.limit) ? (args.limit as number) : 50));
+      const { rows } = await db.query(
+        "select pseudo, tier, div, points from ranked where season = $1 and pseudo is not null order by tier desc, div desc, points desc, updated_at asc limit $2",
+        [season, limit]);
+      return { season, items: rows.map((r, i) => ({ rank: i + 1, pseudo: r.pseudo, tier: r.tier, div: r.div, points: r.points })) };
+    },
+  },
   // --- Sauvegarde ---------------------------------------------------------------
   // Un seul bloc par joueur, remplacé en entier. `expected` est la date de la
   // version que l'appareil connaît : si le serveur en a une autre, quelqu'un

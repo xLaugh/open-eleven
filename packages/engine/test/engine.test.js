@@ -427,3 +427,56 @@ test("sélection : une grande nation n'appelle pas un joueur de D3, mais bien un
   }
   E.clearSeed();
 });
+
+test("défi du jour : objectif stable, adapté au profil, étoiles de 0 à 3", () => {
+  const { loadContent } = require("./load-engine");
+  const C = loadContent();
+  for (let d = 0; d < 120; d++) {
+    const date = new Date(Date.UTC(2026, 10, 1) + d * 86400000).toISOString().slice(0, 10);
+    const a = E.dailyObjective(date), b = E.dailyObjective(date);
+    assert.deepEqual(a, b, "objectif instable pour " + date);
+    assert.equal(a.steps.length, 3);
+    const w = E.dailyChallenge(date).nationality.weight;
+    if (a.kind === "wc") assert.ok(w >= 0.55, "Mondial demandé à une petite nation (" + date + ")");
+    if (a.kind === "cont" || a.kind === "ballon") assert.ok(w >= 0.35);
+    if (a.kind === "cleanSheets") assert.equal(E.dailyChallenge(date).position.id, "gk");
+    const stars = E.starsDaily(date, Array(400).fill(d % 3));
+    assert.ok(stars >= 0 && stars <= 3);
+  }
+  void C;
+});
+
+test("ranked : montée, protection du nouveau palier, descente, saison et inactivité", () => {
+  let s = E.rankedFresh();
+  // Bronze : 3 étoiles = +6 ; deux jours → Bronze II avec 2 points.
+  s = E.rankedStep(s, "2026-11-01", 3).state;
+  let r = E.rankedStep(s, "2026-11-02", 3);
+  assert.equal(r.state.tier, 0); assert.equal(r.state.div, 1); assert.equal(r.state.points, 2); assert.ok(r.promoted);
+  // Tout en bas, 0 étoile ne fait rien perdre.
+  assert.equal(E.rankedStep(E.rankedFresh(), "2026-11-01", 0).state.points, 0);
+  // Or III fraîchement atteint : protégé, une journée blanche ne fait pas descendre.
+  s = { ...E.rankedFresh(), season: "2026-11", tier: 1, div: 2, points: 8, lastDate: "2026-11-03" };
+  r = E.rankedStep(s, "2026-11-04", 2);
+  assert.ok(r.newTier); assert.equal(r.state.tier, 2); assert.equal(r.state.div, 0);
+  r = E.rankedStep(r.state, "2026-11-05", 0);
+  assert.equal(r.state.tier, 2); assert.equal(r.state.points, 0, "le nouveau palier doit être protégé");
+  // Sans protection, sous 0 on redescend d'une division (Or III → Argent I).
+  s = { ...E.rankedFresh(), season: "2026-11", tier: 2, div: 0, points: 1, lastDate: "2026-11-09" };
+  r = E.rankedStep(s, "2026-11-10", 0);
+  assert.ok(r.demoted); assert.equal(r.state.tier, 1); assert.equal(r.state.div, 2); assert.equal(r.state.points, 9);
+  // Nouvelle saison : un palier de moins, saison close renvoyée pour archivage.
+  s = { ...E.rankedFresh(), season: "2026-11", tier: 3, div: 2, points: 7, bestTier: 3, bestDiv: 2, lastDate: "2026-11-30" };
+  r = E.rankedStep(s, "2026-12-01", 0);
+  assert.deepEqual(r.closedSeason, { season: "2026-11", bestTier: 3, bestDiv: 2 });
+  assert.equal(r.state.tier, 2); assert.equal(r.state.div, 0); assert.equal(r.state.season, "2026-12");
+  // Diamant : six jours sans jouer coûtent 4 points avant le gain du jour.
+  s = { ...E.rankedFresh(), season: "2026-11", tier: 4, div: 1, points: 6, lastDate: "2026-11-01" };
+  r = E.rankedStep(s, "2026-11-08", 3);
+  assert.equal(r.decay, 4); assert.equal(r.state.points, 6);
+  // Légende : les points s'accumulent sans division.
+  s = { ...E.rankedFresh(), season: "2026-11", tier: 4, div: 2, points: 9, lastDate: "2026-11-01" };
+  r = E.rankedStep(s, "2026-11-02", 3);
+  assert.equal(r.state.tier, E.RANKED_LEGEND); assert.equal(r.state.points, 3);
+  r = E.rankedStep(r.state, "2026-11-03", 3);
+  assert.equal(r.state.points, 7);
+});

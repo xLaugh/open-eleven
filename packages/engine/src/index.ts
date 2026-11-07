@@ -29,6 +29,7 @@ import { ovr, hasTrait } from "./player";
 import { sponsorDealDue, sponsorTierFor, sponsorOffersFor, applySponsorDeal } from "./sponsors";
 import { creditClubTrophies, roomClubSeason, roomClubSeed, teamRatingFromOvr } from "./rooms";
 import { hasEliteClubs, leagueRange, seasonCupTier, simulatedRank, tierForRank } from "./clubcups";
+import { dailyObjective, objectiveStars, starsDaily, rankedFresh, rankedStep, rankedLabel, RANKED_LEGEND } from "./stars";
 import { ENGINE_VERSION } from "./version";
 import { BALANCE } from "@open-eleven/content";
 
@@ -53,6 +54,7 @@ export const Engine = {
   careerTitle, pickHighlights, buildNarrative, buildUntakenPath,
   newRival, rivalSeason, rivalNewsLine, compareVerdict,
   hashInt, dailyChallenge, dailySeedFor, duelChallenge, replayDaily, replayDuel, scoreDaily, scoreDuel,
+  dailyObjective, objectiveStars, starsDaily, rankedFresh, rankedStep, rankedLabel, RANKED_LEGEND, // étoiles du défi et ranked (cf. stars.ts)
   ENGINE_VERSION,
   BALANCE_REF: BALANCE,
 };

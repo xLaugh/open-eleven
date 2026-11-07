@@ -1,0 +1,205 @@
+<svg viewBox="0 0 512 512" width="512" height="512" xmlns="http://www.w3.org/2000/svg" role="img" class="tier-or">
+<style>
+  .tier-or {
+    --tr-l1:#FFF9E4;
+    --tr-l2:#F3DA82;
+    --tr-l3:#C08E17;
+    --tr-l4:#523001;
+    --tr-l5:#E9C34E;
+    --tr-l6:#FDF3C6;
+    --tr-c1:#3E352A;
+    --tr-c2:#241E15;
+    --tr-c3:#100E09;
+    --tr-acc:#F5DA8B;
+    --tr-edge:#160E02;
+    --tr-slot:#0B0904;
+    --tr-shade:rgba(0,0,0,.58);
+    --tr-stitch:rgba(255,232,160,.30);
+    --tr-deboss:#3E352A;
+    --tr-panneau:#523001;
+    --tr-guilloche:#FFE7A0;
+    --tr-rays-a:0.16;
+    --tr-mol-a:0.31;
+    --tr-eclat-a:1;
+    --tr-halo:#FFC93A;
+    --tr-halo-a:0.66;
+    --tr-aura-a:0.16;
+    --tr-facettes:0.4;
+    --tr-filet:0.95;
+    --tr-grenetis:0.95;
+    --tr-vagues:0.62;
+    --tr-listel:1;
+    --tr-chanfrein:0.52;
+    --tr-creux:0.9;
+    --tr-sheen:0.46;
+  }
+</style>
+<defs>
+<linearGradient id="tr-rim" x1=".05" y1="0" x2=".8" y2="1">
+  <stop offset="0" stop-color="var(--tr-l1)"/>
+  <stop offset=".18" stop-color="var(--tr-l2)"/>
+  <stop offset=".40" stop-color="var(--tr-l3)"/>
+  <stop offset=".58" stop-color="var(--tr-l4)"/>
+  <stop offset=".80" stop-color="var(--tr-l5)"/>
+  <stop offset="1" stop-color="var(--tr-l6)"/>
+</linearGradient>
+<linearGradient id="tr-corps" x1="0" y1="0" x2=".2" y2="1">
+  <stop offset="0" stop-color="var(--tr-c1)"/>
+  <stop offset=".55" stop-color="var(--tr-c2)"/>
+  <stop offset="1" stop-color="var(--tr-c3)"/>
+</linearGradient>
+<linearGradient id="tr-band" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="var(--tr-l2)"/>
+  <stop offset=".5" stop-color="var(--tr-l4)"/>
+  <stop offset="1" stop-color="var(--tr-l5)"/>
+</linearGradient>
+<radialGradient id="tr-spec" cx=".33" cy=".22" r=".62">
+  <stop offset="0" stop-color="#fff" stop-opacity=".8"/>
+  <stop offset=".45" stop-color="#fff" stop-opacity=".22"/>
+  <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="tr-vol" cx=".72" cy=".85" r=".6">
+  <stop offset="0" stop-color="#000" stop-opacity=".3"/>
+  <stop offset="1" stop-color="#000" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="tr-creux" cx=".5" cy=".5" r=".54">
+  <stop offset="0" stop-color="var(--tr-c3)" stop-opacity=".92"/>
+  <stop offset=".55" stop-color="var(--tr-c3)" stop-opacity=".55"/>
+  <stop offset="1" stop-color="var(--tr-c3)" stop-opacity="0"/>
+</radialGradient>
+<radialGradient id="tr-eclat">
+  <stop offset="0" stop-color="#fff" stop-opacity="1"/>
+  <stop offset="1" stop-color="#fff" stop-opacity=".2"/>
+</radialGradient>
+<linearGradient id="tr-mark" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#EFC94C"/>
+  <stop offset="1" stop-color="#8F6200"/>
+</linearGradient>
+<filter id="tr-halo" x="-35%" y="-35%" width="170%" height="170%">
+  <feGaussianBlur stdDeviation="16"/>
+</filter>
+<filter id="tr-flou" x="-35%" y="-35%" width="170%" height="170%">
+  <feGaussianBlur stdDeviation="17"/>
+</filter>
+<clipPath id="tr-clip">
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z"/>
+</clipPath>
+<clipPath id="tr-ring">
+  <path clip-rule="evenodd" d="M 256 36 A 220 220 0 1 1 255.9 36 Z M 256 56 A 200 200 0 1 1 255.9 56 Z"/>
+</clipPath>
+</defs>
+<g id="aura" style="opacity:var(--tr-aura-a)" filter="url(#tr-flou)">
+  <path d="M 256 256 L 547.8 245.3 L 547.8 266.7 Z M 256 256 L 542.9 310.5 L 538.1 331.4 Z M 256 256 L 523.5 373.0 L 514.3 392.2 Z M 256 256 L 490.8 429.6 L 477.5 446.3 Z M 256 256 L 446.3 477.5 L 429.6 490.8 Z M 256 256 L 392.2 514.3 L 373.0 523.5 Z M 256 256 L 331.4 538.1 L 310.5 542.9 Z M 256 256 L 266.7 547.8 L 245.3 547.8 Z M 256 256 L 201.5 542.9 L 180.6 538.1 Z M 256 256 L 139.0 523.5 L 119.8 514.3 Z M 256 256 L 82.4 490.8 L 65.7 477.5 Z M 256 256 L 34.5 446.3 L 21.2 429.6 Z M 256 256 L -2.3 392.2 L -11.5 373.0 Z M 256 256 L -26.1 331.4 L -30.9 310.5 Z M 256 256 L -35.8 266.7 L -35.8 245.3 Z M 256 256 L -30.9 201.5 L -26.1 180.6 Z M 256 256 L -11.5 139.0 L -2.3 119.8 Z M 256 256 L 21.2 82.4 L 34.5 65.7 Z M 256 256 L 65.7 34.5 L 82.4 21.2 Z M 256 256 L 119.8 -2.3 L 139.0 -11.5 Z M 256 256 L 180.6 -26.1 L 201.5 -30.9 Z M 256 256 L 245.3 -35.8 L 266.7 -35.8 Z M 256 256 L 310.5 -30.9 L 331.4 -26.1 Z M 256 256 L 373.0 -11.5 L 392.2 -2.3 Z M 256 256 L 429.6 21.2 L 446.3 34.5 Z M 256 256 L 477.5 65.7 L 490.8 82.4 Z M 256 256 L 514.3 119.8 L 523.5 139.0 Z M 256 256 L 538.1 180.6 L 542.9 201.5 Z" fill="var(--tr-halo)"/>
+</g>
+<g id="halo">
+  <path d="M 256 36 A 220 220 0 1 1 255.9 36 Z" fill="var(--tr-halo)" filter="url(#tr-halo)" style="opacity:var(--tr-halo-a)"/>
+</g>
+<g id="lunette">
+  <path d="M 256 36 A 220 220 0 1 1 255.9 36 Z" fill="url(#tr-rim)" stroke="var(--tr-edge)" stroke-width="3" stroke-opacity=".45"/>
+</g>
+<g id="facettes" clip-path="url(#tr-ring)" style="opacity:var(--tr-facettes)">
+  <path d="M 256 256 L 574.8 228.1 L 574.8 283.9 Z M 256 256 L 565.1 338.8 L 546.0 391.2 Z M 256 256 L 518.1 439.5 L 482.3 482.3 Z M 256 256 L 439.5 518.1 L 391.2 546.0 Z M 256 256 L 338.8 565.1 L 283.9 574.8 Z M 256 256 L 228.1 574.8 L 173.2 565.1 Z M 256 256 L 120.8 546.0 L 72.5 518.1 Z M 256 256 L 29.7 482.3 L -6.1 439.5 Z M 256 256 L -34.0 391.2 L -53.1 338.8 Z M 256 256 L -62.8 283.9 L -62.8 228.1 Z M 256 256 L -53.1 173.2 L -34.0 120.8 Z M 256 256 L -6.1 72.5 L 29.7 29.7 Z M 256 256 L 72.5 -6.1 L 120.8 -34.0 Z M 256 256 L 173.2 -53.1 L 228.1 -62.8 Z M 256 256 L 283.9 -62.8 L 338.8 -53.1 Z M 256 256 L 391.2 -34.0 L 439.5 -6.1 Z M 256 256 L 482.3 29.7 L 518.1 72.5 Z M 256 256 L 546.0 120.8 L 565.1 173.2 Z" fill="#fff"/>
+  <path d="M 256 256 L 574.8 228.1 L 574.8 283.9 Z M 256 256 L 565.1 338.8 L 546.0 391.2 Z M 256 256 L 518.1 439.5 L 482.3 482.3 Z M 256 256 L 439.5 518.1 L 391.2 546.0 Z M 256 256 L 338.8 565.1 L 283.9 574.8 Z M 256 256 L 228.1 574.8 L 173.2 565.1 Z M 256 256 L 120.8 546.0 L 72.5 518.1 Z M 256 256 L 29.7 482.3 L -6.1 439.5 Z M 256 256 L -34.0 391.2 L -53.1 338.8 Z M 256 256 L -62.8 283.9 L -62.8 228.1 Z M 256 256 L -53.1 173.2 L -34.0 120.8 Z M 256 256 L -6.1 72.5 L 29.7 29.7 Z M 256 256 L 72.5 -6.1 L 120.8 -34.0 Z M 256 256 L 173.2 -53.1 L 228.1 -62.8 Z M 256 256 L 283.9 -62.8 L 338.8 -53.1 Z M 256 256 L 391.2 -34.0 L 439.5 -6.1 Z M 256 256 L 482.3 29.7 L 518.1 72.5 Z M 256 256 L 546.0 120.8 L 565.1 173.2 Z" fill="#000" transform="rotate(10 256 256)"/>
+</g>
+<g id="moletage" clip-path="url(#tr-ring)" style="opacity:var(--tr-mol-a)">
+  <path d="M 396.0 256.0 L 556.0 256.0 M 395.7 265.2 L 555.4 275.6 M 394.8 274.3 L 553.4 295.2 M 393.3 283.3 L 550.2 314.5 M 391.2 292.2 L 545.8 333.6 M 388.6 301.0 L 540.1 352.4 M 385.3 309.6 L 533.2 370.8 M 381.6 317.9 L 525.1 388.7 M 377.2 326.0 L 515.8 406.0 M 372.4 333.8 L 505.4 422.7 M 367.1 341.2 L 494.0 438.6 M 361.3 348.3 L 481.6 453.8 M 355.0 355.0 L 468.1 468.1 M 348.3 361.3 L 453.8 481.6 M 341.2 367.1 L 438.6 494.0 M 333.8 372.4 L 422.7 505.4 M 326.0 377.2 L 406.0 515.8 M 317.9 381.6 L 388.7 525.1 M 309.6 385.3 L 370.8 533.2 M 301.0 388.6 L 352.4 540.1 M 292.2 391.2 L 333.6 545.8 M 283.3 393.3 L 314.5 550.2 M 274.3 394.8 L 295.2 553.4 M 265.2 395.7 L 275.6 555.4 M 256.0 396.0 L 256.0 556.0 M 246.8 395.7 L 236.4 555.4 M 237.7 394.8 L 216.8 553.4 M 228.7 393.3 L 197.5 550.2 M 219.8 391.2 L 178.4 545.8 M 211.0 388.6 L 159.6 540.1 M 202.4 385.3 L 141.2 533.2 M 194.1 381.6 L 123.3 525.1 M 186.0 377.2 L 106.0 515.8 M 178.2 372.4 L 89.3 505.4 M 170.8 367.1 L 73.4 494.0 M 163.7 361.3 L 58.2 481.6 M 157.0 355.0 L 43.9 468.1 M 150.7 348.3 L 30.4 453.8 M 144.9 341.2 L 18.0 438.6 M 139.6 333.8 L 6.6 422.7 M 134.8 326.0 L -3.8 406.0 M 130.4 317.9 L -13.1 388.7 M 126.7 309.6 L -21.2 370.8 M 123.4 301.0 L -28.1 352.4 M 120.8 292.2 L -33.8 333.6 M 118.7 283.3 L -38.2 314.5 M 117.2 274.3 L -41.4 295.2 M 116.3 265.2 L -43.4 275.6 M 116.0 256.0 L -44.0 256.0 M 116.3 246.8 L -43.4 236.4 M 117.2 237.7 L -41.4 216.8 M 118.7 228.7 L -38.2 197.5 M 120.8 219.8 L -33.8 178.4 M 123.4 211.0 L -28.1 159.6 M 126.7 202.4 L -21.2 141.2 M 130.4 194.1 L -13.1 123.3 M 134.8 186.0 L -3.8 106.0 M 139.6 178.2 L 6.6 89.3 M 144.9 170.8 L 18.0 73.4 M 150.7 163.7 L 30.4 58.2 M 157.0 157.0 L 43.9 43.9 M 163.7 150.7 L 58.2 30.4 M 170.8 144.9 L 73.4 18.0 M 178.2 139.6 L 89.3 6.6 M 186.0 134.8 L 106.0 -3.8 M 194.1 130.4 L 123.3 -13.1 M 202.4 126.7 L 141.2 -21.2 M 211.0 123.4 L 159.6 -28.1 M 219.8 120.8 L 178.4 -33.8 M 228.7 118.7 L 197.5 -38.2 M 237.7 117.2 L 216.8 -41.4 M 246.8 116.3 L 236.4 -43.4 M 256.0 116.0 L 256.0 -44.0 M 265.2 116.3 L 275.6 -43.4 M 274.3 117.2 L 295.2 -41.4 M 283.3 118.7 L 314.5 -38.2 M 292.2 120.8 L 333.6 -33.8 M 301.0 123.4 L 352.4 -28.1 M 309.6 126.7 L 370.8 -21.2 M 317.9 130.4 L 388.7 -13.1 M 326.0 134.8 L 406.0 -3.8 M 333.8 139.6 L 422.7 6.6 M 341.2 144.9 L 438.6 18.0 M 348.3 150.7 L 453.8 30.4 M 355.0 157.0 L 468.1 43.9 M 361.3 163.7 L 481.6 58.2 M 367.1 170.8 L 494.0 73.4 M 372.4 178.2 L 505.4 89.3 M 377.2 186.0 L 515.8 106.0 M 381.6 194.1 L 525.1 123.3 M 385.3 202.4 L 533.2 141.2 M 388.6 211.0 L 540.1 159.6 M 391.2 219.8 L 545.8 178.4 M 393.3 228.7 L 550.2 197.5 M 394.8 237.7 L 553.4 216.8 M 395.7 246.8 L 555.4 236.4" stroke="var(--tr-edge)" stroke-width="3.4" stroke-opacity=".42"/>
+  <path d="M 396.0 256.0 L 556.0 256.0 M 395.7 265.2 L 555.4 275.6 M 394.8 274.3 L 553.4 295.2 M 393.3 283.3 L 550.2 314.5 M 391.2 292.2 L 545.8 333.6 M 388.6 301.0 L 540.1 352.4 M 385.3 309.6 L 533.2 370.8 M 381.6 317.9 L 525.1 388.7 M 377.2 326.0 L 515.8 406.0 M 372.4 333.8 L 505.4 422.7 M 367.1 341.2 L 494.0 438.6 M 361.3 348.3 L 481.6 453.8 M 355.0 355.0 L 468.1 468.1 M 348.3 361.3 L 453.8 481.6 M 341.2 367.1 L 438.6 494.0 M 333.8 372.4 L 422.7 505.4 M 326.0 377.2 L 406.0 515.8 M 317.9 381.6 L 388.7 525.1 M 309.6 385.3 L 370.8 533.2 M 301.0 388.6 L 352.4 540.1 M 292.2 391.2 L 333.6 545.8 M 283.3 393.3 L 314.5 550.2 M 274.3 394.8 L 295.2 553.4 M 265.2 395.7 L 275.6 555.4 M 256.0 396.0 L 256.0 556.0 M 246.8 395.7 L 236.4 555.4 M 237.7 394.8 L 216.8 553.4 M 228.7 393.3 L 197.5 550.2 M 219.8 391.2 L 178.4 545.8 M 211.0 388.6 L 159.6 540.1 M 202.4 385.3 L 141.2 533.2 M 194.1 381.6 L 123.3 525.1 M 186.0 377.2 L 106.0 515.8 M 178.2 372.4 L 89.3 505.4 M 170.8 367.1 L 73.4 494.0 M 163.7 361.3 L 58.2 481.6 M 157.0 355.0 L 43.9 468.1 M 150.7 348.3 L 30.4 453.8 M 144.9 341.2 L 18.0 438.6 M 139.6 333.8 L 6.6 422.7 M 134.8 326.0 L -3.8 406.0 M 130.4 317.9 L -13.1 388.7 M 126.7 309.6 L -21.2 370.8 M 123.4 301.0 L -28.1 352.4 M 120.8 292.2 L -33.8 333.6 M 118.7 283.3 L -38.2 314.5 M 117.2 274.3 L -41.4 295.2 M 116.3 265.2 L -43.4 275.6 M 116.0 256.0 L -44.0 256.0 M 116.3 246.8 L -43.4 236.4 M 117.2 237.7 L -41.4 216.8 M 118.7 228.7 L -38.2 197.5 M 120.8 219.8 L -33.8 178.4 M 123.4 211.0 L -28.1 159.6 M 126.7 202.4 L -21.2 141.2 M 130.4 194.1 L -13.1 123.3 M 134.8 186.0 L -3.8 106.0 M 139.6 178.2 L 6.6 89.3 M 144.9 170.8 L 18.0 73.4 M 150.7 163.7 L 30.4 58.2 M 157.0 157.0 L 43.9 43.9 M 163.7 150.7 L 58.2 30.4 M 170.8 144.9 L 73.4 18.0 M 178.2 139.6 L 89.3 6.6 M 186.0 134.8 L 106.0 -3.8 M 194.1 130.4 L 123.3 -13.1 M 202.4 126.7 L 141.2 -21.2 M 211.0 123.4 L 159.6 -28.1 M 219.8 120.8 L 178.4 -33.8 M 228.7 118.7 L 197.5 -38.2 M 237.7 117.2 L 216.8 -41.4 M 246.8 116.3 L 236.4 -43.4 M 256.0 116.0 L 256.0 -44.0 M 265.2 116.3 L 275.6 -43.4 M 274.3 117.2 L 295.2 -41.4 M 283.3 118.7 L 314.5 -38.2 M 292.2 120.8 L 333.6 -33.8 M 301.0 123.4 L 352.4 -28.1 M 309.6 126.7 L 370.8 -21.2 M 317.9 130.4 L 388.7 -13.1 M 326.0 134.8 L 406.0 -3.8 M 333.8 139.6 L 422.7 6.6 M 341.2 144.9 L 438.6 18.0 M 348.3 150.7 L 453.8 30.4 M 355.0 157.0 L 468.1 43.9 M 361.3 163.7 L 481.6 58.2 M 367.1 170.8 L 494.0 73.4 M 372.4 178.2 L 505.4 89.3 M 377.2 186.0 L 515.8 106.0 M 381.6 194.1 L 525.1 123.3 M 385.3 202.4 L 533.2 141.2 M 388.6 211.0 L 540.1 159.6 M 391.2 219.8 L 545.8 178.4 M 393.3 228.7 L 550.2 197.5 M 394.8 237.7 L 553.4 216.8 M 395.7 246.8 L 555.4 236.4" stroke="#fff" stroke-width="2" stroke-opacity=".3" transform="rotate(2.8 256 256)"/>
+</g>
+<g id="champ">
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="url(#tr-corps)"/>
+</g>
+<g id="contre-lunette" clip-path="url(#tr-clip)">
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="url(#tr-rim)" stroke-width="44"/>
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-edge)" stroke-opacity=".5" stroke-width="3" transform="scale(0.95) translate(6.7,6.7)"/>
+</g>
+<g id="gravures" clip-path="url(#tr-clip)">
+<g id="guilloche-vagues" style="opacity:var(--tr-vagues)">
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-edge)" stroke-width="5.63" transform="translate(256,256) scale(0.7100) translate(-256,-256)"/>
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-acc)" stroke-width="4.03" transform="translate(256,256) scale(0.6940) translate(-256,-256)"/>
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-edge)" stroke-width="5.97" transform="translate(256,256) scale(0.6700) translate(-256,-256)"/>
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-acc)" stroke-width="4.28" transform="translate(256,256) scale(0.6540) translate(-256,-256)"/>
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-edge)" stroke-width="6.35" transform="translate(256,256) scale(0.6300) translate(-256,-256)"/>
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-acc)" stroke-width="4.56" transform="translate(256,256) scale(0.6140) translate(-256,-256)"/>
+</g>
+<g id="filet" style="opacity:var(--tr-filet)">
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-edge)" stroke-width="6.58" transform="translate(256,256) scale(0.7600) translate(-256,-256)"/>
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-acc)" stroke-width="4.73" transform="translate(256,256) scale(0.7400) translate(-256,-256)"/>
+</g>
+<g id="grenetis" style="opacity:var(--tr-grenetis)">
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-edge)" stroke-width="13.58" stroke-linecap="round" stroke-dasharray="0.01 24.17" transform="translate(256,256) scale(0.8100) translate(-256,-256)"/>
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-acc)" stroke-width="9.94" stroke-linecap="round" stroke-dasharray="0.01 24.17" transform="translate(256,256) scale(0.8050) translate(-256,-256)"/>
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-acc)" stroke-width="8.28" stroke-linecap="round" stroke-dasharray="0.01 28.56" transform="translate(256,256) scale(0.7250) translate(-256,-256)"/>
+</g>
+</g>
+<g id="guilloche" clip-path="url(#tr-clip)" style="opacity:var(--tr-rays-a)">
+  <path d="M 256 256 L 585.2 232.4 L 585.2 279.6 Z M 256 256 L 578.5 326.1 L 565.2 371.4 Z M 256 256 L 545.7 414.1 L 520.1 453.8 Z M 256 256 L 489.4 489.3 L 453.7 520.2 Z M 256 256 L 414.2 545.6 L 371.3 565.2 Z M 256 256 L 326.2 578.4 L 279.5 585.2 Z M 256 256 L 232.5 585.2 L 185.8 578.4 Z M 256 256 L 140.7 565.2 L 97.8 545.6 Z M 256 256 L 58.3 520.2 L 22.6 489.3 Z M 256 256 L -8.1 453.8 L -33.7 414.1 Z M 256 256 L -53.2 371.4 L -66.5 326.1 Z M 256 256 L -73.2 279.6 L -73.2 232.4 Z M 256 256 L -66.5 185.9 L -53.2 140.6 Z M 256 256 L -33.7 97.9 L -8.1 58.2 Z M 256 256 L 22.6 22.7 L 58.3 -8.2 Z M 256 256 L 97.8 -33.6 L 140.7 -53.2 Z M 256 256 L 185.8 -66.4 L 232.5 -73.2 Z M 256 256 L 279.5 -73.2 L 326.2 -66.4 Z M 256 256 L 371.3 -53.2 L 414.2 -33.6 Z M 256 256 L 453.7 -8.2 L 489.4 22.7 Z M 256 256 L 520.1 58.2 L 545.7 97.9 Z M 256 256 L 565.2 140.6 L 578.5 185.9 Z" fill="var(--tr-guilloche)"/>
+</g>
+<g id="listel" clip-path="url(#tr-clip)" style="opacity:var(--tr-listel)">
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="url(#tr-rim)" stroke-width="11.76" transform="translate(256,256) scale(0.8500) translate(-256,-256)"/>
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-edge)" stroke-width="1.76" transform="translate(256,256) scale(0.8500) translate(-256,-256)"/>
+</g>
+<g id="creux" clip-path="url(#tr-clip)" style="opacity:var(--tr-creux)">
+  <rect x="0" y="0" width="512" height="512" fill="url(#tr-creux)"/>
+</g>
+<g id="chanfrein" clip-path="url(#tr-clip)" style="opacity:var(--tr-chanfrein)">
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="#000" stroke-opacity=".45" stroke-width="22" transform="translate(0,9)"/>
+  <path d="M 256 56 A 200 200 0 1 1 255.9 56 Z" fill="none" stroke="var(--tr-l1)" stroke-opacity=".28" stroke-width="14" transform="translate(0,-9)"/>
+</g>
+<g id="panneaux" clip-path="url(#tr-clip)">
+  <path d="M 256.0 56.0 L 307.4 93.3 L 287.7 153.7 L 224.3 153.7 L 204.6 93.3 Z" fill="var(--tr-panneau, var(--tr-edge))" opacity=".85"/>
+  <path d="M 287.7 358.3 L 307.4 418.7 L 256.0 456.0 L 204.6 418.7 L 224.3 358.3 Z" fill="var(--tr-panneau, var(--tr-edge))" opacity=".85"/>
+  <path d="M 156.7 130.0 L 171.9 177.0 L 132.0 206.0 L 92.1 177.0 L 107.3 130.0 Z" fill="var(--tr-panneau, var(--tr-edge))" opacity=".85"/>
+  <path d="M 404.7 130.0 L 419.9 177.0 L 380.0 206.0 L 340.1 177.0 L 355.3 130.0 Z" fill="var(--tr-panneau, var(--tr-edge))" opacity=".85"/>
+  <path d="M 132.0 306.0 L 171.9 335.0 L 156.7 382.0 L 107.3 382.0 L 92.1 335.0 Z" fill="var(--tr-panneau, var(--tr-edge))" opacity=".85"/>
+  <path d="M 380.0 306.0 L 419.9 335.0 L 404.7 382.0 L 355.3 382.0 L 340.1 335.0 Z" fill="var(--tr-panneau, var(--tr-edge))" opacity=".85"/>
+  <path d="M 316 66 L 307 93 M 196 66 L 205 93 M 316 446 L 307 419 M 196 446 L 205 419" stroke="var(--tr-panneau, var(--tr-edge))" stroke-width="8" opacity=".55" stroke-linecap="round"/>
+</g>
+<g id="brassard">
+  <path d="M 40 164 H 472 V 348 H 40 Z" fill="url(#tr-band)" clip-path="url(#tr-clip)"/>
+<g clip-path="url(#tr-clip)" stroke-linecap="round">
+  <path d="M 40 170 H 472" stroke="var(--tr-edge)" stroke-width="9" opacity=".26"/>
+  <path d="M 40 164 H 472 M 40 348 H 472" stroke="var(--tr-acc)" stroke-width="5"/>
+  <path d="M 40 182 H 472 M 40 330 H 472" stroke="var(--tr-stitch)" stroke-width="4.5" stroke-dasharray="12 11"/>
+</g>
+<g id="passants" fill="url(#tr-rim)" stroke="var(--tr-edge)" stroke-width="3">
+  <rect x="74" y="196" width="28" height="120" rx="12"/>
+  <rect x="410" y="196" width="28" height="120" rx="12"/>
+</g>
+</g>
+<g id="lumiere" clip-path="url(#tr-clip)">
+  <rect x="0" y="0" width="512" height="512" fill="url(#tr-vol)"/>
+  <rect x="0" y="0" width="512" height="512" fill="url(#tr-spec)" style="opacity:var(--tr-sheen)"/>
+</g>
+<g id="brand-slot" data-ratio="compact" data-regime="incrustation-noble">
+<g class="slot-safe-area" transform="translate(256,256)">
+<g class="inlay-sertissage" fill="url(#tr-rim)" stroke="url(#tr-rim)" stroke-width="7.17" stroke-linejoin="round" stroke-linecap="round" transform="translate(0,0) scale(5.3000) translate(-32,-32)">
+  <path d="M30 12 L30 52 L20 52 L20 24 L12 28.5 L12 19.5 Z"/>
+  <path d="M52 12 L52 52 L42 52 L42 24 L34 28.5 L34 19.5 Z"/>
+</g>
+<g class="inlay-gorge" fill="var(--tr-shade)" stroke="var(--tr-shade)" stroke-width="4.15" stroke-linejoin="round" stroke-linecap="round" transform="translate(0,0) scale(5.3000) translate(-32,-32)">
+  <path d="M30 12 L30 52 L20 52 L20 24 L12 28.5 L12 19.5 Z"/>
+  <path d="M52 12 L52 52 L42 52 L42 24 L34 28.5 L34 19.5 Z"/>
+</g>
+<g class="slot-fond" fill="var(--tr-slot)" stroke="var(--tr-slot)" stroke-width="2.26" stroke-linejoin="round" stroke-linecap="round" transform="translate(0,0) scale(5.3000) translate(-32,-32)">
+  <path d="M30 12 L30 52 L20 52 L20 24 L12 28.5 L12 19.5 Z"/>
+  <path d="M52 12 L52 52 L42 52 L42 24 L34 28.5 L34 19.5 Z"/>
+</g>
+<g class="brand-artwork" fill="url(#tr-mark)" transform="translate(0,0) scale(5.3000) translate(-32,-32)">
+  <path d="M30 12 L30 52 L20 52 L20 24 L12 28.5 L12 19.5 Z"/>
+  <path d="M52 12 L52 52 L42 52 L42 24 L34 28.5 L34 19.5 Z"/>
+</g>
+</g>
+</g>
+<g id="etoiles">
+  <path d="M 191.8 86.2 L 200.0 106.9 L 222.2 108.4 L 205.2 122.6 L 210.6 144.1 L 191.8 132.3 L 173.0 144.1 L 178.4 122.6 L 161.3 108.4 L 183.5 106.9 Z" fill="var(--tr-l4)" transform="translate(0,3)" opacity=".55"/>
+  <path d="M 191.8 87.2 L 199.8 107.2 L 221.2 108.7 L 204.7 122.5 L 210.0 143.3 L 191.8 131.9 L 173.5 143.3 L 178.8 122.5 L 162.3 108.7 L 183.7 107.2 Z" fill="url(#tr-rim)" stroke="var(--tr-edge)" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M 256.0 72.0 L 264.3 92.6 L 286.4 94.1 L 269.4 108.4 L 274.8 129.9 L 256.0 118.1 L 237.2 129.9 L 242.6 108.4 L 225.6 94.1 L 247.7 92.6 Z" fill="var(--tr-l4)" transform="translate(0,3)" opacity=".55"/>
+  <path d="M 256.0 73.0 L 264.0 93.0 L 285.5 94.4 L 269.0 108.2 L 274.2 129.1 L 256.0 117.6 L 237.8 129.1 L 243.0 108.2 L 226.5 94.4 L 248.0 93.0 Z" fill="url(#tr-rim)" stroke="var(--tr-edge)" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M 320.2 86.2 L 328.5 106.9 L 350.7 108.4 L 333.6 122.6 L 339.0 144.1 L 320.2 132.3 L 301.4 144.1 L 306.8 122.6 L 289.8 108.4 L 312.0 106.9 Z" fill="var(--tr-l4)" transform="translate(0,3)" opacity=".55"/>
+  <path d="M 320.2 87.2 L 328.3 107.2 L 349.7 108.7 L 333.2 122.5 L 338.5 143.3 L 320.2 131.9 L 302.0 143.3 L 307.3 122.5 L 290.8 108.7 L 312.2 107.2 Z" fill="url(#tr-rim)" stroke="var(--tr-edge)" stroke-width="2.5" stroke-linejoin="round"/>
+</g>
+<g id="eclats" fill="url(#tr-eclat)" style="opacity:var(--tr-eclat-a)">
+  <path d="M 118 64 C 125.28 108.72, 125.28 108.72, 170 116 C 125.28 123.28, 125.28 123.28, 118 168 C 110.72 123.28, 110.72 123.28, 66 116 C 110.72 108.72, 110.72 108.72, 118 64 Z"/>
+  <path d="M 176 64 C 178.8 81.2, 178.8 81.2, 196 84 C 178.8 86.8, 178.8 86.8, 176 104 C 173.2 86.8, 173.2 86.8, 156 84 C 173.2 81.2, 173.2 81.2, 176 64 Z"/>
+</g>
+</svg>

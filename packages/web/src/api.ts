@@ -59,6 +59,12 @@ export const api = {
     return { data: json ? json.data : null, error: null };
   },
 
+  /** Ouvre la partie classée du jour (ranked) : { ranked, token } ou { ranked: false, reason }. */
+  async rankedStart(body: unknown): Promise<any> {
+    const { json } = await send("POST", "/api/ranked/start", body);
+    return json ?? { ranked: false, reason: "offline" };
+  },
+
   /** Envoi d'un journal de choix à vérifier (défi du jour, duel) : réponse brute du serveur. */
   async submitScore(kind: "daily" | "duel", body: unknown): Promise<any> {
     const { status, json } = await send("POST", "/api/scores/" + kind, body);
