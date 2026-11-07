@@ -24,8 +24,9 @@ export const CHANGELOG: ChangelogEntry[] = [
     title: "Nouveaux scénarios et dépenses de carrière",
     items: [
       { kind: "new", text: "Plus de soixante-dix nouveaux scénarios dans les moments décisifs : prolongation à dix contre onze, brassard reçu en pleine finale, but refusé par la vidéo, supporters adverses déchaînés, haie d'honneur… Ils s'ajoutent à ceux que vous connaissez déjà." },
-      { kind: "new", text: "Dépenses : à chaque intersaison, votre argent peut enfin servir. Préparateur physique, coach mental, nutritionniste, agent star, maison, voiture, fondation, placements, et même une académie à votre nom en fin de carrière." },
+      { kind: "new", text: "Dépenses : depuis le bilan de saison, votre argent peut enfin servir. Préparateur physique, coach mental, nutritionniste, agent star, maison, voiture, fondation, placements, et même une académie à votre nom en fin de carrière." },
       { kind: "new", text: "Le tableau des saisons affiche aussi vos titres en sélection, l'année où vous les gagnez : or olympique, coupe continentale des nations, Ligue des Sélections, comme la Coupe du monde." },
+      { kind: "new", text: "Bien plus de prénoms et de noms pour chaque nationalité : votre joueur et votre rival ont désormais vingt prénoms et vingt noms possibles au lieu de huit." },
     ],
   },
   {

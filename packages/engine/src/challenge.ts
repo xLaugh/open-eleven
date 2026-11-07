@@ -93,6 +93,13 @@ export function replayRun(seed: number, prof: Profile, choices: number[]) {
     }
     if (s.careerEnded) break;
     if (s.retiring || s.age >= BALANCE.ageMax) break;
+    // Dépenses (panneau facultatif du bilan de saison) : une entrée de journal dès qu'un
+    // achat était possible, −1 si le joueur n'a rien acheté.
+    const shop = shopOffersFor(s);
+    if (shop.length) {
+      const ch = next();
+      if (ch >= 0 && shop[ch]) buyItem(s, shop[ch]);
+    }
     // Miroir EXACT de offseason()/offseasonTransfer() côté game.ts : même
     // ordre de vérification, même consommation de choiceLog (une entrée
     // SEULEMENT si un écran a réellement été montré côté joueur).
@@ -110,12 +117,6 @@ export function replayRun(seed: number, prof: Profile, choices: number[]) {
       const offers = sponsorOffersFor(s);
       const ch = next();
       applySponsorDeal(s, offers[ch] || offers[0]);
-    }
-    // Écran « Dépenses » : seulement s'il y a quelque chose d'abordable (−1 = rien acheter).
-    const shop = shopOffersFor(s);
-    if (shop.length) {
-      const ch = next();
-      if (ch >= 0 && shop[ch]) buyItem(s, shop[ch]);
     }
     const window = transferWindow(s, report);
     // Vétéran sans club : côté joueur, un simple écran d'adieu sans choix,

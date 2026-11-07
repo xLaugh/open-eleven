@@ -5372,8 +5372,9 @@ window.I18N_DATA = { ar: {
  "Le gardien adverse plonge du bon côté. Vous retournez dans votre cage pour un dernier duel, mais le tireur suivant ne tremble pas : votre carrière s'achève sur un penalty manqué, sous des applaudissements qui n'y changent rien.": "يرتمي حارس الخصم في الجهة الصحيحة. تعود إلى مرماك لمواجهة أخيرة، لكن المسدد التالي لا يرتجف: تنتهي مسيرتك بركلة جزاء ضائعة، وسط تصفيق لا يغيّر شيئًا.",
  "Nouveaux scénarios et dépenses de carrière": "سيناريوهات جديدة ومصاريف المسيرة",
  "Plus de soixante-dix nouveaux scénarios dans les moments décisifs : prolongation à dix contre onze, brassard reçu en pleine finale, but refusé par la vidéo, supporters adverses déchaînés, haie d'honneur… Ils s'ajoutent à ceux que vous connaissez déjà.": "أكثر من سبعين سيناريو جديدًا في اللحظات الحاسمة: أشواط إضافية بعشرة لاعبين ضد أحد عشر، شارة القيادة في قلب النهائي، هدف ملغى بتقنية الفيديو، جماهير منافسة هائجة، ممر شرفي… تُضاف إلى ما تعرفه من قبل.",
- "Dépenses : à chaque intersaison, votre argent peut enfin servir. Préparateur physique, coach mental, nutritionniste, agent star, maison, voiture, fondation, placements, et même une académie à votre nom en fin de carrière.": "المصاريف: في كل فترة بين موسمين، صار لمالك أخيرًا فائدة. مُعدّ بدني، مدرب ذهني، أخصائي تغذية، وكيل نجم، منزل، سيارة، مؤسسة، استثمارات، وحتى أكاديمية باسمك في نهاية مسيرتك.",
- "Le tableau des saisons affiche aussi vos titres en sélection, l'année où vous les gagnez : or olympique, coupe continentale des nations, Ligue des Sélections, comme la Coupe du monde.": "يعرض جدول المواسم أيضًا ألقابك مع المنتخب في السنة التي تحققها فيها: ذهبية الألعاب الأولمبية، كأس الأمم القارية، دوري المنتخبات، مثل كأس العالم."
+ "Le tableau des saisons affiche aussi vos titres en sélection, l'année où vous les gagnez : or olympique, coupe continentale des nations, Ligue des Sélections, comme la Coupe du monde.": "يعرض جدول المواسم أيضًا ألقابك مع المنتخب في السنة التي تحققها فيها: ذهبية الألعاب الأولمبية، كأس الأمم القارية، دوري المنتخبات، مثل كأس العالم.",
+ "Dépenses : depuis le bilan de saison, votre argent peut enfin servir. Préparateur physique, coach mental, nutritionniste, agent star, maison, voiture, fondation, placements, et même une académie à votre nom en fin de carrière.": "المصاريف: من ملخص الموسم، صار لمالك أخيرًا فائدة. مُعدّ بدني، مدرب ذهني، أخصائي تغذية، وكيل نجم، منزل، سيارة، مؤسسة، استثمارات، وحتى أكاديمية باسمك في نهاية مسيرتك.",
+ "Bien plus de prénoms et de noms pour chaque nationalité : votre joueur et votre rival ont désormais vingt prénoms et vingt noms possibles au lieu de huit.": "أسماء وألقاب أكثر بكثير لكل جنسية: صار للاعبك ومنافسك عشرون اسمًا وعشرون لقبًا ممكنًا بدلًا من ثمانية."
 } };
 window.I18N_UI = { ar: {
   "Écrivez une carrière de footballeur, saison après saison.": "اكتب مسيرة لاعب كرة قدم، موسمًا بعد موسم.",
@@ -5723,8 +5724,6 @@ window.I18N_UI = { ar: {
   "mise": "رهان",
   "une fois": "مرة واحدة",
   "Dépenses": "المصاريف",
-  "L'intersaison est là, et votre compte en banque aussi : {money}. Un achat pour la saison qui vient ?": "حلّت فترة ما بين الموسمين، ومعها رصيدك البنكي: {money}. هل تشتري شيئًا للموسم المقبل؟",
-  "Ne rien acheter": "عدم شراء أي شيء",
   "Débloqué avec {name} ({flag} {pos}) le {date}": "فُتحت مع {name} ({flag} {pos}) في {date}",
   "Nouveau badge débloqué : {names}": "شارة جديدة مفتوحة: {names}",
   "{done}/{total} badges · {n} carrière jouée": "{done}/{total} شارة · {n} مسيرة ملعوبة",

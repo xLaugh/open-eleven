@@ -1548,6 +1548,18 @@ import { Engine } from "@open-eleven/engine";
       : WORLD_NEWS[Math.floor(Math.random() * WORLD_NEWS.length)];
 
     const microHtml = report.lines.map((l) => `<p class="recap-micro">💬 ${esc(l.text)}</p>`).join("");
+    // Dépenses : facultatives, dépliées depuis le bilan (un achat au plus par saison). Le choix
+    // entre au journal au clic sur « Continuer », là où le rejeu serveur le lit (cf. replayRun).
+    const shopOn = !G.careerEnded && !G.retiring && G.age < E.BALANCE_REF.ageMax && (!G.room || rivalsMode());
+    const shopOffers = shopOn ? E.shopOffersFor(G) : [];
+    let shopPick = -1;
+    const shopHtml = shopOffers.length ? `<div class="recap-shop">
+        <button class="btn-link shop-toggle" id="btn-shop-open">💳 ${T("Dépenses")} · ${E.fmtMoney(G.money)}</button>
+        <div class="shop-panel" id="shop-panel" hidden>${shopOffers.map((o, i) => {
+          const when = o.seasons ? T(o.renew ? "renouveler pour {n} saisons" : "pour {n} saisons", { n: o.seasons }) : o.id === "invest" ? T("mise") : T("une fois");
+          return `<button class="opt-btn shop-item" data-i="${i}"><span class="opt-hint">${E.fmtMoney(o.price)} · ${esc(when)}</span>${o.icon} ${esc(o.name)}<br/><span class="opt-role">${esc(o.desc)}</span></button>`;
+        }).join("")}</div>
+      </div>` : "";
     const objHtml = report.objectiveLabel
       ? `<p class="recap-objective">${report.objectiveMet ? "✅" : "❌"} ${T("Objectif du club :")} ${esc(report.objectiveLabel)}${report.objectiveMet && report.objectiveBonus ? ` <span class="recap-bonus">(prime +${E.fmtMoney(report.objectiveBonus)})</span>` : ""}</p>`
       : "";
@@ -1619,9 +1631,28 @@ import { Engine } from "@open-eleven/engine";
       <p class="recap-money">💰 +${E.fmtMoney(report.income)} ${report.sponsorLabel ? T("(salaire & sponsor {s})", { s: esc(report.sponsorLabel) }) : T("(salaire & sponsors)")}</p>
       ${microHtml}
       ${newsLine ? `<p class="recap-news">${esc(newsLine)}</p>` : ""}
+      ${shopHtml}
       <button class="btn btn-secondary" id="btn-next">Continuer</button>
     `, report.rating >= 7.4 ? "good" : report.rating <= 5.6 ? "bad" : "neutral");
-    $("btn-next").addEventListener("click", offseason);
+    const shopOpen = $("btn-shop-open");
+    if (shopOpen) {
+      shopOpen.addEventListener("click", () => { const panel = $("shop-panel"); panel.hidden = !panel.hidden; });
+      $("shop-panel").querySelectorAll(".shop-item").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (shopPick >= 0) return; // un achat par saison
+          shopPick = Number(btn.getAttribute("data-i"));
+          const line = E.buyItem(G, shopOffers[shopPick]);
+          updateHeader();
+          $("shop-panel").innerHTML = `<p class="recap-micro">${esc(line)}</p>`;
+          shopOpen.textContent = "💳 " + T("Dépenses") + " · " + E.fmtMoney(G.money);
+          shopOpen.disabled = true;
+        });
+      });
+    }
+    $("btn-next").addEventListener("click", () => {
+      if (shopOffers.length && (G.duel || G.dailyDate)) G.choiceLog.push(shopPick); // −1 : rien acheté
+      offseason();
+    });
   }
 
   function offseason() {
@@ -1639,45 +1670,10 @@ import { Engine } from "@open-eleven/engine";
     if ((!G.room || rivalsMode()) && E.sponsorDealDue(G)) {
       // sponsorTierFor AVANT sponsorOffersFor : même palier, et seul le
       // second consomme du hasard (ordre sans incidence sur le rejeu).
-      renderSponsorChoice(E.sponsorTierFor(G), E.sponsorOffersFor(G), offseasonShop);
+      renderSponsorChoice(E.sponsorTierFor(G), E.sponsorOffersFor(G), offseasonTransfer);
       return;
     }
-    offseasonShop();
-  }
-
-  // Écran « Dépenses » : un achat au plus, ou rien. Même condition que les sponsors
-  // (hors salle commune) et même place que dans le rejeu serveur (après le sponsor).
-  function offseasonShop() {
-    const offers = !G.room || rivalsMode() ? E.shopOffersFor(G) : [];
-    if (!offers.length) { offseasonTransfer(); return; }
-    const buttons = offers.map((o, i) => {
-      const when = o.seasons ? T(o.renew ? "renouveler pour {n} saisons" : "pour {n} saisons", { n: o.seasons }) : o.id === "invest" ? T("mise") : T("une fois");
-      return `<button class="opt-btn" data-i="${i}"><span class="opt-hint">${E.fmtMoney(o.price)} · ${esc(when)}</span>${o.icon} ${esc(o.name)}<br/><span class="opt-role">${esc(o.desc)}</span></button>`;
-    }).join("");
-    showCard(`
-      <div class="card-tag"><span class="card-icon">💳</span> ${T("Dépenses")} · ${G.age} ${T("ans")}</div>
-      <p class="event-text">${T("L'intersaison est là, et votre compte en banque aussi : {money}. Un achat pour la saison qui vient ?", { money: E.fmtMoney(G.money) })}</p>
-      <div class="event-options">${buttons}<button class="opt-btn opt-skip" data-i="-1">${T("Ne rien acheter")}</button></div>
-    `, "neutral");
-    $("game-card").querySelectorAll(".opt-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        if (lockOptions()) return;
-        const i = Number(btn.dataset.i);
-        if (G.duel || G.dailyDate) G.choiceLog.push(i); // journal rejoué par le serveur
-        if (i >= 0 && offers[i]) {
-          const line = E.buyItem(G, offers[i]);
-          updateHeader();
-          showCard(`
-            <div class="card-tag"><span class="card-icon">💳</span> ${T("Dépenses")}</div>
-            <p class="result-text">${esc(line)}</p>
-            <button class="btn btn-secondary" id="btn-next">${T("Continuer")}</button>
-          `, "good");
-          $("btn-next").addEventListener("click", offseasonTransfer);
-          return;
-        }
-        offseasonTransfer();
-      });
-    });
+    offseasonTransfer();
   }
 
   // Choix du club de prêt forcé (défiance persistante malgré la mise à

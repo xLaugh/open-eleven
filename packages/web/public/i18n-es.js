@@ -5372,8 +5372,9 @@ window.I18N_DATA = { es: {
  "Le gardien adverse plonge du bon côté. Vous retournez dans votre cage pour un dernier duel, mais le tireur suivant ne tremble pas : votre carrière s'achève sur un penalty manqué, sous des applaudissements qui n'y changent rien.": "El portero rival se tira al lado bueno. Vuelves a tu portería para un último duelo, pero el siguiente lanzador no tiembla: tu carrera termina con un penalti fallado, entre aplausos que no cambian nada.",
  "Nouveaux scénarios et dépenses de carrière": "Nuevos escenarios y gastos de carrera",
  "Plus de soixante-dix nouveaux scénarios dans les moments décisifs : prolongation à dix contre onze, brassard reçu en pleine finale, but refusé par la vidéo, supporters adverses déchaînés, haie d'honneur… Ils s'ajoutent à ceux que vous connaissez déjà.": "Más de setenta escenarios nuevos en los momentos decisivos: prórroga con diez contra once, el brazalete en plena final, un gol anulado por el vídeo, aficionados rivales desatados, pasillo de honor… Se suman a los que ya conoces.",
- "Dépenses : à chaque intersaison, votre argent peut enfin servir. Préparateur physique, coach mental, nutritionniste, agent star, maison, voiture, fondation, placements, et même une académie à votre nom en fin de carrière.": "Gastos: en cada pretemporada, tu dinero por fin sirve para algo. Preparador físico, coach mental, nutricionista, agente estrella, casa, coche, fundación, inversiones e incluso una academia con tu nombre al final de tu carrera.",
- "Le tableau des saisons affiche aussi vos titres en sélection, l'année où vous les gagnez : or olympique, coupe continentale des nations, Ligue des Sélections, comme la Coupe du monde.": "La tabla de temporadas muestra también tus títulos con la selección el año en que los ganas: oro olímpico, copa continental de selecciones, Liga de Selecciones, como el Mundial."
+ "Le tableau des saisons affiche aussi vos titres en sélection, l'année où vous les gagnez : or olympique, coupe continentale des nations, Ligue des Sélections, comme la Coupe du monde.": "La tabla de temporadas muestra también tus títulos con la selección el año en que los ganas: oro olímpico, copa continental de selecciones, Liga de Selecciones, como el Mundial.",
+ "Dépenses : depuis le bilan de saison, votre argent peut enfin servir. Préparateur physique, coach mental, nutritionniste, agent star, maison, voiture, fondation, placements, et même une académie à votre nom en fin de carrière.": "Gastos: desde el resumen de temporada, tu dinero por fin sirve para algo. Preparador físico, coach mental, nutricionista, agente estrella, casa, coche, fundación, inversiones e incluso una academia con tu nombre al final de tu carrera.",
+ "Bien plus de prénoms et de noms pour chaque nationalité : votre joueur et votre rival ont désormais vingt prénoms et vingt noms possibles au lieu de huit.": "Muchos más nombres y apellidos para cada nacionalidad: tu jugador y tu rival tienen ahora veinte nombres y veinte apellidos posibles en lugar de ocho."
 } };
 window.I18N_UI = { es: {
   "Écrivez une carrière de footballeur, saison après saison.": "Escribe una carrera de futbolista, temporada tras temporada.",
@@ -5723,8 +5724,6 @@ window.I18N_UI = { es: {
   "mise": "apuesta",
   "une fois": "una vez",
   "Dépenses": "Gastos",
-  "L'intersaison est là, et votre compte en banque aussi : {money}. Un achat pour la saison qui vient ?": "Llega la pretemporada, y tu cuenta bancaria también: {money}. ¿Alguna compra para la próxima temporada?",
-  "Ne rien acheter": "No comprar nada",
   "Débloqué avec {name} ({flag} {pos}) le {date}": "Desbloqueada con {name} ({flag} {pos}) el {date}",
   "Nouveau badge débloqué : {names}": "Nueva insignia desbloqueada: {names}",
   "{done}/{total} badges · {n} carrière jouée": "{done}/{total} insignias · {n} carrera jugada",

@@ -412,8 +412,6 @@ import { TRANSLATABLE_FLATS, TRANSLATABLE_STRUCTURES, hasWords, visitFlat, visit
     "mise": "stake",
     "une fois": "one-off",
     "Dépenses": "Spending",
-    "L'intersaison est là, et votre compte en banque aussi : {money}. Un achat pour la saison qui vient ?": "The off-season is here, and so is your bank balance: {money}. Anything to buy for the coming season?",
-    "Ne rien acheter": "Buy nothing",
     "Débloqué avec {name} ({flag} {pos}) le {date}": "Unlocked with {name} ({flag} {pos}) on {date}",
     "Nouveau badge débloqué : {names}": "New badge unlocked: {names}",
     "{done}/{total} badges · {n} carrière jouée": "{done}/{total} badges · {n} career played",

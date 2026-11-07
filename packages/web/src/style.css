@@ -2496,5 +2496,10 @@ body { color: var(--text-0); }
 .ranked-note div { display: flex; flex-direction: column; gap: 2px; font-size: 0.86rem; }
 .ranked-note img { flex: none; }
 
-/* Écran « Dépenses » : le refus se distingue des achats */
-.opt-btn.opt-skip { background: transparent; border-style: dashed; color: var(--text-2); font-weight: 600; }
+
+/* Dépenses dépliables depuis le bilan de saison */
+.recap-shop { margin: 6px 0 2px; text-align: center; }
+.shop-toggle { font-weight: 700; }
+.shop-toggle:disabled { opacity: 0.6; cursor: default; }
+.shop-panel { display: grid; gap: 6px; margin-top: 8px; text-align: start; }
+.shop-panel[hidden] { display: none; }
