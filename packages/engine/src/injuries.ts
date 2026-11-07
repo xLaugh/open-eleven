@@ -1,11 +1,12 @@
 // Blessures.
 
 import type { InjuryTier } from "@open-eleven/content";
+import { hasPurchase } from "./shop";
 import { rng } from "./rng";
 import { clamp, randInt, weightedRandom } from "./utils";
 import { hasTrait } from "./player";
 import type { CareerState } from "./types";
-import { BALANCE } from "@open-eleven/content";
+import { BALANCE, SHOP_EFFECTS } from "@open-eleven/content";
 
 // --- Blessures --------------------------------------------------------------
 // Applique une blessure : modulation traits, répartition saison / dette
@@ -36,6 +37,7 @@ export function rollInjury(s: CareerState, pt: number) {
   p += (s.injuryHistory || 0) * B.historyAdd;
   if (hasTrait(s, "glass")) p += B.glassAdd;
   else if (hasTrait(s, "ironman")) p += B.ironmanAdd;
+  if (hasPurchase(s, "trainer")) p *= SHOP_EFFECTS.trainerInjuryMult; // préparateur physique perso
   p = clamp(p, B.minChance, B.maxChance);
   if (rng() >= p) return null;
   const bias = clamp(Math.max(0, s.age - 30) * B.severityBiasAge + (s.injuryHistory || 0) * B.severityBiasHistory + (hasTrait(s, "glass") ? B.severityBiasGlass : 0), 0, 1);

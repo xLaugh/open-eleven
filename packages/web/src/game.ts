@@ -1639,10 +1639,45 @@ import { Engine } from "@open-eleven/engine";
     if ((!G.room || rivalsMode()) && E.sponsorDealDue(G)) {
       // sponsorTierFor AVANT sponsorOffersFor : même palier, et seul le
       // second consomme du hasard (ordre sans incidence sur le rejeu).
-      renderSponsorChoice(E.sponsorTierFor(G), E.sponsorOffersFor(G), offseasonTransfer);
+      renderSponsorChoice(E.sponsorTierFor(G), E.sponsorOffersFor(G), offseasonShop);
       return;
     }
-    offseasonTransfer();
+    offseasonShop();
+  }
+
+  // Écran « Dépenses » : un achat au plus, ou rien. Même condition que les sponsors
+  // (hors salle commune) et même place que dans le rejeu serveur (après le sponsor).
+  function offseasonShop() {
+    const offers = !G.room || rivalsMode() ? E.shopOffersFor(G) : [];
+    if (!offers.length) { offseasonTransfer(); return; }
+    const buttons = offers.map((o, i) => {
+      const when = o.seasons ? T(o.renew ? "renouveler pour {n} saisons" : "pour {n} saisons", { n: o.seasons }) : o.id === "invest" ? T("mise") : T("une fois");
+      return `<button class="opt-btn" data-i="${i}"><span class="opt-hint">${E.fmtMoney(o.price)} · ${esc(when)}</span>${o.icon} ${esc(o.name)}<br/><span class="opt-role">${esc(o.desc)}</span></button>`;
+    }).join("");
+    showCard(`
+      <div class="card-tag"><span class="card-icon">💳</span> ${T("Dépenses")} · ${G.age} ${T("ans")}</div>
+      <p class="event-text">${T("L'intersaison est là, et votre compte en banque aussi : {money}. Un achat pour la saison qui vient ?", { money: E.fmtMoney(G.money) })}</p>
+      <div class="event-options">${buttons}<button class="opt-btn opt-skip" data-i="-1">${T("Ne rien acheter")}</button></div>
+    `, "neutral");
+    $("game-card").querySelectorAll(".opt-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (lockOptions()) return;
+        const i = Number(btn.dataset.i);
+        if (G.duel || G.dailyDate) G.choiceLog.push(i); // journal rejoué par le serveur
+        if (i >= 0 && offers[i]) {
+          const line = E.buyItem(G, offers[i]);
+          updateHeader();
+          showCard(`
+            <div class="card-tag"><span class="card-icon">💳</span> ${T("Dépenses")}</div>
+            <p class="result-text">${esc(line)}</p>
+            <button class="btn btn-secondary" id="btn-next">${T("Continuer")}</button>
+          `, "good");
+          $("btn-next").addEventListener("click", offseasonTransfer);
+          return;
+        }
+        offseasonTransfer();
+      });
+    });
   }
 
   // Choix du club de prêt forcé (défiance persistante malgré la mise à
@@ -3640,6 +3675,29 @@ import { Engine } from "@open-eleven/engine";
     </svg>`;
   }
 
+  // Icônes des titres d'une saison : ceux du club (se.trophies) ET ceux de la sélection
+  // gagnés la même année (natRuns : Coupe du monde, coupe continentale des nations, Ligue
+  // des Sélections, or olympique, Coupe arabe, Jeux régionaux). Le nom en info-bulle.
+  function seasonTrophyIcons(s, se) {
+    const icon = (c) => (c ? `<span title="${esc(c.name)}">${c.icon}</span>` : "");
+    const out = (se.trophies || []).map((tr) => icon(trophyInfo(tr, se.countryId)));
+    const cont = (E.countryOf(s.nationality.homeCountryId) || {}).continent;
+    const natComp = {
+      wc: COMPETITIONS.worldCup,
+      cont: NATIONAL_CUPS[cont],
+      natl: NATIONS_LEAGUE,
+      olympic: { icon: "🥇", name: T("Jeux Olympiques") },
+      arab: ARAB_CUP,
+      games: REGIONAL_GAMES[cont],
+    };
+    for (const r of s.natRuns || []) {
+      if (r.year !== se.year || r.stage !== "champion") continue;
+      if (r.comp === "wc" && (se.trophies || []).includes("worldCup")) continue; // déjà compté côté saison
+      out.push(icon(natComp[r.comp]));
+    }
+    return out.join("");
+  }
+
   function pathHtml(s) {
     return (s.transferHistory || [])
       .map((step) => {
@@ -3829,7 +3887,7 @@ import { Engine } from "@open-eleven/engine";
         // se.trophies (pour ne pas peser sur le Ballon d'Or) : on ajoute quand
         // même l'icône de champion ici pour qu'il apparaisse dans le tableau.
         const champIcon = (se.divisionTitle && !(se.trophies || []).includes("league")) ? COMPETITIONS.league.icon : "";
-        const icons = champIcon + (se.trophies || []).map((tr) => { const c = trophyInfo(tr, se.countryId); return c ? c.icon : ""; }).join("");
+        const icons = champIcon + seasonTrophyIcons(G, se);
         // Saison en U17/réserve : chiffres de cette équipe, étiquetés.
         const sst = se.squad && se.dev ? se.dev : se;
         const perf = isGk ? `${sst.cleanSheets || 0} cs` : `${sst.goals} ${ab.b}`;

@@ -5,6 +5,7 @@
 // variante « gk » — un gardien ne vit pas une finale comme un attaquant.
 
 import type { Dict, MomentVariant } from "./types";
+import { KEY_MOMENTS_EXTRA } from "./moments-extra";
 
 /* ============================================================
    MOMENTS DÉCISIFS — séquences interactives des très grands
@@ -1909,3 +1910,11 @@ export const KEY_MOMENTS: Dict<Dict<MomentVariant[]>> = {
     ]
   },
 };
+
+// Scénarios supplémentaires (moments-extra.ts) : versés dans les mêmes tirages, aux
+// postes déjà définis (un poste nouveau masquerait le repli « field » du moteur).
+for (const [id, byPos] of Object.entries(KEY_MOMENTS_EXTRA)) {
+  const base = KEY_MOMENTS[id];
+  if (!base) continue;
+  for (const [pos, list] of Object.entries(byPos)) if (base[pos]) base[pos].push(...list);
+}

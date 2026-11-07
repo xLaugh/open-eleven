@@ -480,3 +480,34 @@ test("ranked : montée, protection du nouveau palier, descente, saison et inacti
   r = E.rankedStep(r.state, "2026-11-03", 3);
   assert.equal(r.state.points, 7);
 });
+
+test("achats de l'intersaison : abordables seulement, abonnements, effets et score", () => {
+  const s = E.replayDuel(4321, Array(400).fill(-1));
+  Object.assign(s, { age: 27, rep: 70, money: 0, year: 2040, purchases: {} });
+  s.contract = { ...s.contract, salary: 2 };
+  assert.equal(E.shopOffersFor(s).length, 0, "rien d'abordable sans argent");
+  s.money = 100;
+  const offers = E.shopOffersFor(s);
+  const ids = offers.map((o) => o.id);
+  assert.ok(ids.includes("trainer") && ids.includes("charity"));
+  assert.ok(!ids.includes("academy"), "l'académie attend la fin de carrière");
+  const trainer = offers.find((o) => o.id === "trainer");
+  assert.equal(trainer.price, 0.5, "prix = 25 % du salaire");
+  E.buyItem(s, trainer);
+  assert.equal(s.money, 99.5);
+  assert.ok(E.hasPurchase(s, "trainer"));
+  assert.ok(!E.shopOffersFor(s).some((o) => o.id === "trainer"), "abonnement en cours : pas reproposé");
+  s.year += 4;
+  assert.ok(!E.hasPurchase(s, "trainer"), "abonnement échu");
+  assert.ok(E.shopOffersFor(s).find((o) => o.id === "trainer").renew);
+  // Achat définitif : une seule fois, bonus de score.
+  const before = E.computeCareerScore(s);
+  E.buyItem(s, E.shopOffersFor(s).find((o) => o.id === "charity"));
+  assert.ok(!E.shopOffersFor(s).some((o) => o.id === "charity"));
+  assert.ok(E.computeCareerScore(s) > before - 5, "la fondation compense son coût au score");
+  // Investissement : au plus une fois tous les trois ans.
+  E.buyItem(s, E.shopOffersFor(s).find((o) => o.id === "invest"));
+  assert.ok(!E.shopOffersFor(s).some((o) => o.id === "invest"));
+  s.year += 3;
+  assert.ok(E.shopOffersFor(s).some((o) => o.id === "invest"));
+});

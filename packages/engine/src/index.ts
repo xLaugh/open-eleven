@@ -30,6 +30,7 @@ import { sponsorDealDue, sponsorTierFor, sponsorOffersFor, applySponsorDeal } fr
 import { creditClubTrophies, roomClubSeason, roomClubSeed, teamRatingFromOvr } from "./rooms";
 import { hasEliteClubs, leagueRange, seasonCupTier, simulatedRank, tierForRank } from "./clubcups";
 import { dailyObjective, objectiveStars, starsDaily, rankedFresh, rankedStep, rankedLabel, RANKED_LEGEND } from "./stars";
+import { shopOffersFor, buyItem, hasPurchase } from "./shop";
 import { ENGINE_VERSION } from "./version";
 import { BALANCE } from "@open-eleven/content";
 
@@ -49,6 +50,7 @@ export const Engine = {
   playSeason, resolveSeasonMoment, advanceYear, marketValue, salaryFor,
   buildOffer, offersFor, loanOffersFor, applyLoan, transferWindow,
   sponsorDealDue, sponsorTierFor, sponsorOffersFor, applySponsorDeal,
+  shopOffersFor, buyItem, hasPurchase, // achats de l'intersaison (cf. shop.ts)
   applyTransfer, renewContract, totalAwards, careerRating, computeCareerScore, visibilityOf, creditClubTrophies, roomClubSeed, teamRatingFromOvr, roomClubSeason,
   hasEliteClubs, leagueRange, seasonCupTier, simulatedRank, tierForRank, // coupes continentales de clubs (cf. clubcups.ts)
   careerTitle, pickHighlights, buildNarrative, buildUntakenPath,

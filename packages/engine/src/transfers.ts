@@ -1,6 +1,7 @@
 // Mercato : offres, prêts, sponsors, fenêtre de transfert.
 
 import { rng } from "./rng";
+import { hasPurchase } from "./shop";
 import { clamp, rand, randInt, pick, weightedRandom, sampleDiverseByCountry, fmtMoney } from "./utils";
 import { tx } from "./text";
 import { roleForClub } from "./role";
@@ -8,7 +9,7 @@ import { squadOf, squadForClub } from "./squad";
 import { clubHomeOf, continentOf, countryOf, lvlOf } from "./clubs";
 import { ovr, hasTrait } from "./player";
 import type { CareerState, Club, LevelId, LoanOffer, OfferSpec, SeasonReport, TransferOffer, TransferWindow } from "./types";
-import { BALANCE, CLUBS, CLUBS_BY_LEVEL, COACH_NAMES, LEVEL_ORDER } from "@open-eleven/content";
+import { BALANCE, CLUBS, CLUBS_BY_LEVEL, COACH_NAMES, LEVEL_ORDER, SHOP_EFFECTS } from "@open-eleven/content";
 
 // --- Mercato -----------------------------------------------------------------
 // Poids d'un pays comme destination, pour CE joueur : le continent du club
@@ -110,7 +111,7 @@ export function offersFor(s: CareerState, spec?: OfferSpec | null): TransferOffe
   if (pool.length === 0) pool = CLUBS_BY_LEVEL[targetLevel].filter((c) => c.id !== s.club.id && free(c));
   // Plus d'offres, venues de plus de pays (c'était 1 à 3), et pondérées par continent.
   const drawn = weightedRandom(BALANCE.offerCount, (e) => e[1])[0];
-  const shift = (s.entourage && BALANCE.offerCountByEntourage[s.entourage.id]) || 0;
+  const shift = ((s.entourage && BALANCE.offerCountByEntourage[s.entourage.id]) || 0) + (hasPurchase(s, "agent") ? SHOP_EFFECTS.agentOffers : 0); // agent star
   const count = Math.min(pool.length, clamp(drawn + shift, 1, BALANCE.offerCountMax));
   const offers = sampleDiverseByCountry<Club>(pool, count, destinationWeight(s)).map((club) => buildOffer(s, club));
   // Une clause libératoire rend le joueur plus abordable → plus d'offres sérieuses

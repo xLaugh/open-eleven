@@ -1,11 +1,12 @@
 // Statut au club et temps de jeu.
 
 import { rng } from "./rng";
+import { hasPurchase } from "./shop";
 import { clamp } from "./utils";
 import { countryOf, lvlOf } from "./clubs";
 import { ovr, hasTrait } from "./player";
 import type { CareerState, Club, SeasonReport } from "./types";
-import { BALANCE, ROLES, ROLE_ESPOIR_MAX_AGE } from "@open-eleven/content";
+import { BALANCE, ROLES, ROLE_ESPOIR_MAX_AGE, SHOP_EFFECTS } from "@open-eleven/content";
 
 // --- Statut au club (rôle) --------------------------------------------------
 // Rôle proposé sur une offre : dérivé de ta marge (OVR − niveau attendu du club),
@@ -86,5 +87,6 @@ export function longevityScore(s: CareerState) {
   if (hasTrait(s, "zen")) L += 1;
   L += (s.discipline - 50) / 12;
   L += (s.stats.p - 60) / 15;
+  if (hasPurchase(s, "trainer")) L += SHOP_EFFECTS.trainerLongevity; // préparateur physique perso
   return L;
 }

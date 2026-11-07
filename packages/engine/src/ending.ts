@@ -1,6 +1,7 @@
 // Fin de carrière : note, score, titre, récit.
 
 import { pick } from "./utils";
+import { shopScore } from "./shop";
 import { tx } from "./text";
 import type { CareerState, HistoryEntry } from "./types";
 import { UNTAKEN_PATH_TEMPLATES } from "@open-eleven/content";
@@ -34,7 +35,7 @@ export function computeCareerScore(s: CareerState) {
     t.league * 4 + t.cup * 2 + (t.leagueCup || 0) * 1.5 + (t.natSupercup || 0) * 1 + t.goldenBoot * 5 +
     Math.min(12, totalAwards(s) * 1.2) +
     Math.min(20, s.natTeam.caps / 6) + Math.min(15, s.totals.goals / 30) +
-    s.money * 0.05
+    s.money * 0.05 + shopScore(s)
   );
 }
 

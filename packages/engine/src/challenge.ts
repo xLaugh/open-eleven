@@ -10,6 +10,7 @@ import { playSeason, resolveSeasonMoment } from "./season";
 import { advanceYear } from "./offseason";
 import { offersFor, loanOffersFor, applyLoan, transferWindow, applyTransfer, renewContract } from "./transfers";
 import { computeCareerScore } from "./ending";
+import { shopOffersFor, buyItem } from "./shop";
 import { sponsorDealDue, sponsorOffersFor, applySponsorDeal } from "./sponsors";
 import type { Profile, SeasonReport } from "./types";
 import { BALANCE, ENTOURAGES, LIFESTYLES, NATIONALITIES, ORIGINS, POSITIONS } from "@open-eleven/content";
@@ -109,6 +110,12 @@ export function replayRun(seed: number, prof: Profile, choices: number[]) {
       const offers = sponsorOffersFor(s);
       const ch = next();
       applySponsorDeal(s, offers[ch] || offers[0]);
+    }
+    // Écran « Dépenses » : seulement s'il y a quelque chose d'abordable (−1 = rien acheter).
+    const shop = shopOffersFor(s);
+    if (shop.length) {
+      const ch = next();
+      if (ch >= 0 && shop[ch]) buyItem(s, shop[ch]);
     }
     const window = transferWindow(s, report);
     // Vétéran sans club : côté joueur, un simple écran d'adieu sans choix,

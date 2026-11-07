@@ -1,13 +1,14 @@
 // Moments décisifs interactifs (finales, barrages, derbys…).
 
 import type { MomentVariant } from "@open-eleven/content";
+import { hasPurchase } from "./shop";
 import { rng } from "./rng";
 import { clamp, pick } from "./utils";
 import { renderText } from "./text";
 import { applyFx } from "./effects";
 import { hasTrait } from "./player";
 import type { CareerState, Chip, EventOption, KeyMoment } from "./types";
-import { KEY_MOMENTS } from "@open-eleven/content";
+import { KEY_MOMENTS, SHOP_EFFECTS } from "@open-eleven/content";
 
 // --- Moments décisifs (interactifs) -----------------------------------------
 // Sélectionne la variante d'un moment décisif : pool par poste si
@@ -31,6 +32,7 @@ export function keyMomentSuccess(s: CareerState, option: EventOption) {
   p += s.position.id === "gk" ? (s.stats.m - 60) / 300 : (s.stats.t - 70) / 350;
   p += (s.form - 60) / 500;
   if (hasTrait(s, "clutch")) p += 0.08;
+  if (hasPurchase(s, "mental")) p += SHOP_EFFECTS.mentalMoment; // coach mental
   return rng() < clamp(p, 0.15, 0.92);
 }
 

@@ -1,6 +1,7 @@
 // Vieillissement, vie du club et intersaison.
 
 import { rng } from "./rng";
+import { hasPurchase } from "./shop";
 import { clamp, rand, randInt, pick } from "./utils";
 import { trajGrowthMult } from "./potential";
 import { natCallBarFor, natClubFloorOk } from "./nationality";
@@ -9,7 +10,7 @@ import { playingTimeFactor, longevityScore } from "./role";
 import { countryOf, divShort, lvlOf, setClubLevel, shiftClubLevel } from "./clubs";
 import { ovr, hasTrait } from "./player";
 import type { CareerState } from "./types";
-import { BALANCE, CLUBS, COACH_NAMES, ROLE_ESPOIR_MAX_AGE } from "@open-eleven/content";
+import { BALANCE, CLUBS, COACH_NAMES, ROLE_ESPOIR_MAX_AGE, SHOP_EFFECTS } from "@open-eleven/content";
 
 // --- Vieillissement, vie du club & intersaison ------------------------------
 export function advanceYear(s: CareerState) {
@@ -154,8 +155,9 @@ export function advanceYear(s: CareerState) {
   }
 
   // Dérive des jauges
-  const formTarget = 65;
-  const moralTarget = (hasTrait(s, "zen") ? 70 : 60) + Math.round((s.teamRel - 55) / 8);
+  const formTarget = 65 + (hasPurchase(s, "nutrition") ? SHOP_EFFECTS.nutritionForm : 0); // nutritionniste
+  const moralTarget = (hasTrait(s, "zen") ? 70 : 60) + Math.round((s.teamRel - 55) / 8)
+    + (hasPurchase(s, "mental") ? SHOP_EFFECTS.mentalMoral : 0) + (s.purchases && s.purchases.house ? SHOP_EFFECTS.houseMoral : 0); // coach mental, maison
   s.form = clamp(Math.round(s.form + (formTarget - s.form) * 0.35 + rand(-6, 6)), 5, 100);
   s.moral = clamp(Math.round(s.moral + (moralTarget - s.moral) * 0.25 + rand(-4, 4)), 5, 100);
   if (hasTrait(s, "leader")) s.moral = Math.max(s.moral, 40);
