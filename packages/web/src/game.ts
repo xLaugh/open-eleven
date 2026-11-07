@@ -2553,7 +2553,7 @@ import { Engine } from "@open-eleven/engine";
     const doneToday = d.today === today && d.todayBest != null;
     const alive = d.lastDate === today || d.lastDate === prevDayKey(today);
     const streak = alive ? d.streak : 0;
-    const bestLine = doneToday ? T("Ton meilleur aujourd'hui : {n} pts", { n: d.todayBest }) : "Pas encore tenté aujourd'hui";
+    const bestLine = doneToday ? T("Ton meilleur aujourd'hui : {n} pts", { n: d.todayBest }) : "";
     const obj = E.dailyObjective(today);
     const bestStars = d.today === today ? (d as any).todayStars || 0 : 0;
     panel.innerHTML = `
@@ -2565,7 +2565,7 @@ import { Engine } from "@open-eleven/engine";
           <span class="daily-chip">${esc(ch.origin.name)}</span>
         </div>
         ${dailyObjectiveHtml(obj, bestStars)}
-        <span class="daily-best${doneToday ? " done" : ""}">${bestLine}</span>
+        ${bestLine ? `<span class="daily-best done">${bestLine}</span>` : ""}
         <div class="hc-cta">${T(doneToday ? "Rejouer maintenant" : "Jouer maintenant")}</div>
       </div>`;
   }
@@ -2573,9 +2573,9 @@ import { Engine } from "@open-eleven/engine";
   // Objectif du jour : trois paliers d'étoiles (cf. E.dailyObjective). `got` = étoiles
   // déjà obtenues : les paliers atteints s'allument.
   function dailyObjectiveHtml(obj, got) {
-    const steps = obj.steps.map((label, i) =>
-      `<li class="dobj-step${got > i ? " on" : ""}"><span class="dobj-stars">${"⭐".repeat(i + 1)}</span> ${esc(label)}</li>`).join("");
-    return `<div class="daily-obj"><div class="dobj-title">${T("Objectif du jour")} · ${obj.icon} ${esc(obj.title)}</div><ul class="dobj-steps">${steps}</ul></div>`;
+    const steps = obj.shorts.map((label, i) =>
+      `<li class="dobj-step${got > i ? " on" : ""}" title="${esc(obj.steps[i])}"><span class="dobj-stars">${"★".repeat(i + 1)}</span><span class="dobj-label">${esc(label)}</span></li>`).join("");
+    return `<div class="daily-obj"><div class="dobj-title">🎯 ${obj.icon} ${esc(obj.title)}</div><ol class="dobj-steps">${steps}</ol></div>`;
   }
 
   // Lance le défi : verrouille l'identité imposée puis saute aux choix libres
@@ -2612,7 +2612,7 @@ import { Engine } from "@open-eleven/engine";
         : ranked.ranked ? ` · <span class="ranked-tag">${T("🏅 Partie classée")}</span>`
         : ranked.reason === "already" ? ` · <span class="ranked-tag off">${T("Entraînement : ta partie classée du jour est déjà jouée")}</span>` : "";
       reminder.innerHTML = T("🗓️ <strong>Défi du jour</strong> — {profile}", { profile: `${ch.position.icon} ${esc(ch.position.name)} · ${flagHtml(ch.nationality)} ${esc(ch.nationality.name)} · ${esc(ch.origin.name)}` })
-        + `<br>🎯 ${obj.icon} ${esc(obj.title)} : ⭐ ${esc(obj.steps[0])} · ⭐⭐ ${esc(obj.steps[1])} · ⭐⭐⭐ ${esc(obj.steps[2])}${rankedTag}`;
+        + `<br>🎯 ${obj.icon} ${esc(obj.title)} · ${obj.shorts.map((x, i) => `${"★".repeat(i + 1)} ${esc(x)}`).join(" · ")}${rankedTag}`;
       reminder.hidden = false;
     }
     showScreen("screen-lifestyle");

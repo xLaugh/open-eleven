@@ -43,6 +43,18 @@ export const DAILY_OBJECTIVES = {
   caps: { icon: "🎽", title: "Fidèle à la sélection", labels: { 1: "{n} sélections", 2: "{n} sélections", 3: "{n} sélections" } },
 };
 
+// Libellés COURTS des paliers (« clé + numéro de palier »), pour la carte de l'accueil
+// et le rappel en jeu ; les libellés complets restent en info-bulle.
+export const DAILY_OBJECTIVE_SHORTS: Record<string, string> = {
+  club1: "Coupe nationale", club2: "Titre en D1", club3: "Coupe continentale",
+  wc1: "Quarts", wc2: "Demies", wc3: "Finale",
+  cont1: "Quarts", cont2: "Demies", cont3: "Finale",
+  ballon1: "Top 30", ballon2: "Top 10", ballon3: "Podium",
+  goals1: "{n} buts", goals2: "{n} buts", goals3: "{n} buts",
+  cleanSheets1: "{n} sans encaisser", cleanSheets2: "{n} sans encaisser", cleanSheets3: "{n} sans encaisser",
+  caps1: "{n} sélections", caps2: "{n} sélections", caps3: "{n} sélections",
+};
+
 // Tirage et seuils, calibrés sur des milliers de défis simulés : avec des choix au
 // hasard, environ un joueur sur deux décroche une étoile et un sur cinq les trois.
 // minW = force de nation minimale pour que l'objectif soit atteignable.

@@ -4,7 +4,7 @@
 import { dailyChallenge, hashInt, replayDaily } from "./challenge";
 import { isTopFlightOf } from "./clubs";
 import type { CareerState } from "./types";
-import { DAILY_OBJECTIVES, DAILY_OBJECTIVE_POOL, DAILY_STAT_THRESHOLDS, RANKED_RULES, RANKED_TIERS } from "@open-eleven/content";
+import { DAILY_OBJECTIVES, DAILY_OBJECTIVE_POOL, DAILY_OBJECTIVE_SHORTS, DAILY_STAT_THRESHOLDS, RANKED_RULES, RANKED_TIERS } from "@open-eleven/content";
 
 export interface DailyObjective {
   /** club · wc · cont · ballon · goals · cleanSheets · caps */
@@ -13,6 +13,8 @@ export interface DailyObjective {
   title: string;
   /** Libellés des paliers ⭐, ⭐⭐, ⭐⭐⭐ (seuils déjà remplis). */
   steps: string[];
+  /** Mêmes paliers, en version courte (« Quarts », « 300 buts »). */
+  shorts: string[];
   /** Seuils chiffrés (objectifs de statistiques), sinon null. */
   n: number[] | null;
 }
@@ -40,7 +42,8 @@ export function dailyObjective(dateKey: string): DailyObjective {
   } else if (id === "caps") n = capsThresholds(w);
   const def = (DAILY_OBJECTIVES as Record<string, { icon: string; title: string; labels: Record<string, string> }>)[kind];
   const steps = [1, 2, 3].map((k) => String(def.labels[k]).replace("{n}", n ? String(n[k - 1]) : ""));
-  return { kind, icon: def.icon, title: def.title, steps, n };
+  const shorts = [1, 2, 3].map((k) => String(DAILY_OBJECTIVE_SHORTS[kind + k] || def.labels[k]).replace("{n}", n ? String(n[k - 1]) : ""));
+  return { kind, icon: def.icon, title: def.title, steps, shorts, n };
 }
 
 const STAGE_STARS: Record<string, number> = { quarter: 1, semi: 2, final: 3, champion: 3 };

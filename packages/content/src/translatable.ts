@@ -21,7 +21,7 @@ import { NATIONALITIES } from "./nations";
 import { ARCHETYPES, ENTOURAGES, LIFESTYLES, ORIGINS, POSITIONS, ROLES, TRAITS, TRAJECTORIES } from "./profile";
 import { BADGES, BADGE_CATS, DAILY_QUESTS, LEGEND_QUESTS, PERKS, STREAK_MILESTONES, WEEKLY_CHALLENGES } from "./progression";
 import { SPONSOR_TIERS } from "./sponsors";
-import { DAILY_OBJECTIVES, RANKED_TIERS, RANKED_UNRANKED } from "./ranked";
+import { DAILY_OBJECTIVES, DAILY_OBJECTIVE_SHORTS, RANKED_TIERS, RANKED_UNRANKED } from "./ranked";
 import { STORIES } from "./stories";
 import { BRAND } from "./brand";
 import { ENGINE_TEXT, HEADLINES, RIVAL_NEWS_AHEAD, RIVAL_NEWS_BAD, RIVAL_NEWS_BEHIND, RIVAL_NEWS_GOOD, UNTAKEN_PATH_TEMPLATES, WORLD_NEWS } from "./texts";
@@ -59,7 +59,7 @@ export const TRANSLATABLE_STRUCTURES: Record<string, unknown> = {
 };
 
 /** Tables plates « identifiant → texte » : TOUTES leurs valeurs se traduisent. */
-export const TRANSLATABLE_FLATS: Record<string, Record<string, string>> = { ENGINE_TEXT, YOUTH_U17_CUPS };
+export const TRANSLATABLE_FLATS: Record<string, Record<string, string>> = { ENGINE_TEXT, YOUTH_U17_CUPS, DAILY_OBJECTIVE_SHORTS };
 
 export type TextVisitor = (holder: Record<string, any>, key: string, text: string) => void;
 

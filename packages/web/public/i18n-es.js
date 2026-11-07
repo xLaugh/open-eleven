@@ -4774,7 +4774,18 @@ window.I18N_DATA = { es: {
  "Ranked et étoiles du défi du jour": "Ranked y estrellas del reto del día",
  "Le défi du jour a désormais un objectif, le même pour tous : parcours au Mondial, saison de club, Ballon d'Or, buts… Selon jusqu'où vous allez, vous décrochez une, deux ou trois étoiles.": "El reto del día tiene ahora un objetivo, el mismo para todos: recorrido en el Mundial, temporada de club, Balón de Oro, goles… Según hasta dónde llegues, consigues una, dos o tres estrellas.",
  "Ranked : six paliers, de Bronze à Légende, avec trois divisions chacun. La première partie du défi du jour fait monter ou descendre votre rang selon vos étoiles ; plus vous montez, plus une mauvaise journée coûte.": "Ranked: seis niveles, de Bronce a Leyenda, con tres divisiones cada uno. La primera partida del reto del día hace subir o bajar tu rango según tus estrellas; cuanto más subes, más cuesta un mal día.",
- "Une saison par mois : le 1er, chacun redescend d'un palier et repart à l'assaut du classement. Les étoiles sont vérifiées par le serveur, comme les scores.": "Una temporada al mes: el día 1, todos bajan un nivel y vuelven al asalto de la clasificación. El servidor verifica las estrellas, igual que las puntuaciones."
+ "Une saison par mois : le 1er, chacun redescend d'un palier et repart à l'assaut du classement. Les étoiles sont vérifiées par le serveur, comme les scores.": "Una temporada al mes: el día 1, todos bajan un nivel y vuelven al asalto de la clasificación. El servidor verifica las estrellas, igual que las puntuaciones.",
+ "Coupe nationale": "Copa nacional",
+ "Titre en D1": "Título de 1.ª",
+ "Coupe continentale": "Copa continental",
+ "Quarts": "Cuartos",
+ "Demies": "Semis",
+ "Finale": "Final",
+ "Top 30": "Top 30",
+ "Top 10": "Top 10",
+ "Podium": "Podio",
+ "{n} buts": "{n} goles",
+ "{n} sans encaisser": "{n} sin encajar"
 } };
 window.I18N_UI = { es: {
   "Écrivez une carrière de footballeur, saison après saison.": "Escribe una carrera de futbolista, temporada tras temporada.",

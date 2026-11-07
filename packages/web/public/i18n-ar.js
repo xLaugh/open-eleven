@@ -4774,7 +4774,18 @@ window.I18N_DATA = { ar: {
  "Ranked et étoiles du défi du jour": "المصنّف ونجوم تحدي اليوم",
  "Le défi du jour a désormais un objectif, le même pour tous : parcours au Mondial, saison de club, Ballon d'Or, buts… Selon jusqu'où vous allez, vous décrochez une, deux ou trois étoiles.": "أصبح لتحدي اليوم هدف واحد للجميع: مشوار كأس العالم، موسم النادي، الكرة الذهبية، الأهداف… وحسب المدى الذي تبلغه تنال نجمة أو نجمتين أو ثلاث نجوم.",
  "Ranked : six paliers, de Bronze à Légende, avec trois divisions chacun. La première partie du défi du jour fait monter ou descendre votre rang selon vos étoiles ; plus vous montez, plus une mauvaise journée coûte.": "المصنّف: ست فئات، من البرونزي إلى الأسطورة، ولكل منها ثلاث درجات. أول محاولة في تحدي اليوم ترفع رتبتك أو تخفضها حسب نجومك؛ وكلما صعدت زادت كلفة اليوم السيئ.",
- "Une saison par mois : le 1er, chacun redescend d'un palier et repart à l'assaut du classement. Les étoiles sont vérifiées par le serveur, comme les scores.": "موسم كل شهر: في اليوم الأول ينزل الجميع فئة واحدة ويعودون لتسلّق الترتيب. يتحقق الخادم من النجوم كما يتحقق من النتائج."
+ "Une saison par mois : le 1er, chacun redescend d'un palier et repart à l'assaut du classement. Les étoiles sont vérifiées par le serveur, comme les scores.": "موسم كل شهر: في اليوم الأول ينزل الجميع فئة واحدة ويعودون لتسلّق الترتيب. يتحقق الخادم من النجوم كما يتحقق من النتائج.",
+ "Coupe nationale": "كأس وطنية",
+ "Titre en D1": "لقب الدرجة الأولى",
+ "Coupe continentale": "كأس قارية",
+ "Quarts": "ربع النهائي",
+ "Demies": "نصف النهائي",
+ "Finale": "النهائي",
+ "Top 30": "أفضل 30",
+ "Top 10": "أفضل 10",
+ "Podium": "المنصة",
+ "{n} buts": "{n} هدفًا",
+ "{n} sans encaisser": "{n} بشباك نظيفة"
 } };
 window.I18N_UI = { ar: {
   "Écrivez une carrière de footballeur, saison après saison.": "اكتب مسيرة لاعب كرة قدم، موسمًا بعد موسم.",

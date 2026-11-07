@@ -4783,5 +4783,16 @@ window.I18N_DATA = { en: {
  "Ranked et étoiles du défi du jour": "Ranked and daily challenge stars",
  "Le défi du jour a désormais un objectif, le même pour tous : parcours au Mondial, saison de club, Ballon d'Or, buts… Selon jusqu'où vous allez, vous décrochez une, deux ou trois étoiles.": "The daily challenge now has a goal, the same for everyone: World Cup run, club season, Ballon d'Or, goals… Depending on how far you go, you earn one, two or three stars.",
  "Ranked : six paliers, de Bronze à Légende, avec trois divisions chacun. La première partie du défi du jour fait monter ou descendre votre rang selon vos étoiles ; plus vous montez, plus une mauvaise journée coûte.": "Ranked: six tiers, from Bronze to Legend, with three divisions each. Your first daily challenge run of the day moves your rank up or down depending on your stars; the higher you climb, the more a bad day costs.",
- "Une saison par mois : le 1er, chacun redescend d'un palier et repart à l'assaut du classement. Les étoiles sont vérifiées par le serveur, comme les scores.": "One season per month: on the 1st, everyone drops one tier and sets off up the ladder again. Stars are verified by the server, just like scores."
+ "Une saison par mois : le 1er, chacun redescend d'un palier et repart à l'assaut du classement. Les étoiles sont vérifiées par le serveur, comme les scores.": "One season per month: on the 1st, everyone drops one tier and sets off up the ladder again. Stars are verified by the server, just like scores.",
+ "Coupe nationale": "National cup",
+ "Titre en D1": "Top-flight title",
+ "Coupe continentale": "Continental cup",
+ "Quarts": "Quarters",
+ "Demies": "Semis",
+ "Finale": "Final",
+ "Top 30": "Top 30",
+ "Top 10": "Top 10",
+ "Podium": "Podium",
+ "{n} buts": "{n} goals",
+ "{n} sans encaisser": "{n} clean sheets"
 } };
